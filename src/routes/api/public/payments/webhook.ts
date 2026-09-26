@@ -232,9 +232,101 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 }
 
 
+/** Firma eines Stripe-Kunden: nur aus der serverseitigen Zuordnung, nie aus dem Browser. */
+async function agencyForCustomer(customerId: string | undefined, env: StripeEnv): Promise<string | null> {
+  if (!customerId) return null;
+  const { data } = await (getSupabase() as any)
+    .from("stripe_customers")
+    .select("agency_id")
+    .eq("stripe_customer_id", customerId)
+    .eq("environment", env)
+    .maybeSingle();
+  return data?.agency_id ?? null;
+}
+
+/** Immolia-Abo (Firmen-Kunde) → stripe_sync_subscription. Liefert false für Alt-Abos. */
+async function syncImmoliaSubscription(subscription: any, env: StripeEnv): Promise<boolean> {
+  const agencyId = await agencyForCustomer(subscription.customer, env);
+  if (!agencyId) return false;
+  const item = subscription.items?.data?.[0];
+  const ps = item?.current_period_start ?? subscription.current_period_start;
+  const pe = item?.current_period_end ?? subscription.current_period_end;
+  const userId = subscription.metadata?.userId ?? null;
+  const { error } = await (getSupabase() as any).rpc("stripe_sync_subscription", {
+    _agency_id: agencyId,
+    _user_id: userId,
+    _stripe_subscription_id: subscription.id,
+    _stripe_customer_id: subscription.customer,
+    _product_id: typeof item?.price?.product === "string" ? item.price.product : item?.price?.product?.id ?? "",
+    _price_key: resolvePriceId(item),
+    _status: subscription.status,
+    _period_start: ps ? new Date(ps * 1000).toISOString() : null,
+    _period_end: pe ? new Date(pe * 1000).toISOString() : null,
+    _cancel_at_period_end: !!subscription.cancel_at_period_end,
+    _environment: env,
+  });
+  if (error) throw error;
+  return true;
+}
+
+async function handleCheckoutCompleted(session: any, env: StripeEnv) {
+  if (session.metadata?.kind !== "credit_topup") return;
+  // Nur bestätigte Zahlung; asynchrone Methoden kommen über async_payment_succeeded
+  if (session.payment_status !== "paid") return;
+  const agencyId = await agencyForCustomer(session.customer, env);
+  if (!agencyId || agencyId !== session.metadata?.agencyId) {
+    console.error("Credit top-up: customer/agency mismatch", session.id);
+    return;
+  }
+  const { error } = await (getSupabase() as any).rpc("stripe_grant_credit_purchase", {
+    _agency_id: agencyId,
+    _package_key: String(session.metadata?.packageKey ?? ""),
+    _session_id: session.id,
+  });
+  if (error) throw error;
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
-  const event = await verifyWebhook(req, env);
+  const event = (await verifyWebhook(req, env)) as any;
+  const sb = getSupabase() as any;
+  if (event.id) {
+    const { data: seen } = await sb.from("stripe_webhook_events").select("event_id").eq("event_id", event.id).maybeSingle();
+    if (seen) return;
+  }
+  await dispatch(event, env);
+  if (event.id) {
+    await sb.from("stripe_webhook_events").upsert(
+      { event_id: event.id, environment: env, event_type: event.type },
+      { onConflict: "event_id", ignoreDuplicates: true },
+    );
+  }
+}
+
+async function dispatch(event: any, env: StripeEnv) {
+  const obj = event.data.object;
+  if (event.type.startsWith("customer.subscription.") && (await syncImmoliaSubscription(obj, env))) {
+    if (event.type === "customer.subscription.deleted") {
+      await (getSupabase() as any).from("subscriptions").update({ status: "canceled", updated_at: new Date().toISOString() })
+        .eq("stripe_subscription_id", obj.id).eq("environment", env);
+    }
+    return;
+  }
   switch (event.type) {
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded":
+      await handleCheckoutCompleted(obj, env);
+      break;
+    case "invoice.paid":
+    case "invoice.payment_failed": {
+      // Abo-Status neu laden → Periode/Plan-Credits (idempotent) bzw. past_due
+      const subId = obj.parent?.subscription_details?.subscription ?? obj.subscription;
+      if (subId) {
+        const { createStripeClient } = await import("@/lib/stripe.server");
+        const sub = await createStripeClient(env).subscriptions.retrieve(String(subId));
+        await syncImmoliaSubscription(sub, env);
+      }
+      break;
+    }
     case "customer.subscription.created":
       await handleSubscriptionCreated(event.data.object, env);
       break;

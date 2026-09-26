@@ -48,3 +48,6 @@
 - Abo-Perioden-Key = Abo-ID + Periodenbeginn (ms); Zustand über commercial_subscription_state (trialing/active/past_due/canceled_until_period_end/unpaid/post_trial/no_active_subscription); why: neue Periode = neue Messperiode, Wiederholung bucht nie doppelt.
 ## Katalog (5.5)
 - Pläne solo/team/business (aktiv, CHF 29/69/149 in plans.price_monthly), enterprise Entwurf (is_custom); Benutzer/Speicher metered, Kerndaten ausdrücklich unbegrenzt; Overage-Kosten, Finanzierungskontingente, Paketpreise, Test-Credits bis zur Freigabe leer (Entscheidung liefert overage_cost_not_set); why: keine erfundenen Werte.
+## Stripe Billing (5.6)
+- Stripe ist nur Zahlungsquelle: ein Stripe-Kunde pro Firma (stripe_customers, nur service_role), Firma immer serverseitig über current_agency_id + Inhaber/Admin; Abo/Credits nur per verifiziertem Webhook über stripe_sync_subscription / stripe_grant_credit_purchase (idempotent 'stripe:checkout:<session>', stripe_webhook_events); why: nie Browser-Vertrauen, nie Doppelbuchung.
+- past_due mit Frist platform_commercial_settings.past_due_grace_days (14), danach Zustand unpaid = Pay-as-you-use, nie Sperre/Löschung; why: Grace ohne Datenverlust.

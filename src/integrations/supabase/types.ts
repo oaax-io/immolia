@@ -3865,6 +3865,7 @@ export type Database = {
           price_yearly: number | null
           sort_order: number
           status: string
+          stripe_price_key: string | null
           trial_days: number | null
           updated_at: string
         }
@@ -3882,6 +3883,7 @@ export type Database = {
           price_yearly?: number | null
           sort_order?: number
           status?: string
+          stripe_price_key?: string | null
           trial_days?: number | null
           updated_at?: string
         }
@@ -3899,6 +3901,7 @@ export type Database = {
           price_yearly?: number | null
           sort_order?: number
           status?: string
+          stripe_price_key?: string | null
           trial_days?: number | null
           updated_at?: string
         }
@@ -3965,6 +3968,7 @@ export type Database = {
         Row: {
           auto_trial_enabled: boolean
           id: boolean
+          past_due_grace_days: number | null
           trial_credits: number | null
           trial_days: number
           trial_plan_id: string | null
@@ -3973,6 +3977,7 @@ export type Database = {
         Insert: {
           auto_trial_enabled?: boolean
           id?: boolean
+          past_due_grace_days?: number | null
           trial_credits?: number | null
           trial_days?: number
           trial_plan_id?: string | null
@@ -3981,6 +3986,7 @@ export type Database = {
         Update: {
           auto_trial_enabled?: boolean
           id?: boolean
+          past_due_grace_days?: number | null
           trial_credits?: number | null
           trial_days?: number
           trial_plan_id?: string | null
@@ -5064,6 +5070,56 @@ export type Database = {
           },
         ]
       }
+      stripe_customers: {
+        Row: {
+          agency_id: string
+          created_at: string
+          environment: string
+          stripe_customer_id: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          environment: string
+          stripe_customer_id: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          environment?: string
+          stripe_customer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_customers_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stripe_webhook_events: {
+        Row: {
+          environment: string
+          event_id: string
+          event_type: string
+          processed_at: string
+        }
+        Insert: {
+          environment: string
+          event_id: string
+          event_type: string
+          processed_at?: string
+        }
+        Update: {
+          environment?: string
+          event_id?: string
+          event_type?: string
+          processed_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           agency_id: string | null
@@ -5074,6 +5130,7 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
+          past_due_since: string | null
           plan_id: string | null
           price_id: string
           product_id: string
@@ -5095,6 +5152,7 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          past_due_since?: string | null
           plan_id?: string | null
           price_id: string
           product_id: string
@@ -5116,6 +5174,7 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          past_due_since?: string | null
           plan_id?: string | null
           price_id?: string
           product_id?: string
@@ -6296,6 +6355,26 @@ export type Database = {
       single_agency_of: { Args: { _user_id: string }; Returns: string }
       storage_object_agency: {
         Args: { _bucket: string; _name: string; _owner: string }
+        Returns: string
+      }
+      stripe_grant_credit_purchase: {
+        Args: { _agency_id: string; _package_key: string; _session_id: string }
+        Returns: string
+      }
+      stripe_sync_subscription: {
+        Args: {
+          _agency_id: string
+          _cancel_at_period_end: boolean
+          _environment: string
+          _period_end: string
+          _period_start: string
+          _price_key: string
+          _product_id: string
+          _status: string
+          _stripe_customer_id: string
+          _stripe_subscription_id: string
+          _user_id: string
+        }
         Returns: string
       }
       tenant_branding_of: { Args: { _agency: string }; Returns: Json }

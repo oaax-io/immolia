@@ -69,6 +69,7 @@ import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esi
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
 import { Route as AppSettingsCategoriesRouteImport } from './routes/_app/settings.categories'
 import { Route as AppSettingsBrandkitRouteImport } from './routes/_app/settings.brandkit'
+import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings.billing'
 import { Route as AppSettingsBanksRouteImport } from './routes/_app/settings.banks'
 import { Route as AppPropertiesIdRouteImport } from './routes/_app/properties.$id'
 import { Route as AppMeetRoomRouteImport } from './routes/_app/meet.$room'
@@ -380,6 +381,11 @@ const AppSettingsBrandkitRoute = AppSettingsBrandkitRouteImport.update({
   path: '/brandkit',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsBanksRoute = AppSettingsBanksRouteImport.update({
   id: '/banks',
   path: '/banks',
@@ -481,6 +487,7 @@ export interface FileRoutesByFullPath {
   '/meet/$room': typeof AppMeetRoomRoute
   '/properties/$id': typeof AppPropertiesIdRouteWithChildren
   '/settings/banks': typeof AppSettingsBanksRoute
+  '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -548,6 +555,7 @@ export interface FileRoutesByTo {
   '/meet/$room': typeof AppMeetRoomRoute
   '/properties/$id': typeof AppPropertiesIdRouteWithChildren
   '/settings/banks': typeof AppSettingsBanksRoute
+  '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
@@ -621,6 +629,7 @@ export interface FileRoutesById {
   '/_app/meet/$room': typeof AppMeetRoomRoute
   '/_app/properties/$id': typeof AppPropertiesIdRouteWithChildren
   '/_app/settings/banks': typeof AppSettingsBanksRoute
+  '/_app/settings/billing': typeof AppSettingsBillingRoute
   '/_app/settings/brandkit': typeof AppSettingsBrandkitRoute
   '/_app/settings/categories': typeof AppSettingsCategoriesRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
@@ -694,6 +703,7 @@ export interface FileRouteTypes {
     | '/meet/$room'
     | '/properties/$id'
     | '/settings/banks'
+    | '/settings/billing'
     | '/settings/brandkit'
     | '/settings/categories'
     | '/settings/company'
@@ -761,6 +771,7 @@ export interface FileRouteTypes {
     | '/meet/$room'
     | '/properties/$id'
     | '/settings/banks'
+    | '/settings/billing'
     | '/settings/brandkit'
     | '/settings/categories'
     | '/settings/company'
@@ -833,6 +844,7 @@ export interface FileRouteTypes {
     | '/_app/meet/$room'
     | '/_app/properties/$id'
     | '/_app/settings/banks'
+    | '/_app/settings/billing'
     | '/_app/settings/brandkit'
     | '/_app/settings/categories'
     | '/_app/settings/company'
@@ -1297,6 +1309,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsBrandkitRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/billing': {
+      id: '/_app/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof AppSettingsBillingRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/banks': {
       id: '/_app/settings/banks'
       path: '/banks'
@@ -1400,6 +1419,7 @@ const AppLeadsRouteWithChildren = AppLeadsRoute._addFileChildren(
 
 interface AppSettingsRouteChildren {
   AppSettingsBanksRoute: typeof AppSettingsBanksRoute
+  AppSettingsBillingRoute: typeof AppSettingsBillingRoute
   AppSettingsBrandkitRoute: typeof AppSettingsBrandkitRoute
   AppSettingsCategoriesRoute: typeof AppSettingsCategoriesRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
@@ -1415,6 +1435,7 @@ interface AppSettingsRouteChildren {
 
 const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsBanksRoute: AppSettingsBanksRoute,
+  AppSettingsBillingRoute: AppSettingsBillingRoute,
   AppSettingsBrandkitRoute: AppSettingsBrandkitRoute,
   AppSettingsCategoriesRoute: AppSettingsCategoriesRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
