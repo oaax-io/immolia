@@ -310,6 +310,64 @@ export type Database = {
           },
         ]
       }
+      agency_trials: {
+        Row: {
+          agency_id: string
+          created_at: string
+          credit_operation_id: string | null
+          credits_granted: number
+          extensions: Json
+          original_trial_end: string
+          subscription_id: string | null
+          trial_end: string
+          trial_start: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          credit_operation_id?: string | null
+          credits_granted?: number
+          extensions?: Json
+          original_trial_end: string
+          subscription_id?: string | null
+          trial_end: string
+          trial_start: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          credit_operation_id?: string | null
+          credits_granted?: number
+          extensions?: Json
+          original_trial_end?: string
+          subscription_id?: string | null
+          trial_end?: string
+          trial_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_trials_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: true
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_trials_credit_operation_id_fkey"
+            columns: ["credit_operation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_trials_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           agency_id: string | null
@@ -3799,6 +3857,7 @@ export type Database = {
           id: string
           is_public: boolean
           key: string
+          monthly_credits: number | null
           name: string
           sort_order: number
           status: string
@@ -3811,6 +3870,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           key: string
+          monthly_credits?: number | null
           name: string
           sort_order?: number
           status?: string
@@ -3823,6 +3883,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           key?: string
+          monthly_credits?: number | null
           name?: string
           sort_order?: number
           status?: string
@@ -3887,6 +3948,41 @@ export type Database = {
           target_type?: string
         }
         Relationships: []
+      }
+      platform_commercial_settings: {
+        Row: {
+          auto_trial_enabled: boolean
+          id: boolean
+          trial_credits: number | null
+          trial_days: number
+          trial_plan_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_trial_enabled?: boolean
+          id?: boolean
+          trial_credits?: number | null
+          trial_days?: number
+          trial_plan_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_trial_enabled?: boolean
+          id?: boolean
+          trial_credits?: number | null
+          trial_days?: number
+          trial_plan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_commercial_settings_trial_plan_id_fkey"
+            columns: ["trial_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portal_event_log: {
         Row: {
@@ -4969,6 +5065,7 @@ export type Database = {
           plan_id: string | null
           price_id: string
           product_id: string
+          source: string | null
           status: string
           stripe_customer_id: string
           stripe_subscription_id: string
@@ -4989,6 +5086,7 @@ export type Database = {
           plan_id?: string | null
           price_id: string
           product_id: string
+          source?: string | null
           status?: string
           stripe_customer_id: string
           stripe_subscription_id: string
@@ -5009,6 +5107,7 @@ export type Database = {
           plan_id?: string | null
           price_id?: string
           product_id?: string
+          source?: string | null
           status?: string
           stripe_customer_id?: string
           stripe_subscription_id?: string
@@ -5420,9 +5519,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _commercial_grant_period_credits: {
+        Args: { _sub_id: string }
+        Returns: string
+      }
       _commercial_resolve_agency: {
         Args: { _agency_id: string }
         Returns: string
+      }
+      _commercial_start_trial: {
+        Args: { _actor: string; _agency_id: string }
+        Returns: Json
       }
       _commercial_usage_decision: {
         Args: { _key: string; _qty: number; a: string }
@@ -5564,6 +5671,11 @@ export type Database = {
         Args: { _profile_agency: string; _profile_id: string }
         Returns: boolean
       }
+      commercial_advance_due_periods: { Args: never; Returns: Json }
+      commercial_advance_period: {
+        Args: { _subscription_id: string }
+        Returns: Json
+      }
       commercial_can_read: { Args: { _agency_id: string }; Returns: boolean }
       commercial_period_key: {
         Args: { _agency_id: string; _period: string }
@@ -5574,6 +5686,14 @@ export type Database = {
         Returns: Json
       }
       commercial_recurring_charge_due: { Args: never; Returns: Json }
+      commercial_set_cancel_at_period_end: {
+        Args: { _agency_id: string; _cancel: boolean; _reason?: string }
+        Returns: Json
+      }
+      commercial_subscription_state: {
+        Args: { _agency_id: string }
+        Returns: Json
+      }
       commercial_usage_current: {
         Args: { _agency_id: string; _key: string; _period: string }
         Returns: number
@@ -5784,6 +5904,15 @@ export type Database = {
       }
       platform_assert_admin: { Args: never; Returns: undefined }
       platform_assert_system_owner: { Args: never; Returns: undefined }
+      platform_assign_plan: {
+        Args: {
+          _agency_id: string
+          _billing_period: string
+          _plan_id: string
+          _reason: string
+        }
+        Returns: Json
+      }
       platform_check_owner_email: { Args: { _email: string }; Returns: boolean }
       platform_check_subdomain: { Args: { _slug: string }; Returns: string }
       platform_core_module_keys: { Args: never; Returns: string[] }
@@ -5843,6 +5972,10 @@ export type Database = {
       platform_domain_record_check: {
         Args: { _actor: string; _error: string; _id: string; _ok: boolean }
         Returns: string
+      }
+      platform_extend_trial: {
+        Args: { _agency_id: string; _days: number; _reason: string }
+        Returns: Json
       }
       platform_find_user_by_email: { Args: { _email: string }; Returns: Json }
       platform_invite_user: {
@@ -5981,6 +6114,16 @@ export type Database = {
           _agency_id: string
           _ends_at?: string
           _quantity?: number
+        }
+        Returns: undefined
+      }
+      platform_set_commercial_settings: {
+        Args: {
+          _auto_trial: boolean
+          _reason: string
+          _trial_credits: number
+          _trial_days: number
+          _trial_plan_id: string
         }
         Returns: undefined
       }
