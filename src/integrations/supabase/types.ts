@@ -3751,7 +3751,11 @@ export type Database = {
           is_unlimited: boolean
           limit_key: string
           limit_value: number | null
+          overage_credit_cost: number | null
+          period: string | null
           plan_id: string
+          policy: string | null
+          unit: string | null
           updated_at: string
         }
         Insert: {
@@ -3759,7 +3763,11 @@ export type Database = {
           is_unlimited?: boolean
           limit_key: string
           limit_value?: number | null
+          overage_credit_cost?: number | null
+          period?: string | null
           plan_id: string
+          policy?: string | null
+          unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -3767,7 +3775,11 @@ export type Database = {
           is_unlimited?: boolean
           limit_key?: string
           limit_value?: number | null
+          overage_credit_cost?: number | null
+          period?: string | null
           plan_id?: string
+          policy?: string | null
+          unit?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3790,6 +3802,7 @@ export type Database = {
           name: string
           sort_order: number
           status: string
+          trial_days: number | null
           updated_at: string
         }
         Insert: {
@@ -3801,6 +3814,7 @@ export type Database = {
           name: string
           sort_order?: number
           status?: string
+          trial_days?: number | null
           updated_at?: string
         }
         Update: {
@@ -3812,6 +3826,7 @@ export type Database = {
           name?: string
           sort_order?: number
           status?: string
+          trial_days?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -4667,6 +4682,130 @@ export type Database = {
           },
         ]
       }
+      recurring_credit_charges: {
+        Row: {
+          agency_id: string
+          amount: number
+          attempts: number
+          created_at: string
+          credit_operation_id: string | null
+          id: string
+          period_key: string
+          resource_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          amount: number
+          attempts?: number
+          created_at?: string
+          credit_operation_id?: string | null
+          id?: string
+          period_key: string
+          resource_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          amount?: number
+          attempts?: number
+          created_at?: string
+          credit_operation_id?: string | null
+          id?: string
+          period_key?: string
+          resource_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_credit_charges_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_credit_charges_credit_operation_id_fkey"
+            columns: ["credit_operation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_credit_charges_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_credit_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_credit_resources: {
+        Row: {
+          agency_id: string
+          created_at: string
+          created_by: string | null
+          credit_cost_per_period: number | null
+          ends_at: string | null
+          id: string
+          period: string
+          quantity: number
+          reason: string | null
+          resource_key: string
+          starts_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          created_by?: string | null
+          credit_cost_per_period?: number | null
+          ends_at?: string | null
+          id?: string
+          period?: string
+          quantity: number
+          reason?: string | null
+          resource_key: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          created_by?: string | null
+          credit_cost_per_period?: number | null
+          ends_at?: string | null
+          id?: string
+          period?: string
+          quantity?: number
+          reason?: string | null
+          resource_key?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_credit_resources_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_credit_resources_resource_key_fkey"
+            columns: ["resource_key"]
+            isOneToOne: false
+            referencedRelation: "usage_meters"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       reservations: {
         Row: {
           agency_id: string | null
@@ -5104,6 +5243,112 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_events: {
+        Row: {
+          agency_id: string
+          created_at: string
+          created_by: string | null
+          credit_cost: number
+          credit_operation_id: string | null
+          decision: string
+          id: string
+          idempotency_key: string
+          included_quantity: number
+          overage_quantity: number
+          period_key: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          usage_key: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number
+          credit_operation_id?: string | null
+          decision: string
+          id?: string
+          idempotency_key: string
+          included_quantity?: number
+          overage_quantity?: number
+          period_key: string
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          usage_key: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          created_by?: string | null
+          credit_cost?: number
+          credit_operation_id?: string | null
+          decision?: string
+          id?: string
+          idempotency_key?: string
+          included_quantity?: number
+          overage_quantity?: number
+          period_key?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          usage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_credit_operation_id_fkey"
+            columns: ["credit_operation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_usage_key_fkey"
+            columns: ["usage_key"]
+            isOneToOne: false
+            referencedRelation: "usage_meters"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      usage_meters: {
+        Row: {
+          created_at: string
+          default_period: string
+          key: string
+          kind: string
+          name: string
+          recurring: boolean
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          default_period?: string
+          key: string
+          kind: string
+          name: string
+          recurring?: boolean
+          unit: string
+        }
+        Update: {
+          created_at?: string
+          default_period?: string
+          key?: string
+          kind?: string
+          name?: string
+          recurring?: boolean
+          unit?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -5175,6 +5420,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _commercial_resolve_agency: {
+        Args: { _agency_id: string }
+        Returns: string
+      }
+      _commercial_usage_decision: {
+        Args: { _key: string; _qty: number; a: string }
+        Returns: Json
+      }
       _credit_available: { Args: { _agency_id: string }; Returns: number }
       _credit_debit: {
         Args: {
@@ -5312,6 +5565,38 @@ export type Database = {
         Returns: boolean
       }
       commercial_can_read: { Args: { _agency_id: string }; Returns: boolean }
+      commercial_period_key: {
+        Args: { _agency_id: string; _period: string }
+        Returns: string
+      }
+      commercial_recurring_charge: {
+        Args: { _resource_id: string }
+        Returns: Json
+      }
+      commercial_recurring_charge_due: { Args: never; Returns: Json }
+      commercial_usage_current: {
+        Args: { _agency_id: string; _key: string; _period: string }
+        Returns: number
+      }
+      commercial_usage_decision: {
+        Args: {
+          _agency_id?: string
+          _requested_quantity?: number
+          _usage_key: string
+        }
+        Returns: Json
+      }
+      commercial_usage_record: {
+        Args: {
+          _agency_id?: string
+          _idempotency_key: string
+          _quantity: number
+          _reference_id?: string
+          _reference_type?: string
+          _usage_key: string
+        }
+        Returns: Json
+      }
       commercial_valid_entitlement_key: {
         Args: { _key: string }
         Returns: boolean
@@ -5707,6 +5992,18 @@ export type Database = {
         Args: { _agency_id: string; _entitled: boolean; _module: string }
         Returns: undefined
       }
+      platform_set_plan_allowance: {
+        Args: {
+          _included: number
+          _key: string
+          _overage_credit_cost: number
+          _period: string
+          _plan_id: string
+          _policy: string
+          _unit?: string
+        }
+        Returns: undefined
+      }
       platform_set_plan_entitlement: {
         Args: { _enabled: boolean; _key: string; _plan_id: string }
         Returns: undefined
@@ -5721,6 +6018,20 @@ export type Database = {
         Returns: undefined
       }
       platform_set_primary_domain: { Args: { _id: string }; Returns: undefined }
+      platform_set_recurring_resource: {
+        Args: {
+          _agency_id: string
+          _credit_cost_per_period: number
+          _ends_at: string
+          _period: string
+          _quantity: number
+          _reason: string
+          _resource_id?: string
+          _resource_key: string
+          _starts_at: string
+        }
+        Returns: string
+      }
       platform_set_tenant_status: {
         Args: { _agency_id: string; _status: string }
         Returns: string
