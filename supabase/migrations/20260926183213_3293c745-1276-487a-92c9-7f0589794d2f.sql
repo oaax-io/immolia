@@ -1,0 +1,1 @@
+ALTER FUNCTION public._credit_default_order() SET search_path = public;
