@@ -1797,7 +1797,9 @@ export type Database = {
           delta: number
           expires_at: string | null
           id: string
+          lot_id: string | null
           metadata: Json
+          operation_id: string | null
           reference_id: string | null
           reference_type: string | null
           source: string
@@ -1812,7 +1814,9 @@ export type Database = {
           delta: number
           expires_at?: string | null
           id?: string
+          lot_id?: string | null
           metadata?: Json
+          operation_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           source: string
@@ -1827,7 +1831,9 @@ export type Database = {
           delta?: number
           expires_at?: string | null
           id?: string
+          lot_id?: string | null
           metadata?: Json
+          operation_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
           source?: string
@@ -1842,10 +1848,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "credit_ledger_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "credit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "credit_ledger_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "credit_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_operations: {
+        Row: {
+          action_key: string | null
+          agency_id: string
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          idempotency_key: string | null
+          kind: string
+          reason: string | null
+          refund_of: string | null
+        }
+        Insert: {
+          action_key?: string | null
+          agency_id: string
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          kind: string
+          reason?: string | null
+          refund_of?: string | null
+        }
+        Update: {
+          action_key?: string | null
+          agency_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string | null
+          kind?: string
+          reason?: string | null
+          refund_of?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_operations_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_operations_refund_of_fkey"
+            columns: ["refund_of"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
             referencedColumns: ["id"]
           },
         ]
@@ -5108,6 +5175,55 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _credit_available: { Args: { _agency_id: string }; Returns: number }
+      _credit_debit: {
+        Args: {
+          _action_key: string
+          _actor: string
+          _agency_id: string
+          _amount: number
+          _op: string
+          _source: string
+          _wallet: string
+        }
+        Returns: Json
+      }
+      _credit_default_order: { Args: never; Returns: string[] }
+      _credit_insert_grant: {
+        Args: {
+          _actor: string
+          _agency_id: string
+          _amount: number
+          _bucket: string
+          _expires_at: string
+          _idem: string
+          _kind: string
+          _reason: string
+          _ref_id: string
+          _ref_type: string
+          _source: string
+        }
+        Returns: string
+      }
+      _credit_open_lots: {
+        Args: { _agency_id: string }
+        Returns: {
+          bucket: string
+          expires_at: string
+          lot_id: string
+          remaining: number
+        }[]
+      }
+      _credit_refund: {
+        Args: {
+          _actor: string
+          _amount: number
+          _operation_id: string
+          _reason: string
+        }
+        Returns: string
+      }
+      _credit_wallet: { Args: { _agency_id: string }; Returns: string }
       _invitation_audit: {
         Args: {
           _action: string
@@ -5215,6 +5331,35 @@ export type Database = {
       credit_action_effective_cost: {
         Args: { _action_key: string }
         Returns: number
+      }
+      credit_balance: { Args: { _agency_id?: string }; Returns: number }
+      credit_balance_breakdown: { Args: { _agency_id?: string }; Returns: Json }
+      credit_can_consume: { Args: { _action_key: string }; Returns: Json }
+      credit_consume: {
+        Args: {
+          _action_key: string
+          _agency_id?: string
+          _idempotency_key: string
+        }
+        Returns: Json
+      }
+      credit_grant: {
+        Args: {
+          _agency_id: string
+          _amount: number
+          _bucket: string
+          _expires_at: string
+          _idempotency_key: string
+          _reason: string
+          _reference_id?: string
+          _reference_type?: string
+          _source: string
+        }
+        Returns: string
+      }
+      credit_refund: {
+        Args: { _amount?: number; _operation_id: string; _reason?: string }
+        Returns: string
       }
       current_agency_id: { Args: never; Returns: string }
       financing_link_resolve: {
@@ -5367,6 +5512,20 @@ export type Database = {
           _slug: string
         }
         Returns: Json
+      }
+      platform_credit_adjust: {
+        Args: {
+          _agency_id: string
+          _amount: number
+          _bucket: string
+          _expires_at: string
+          _reason: string
+        }
+        Returns: string
+      }
+      platform_credit_refund: {
+        Args: { _amount: number; _operation_id: string; _reason: string }
+        Returns: string
       }
       platform_domain_audit: {
         Args: {
