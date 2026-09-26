@@ -70,3 +70,15 @@ export async function verifyWebhook(req: Request, env: StripeEnv): Promise<{ typ
   if (!v1Signatures.includes(expected)) throw new Error("Invalid webhook signature");
   return JSON.parse(body);
 }
+
+export function getStripeErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    const e = error as { message?: string; type?: string; code?: string; raw?: { message?: string; code?: string } };
+    const message = e.raw?.message ?? e.message;
+    if (message) {
+      const code = e.raw?.code ?? e.code;
+      return code ? `${message} (${code})` : message;
+    }
+  }
+  return "Stripe request failed";
+}
