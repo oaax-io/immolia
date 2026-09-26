@@ -32,3 +32,9 @@
 - Auswertung nur serverseitig: agency_has_entitlement / agency_effective_limit (Plan + Add-ons) / agency_commercial_state / credit_action_effective_cost (NULL, 0 oder inaktiv = kostenlos); why: Frontend rechnet nie selbst.
 - Definitionen nur über platform_* RPCs (is_platform_admin, ein Audit-Eintrag); Tenants lesen nur eigene agency_addons/credits (Inhaber/Admin), schreiben nie; why: keine Browser-Mutationen, Plattformrolle verleiht keine Commercial-Rechte.
 - commercial_enforced=false: agency_modules bleibt massgeblich, bis die Plan-Migration ausdrücklich aktiviert wird; Stripe darf später nie agency_modules.is_enabled setzen; why: ASIMO verliert keine Funktionen.
+## Credit Engine (5.2)
+- Credits = Posten-Modell im bestehenden credit_ledger: positive Zeile = Posten (Topf + optional expires_at), negative Zeile belastet genau einen Posten (lot_id); fachliche Vorgänge in credit_operations (unveränderlich, operation_id verbindet mehrere Zeilen); why: Ablauf pro Posten, Saldo jederzeit aus dem Journal rekonstruierbar.
+- Verbrauch nur über credit_consume(action_key, idempotency_key): aktive Firma, Kosten aus credit_action_costs, Wallet-Sperre FOR UPDATE, Reihenfolge subscription → promotional → adjustment → purchased, früheste Ablaufzeit zuerst; Idempotenz per UNIQUE-Index; why: nie doppelt, nie negativ, Browser bestimmt nie Kosten.
+- Gutschrift/Rückerstattung nur service_role (credit_grant/credit_refund, später Stripe/Abo) oder Plattform (platform_credit_adjust/refund mit Begründung + Audit); Tenants nie; why: keine Selbstgutschrift.
+- Kein Reserve/Commit: kostenpflichtige externe Aktionen buchen erst nach Erfolg (credit_can_consume vorher, credit_consume nachher mit gleicher Idempotenz); why: nie Belastung bei technischem Fehler, geringere Komplexität.
+- subscriptions lesen nur Mitglieder der aktiven Firma (RESTRICTIVE sec52_subscriptions_select); why: M5, keine Plattform-Hintertür.
