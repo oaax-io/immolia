@@ -3853,12 +3853,16 @@ export type Database = {
       plans: {
         Row: {
           created_at: string
+          currency: string | null
           description: string | null
           id: string
+          is_custom: boolean | null
           is_public: boolean
           key: string
           monthly_credits: number | null
           name: string
+          price_monthly: number | null
+          price_yearly: number | null
           sort_order: number
           status: string
           trial_days: number | null
@@ -3866,12 +3870,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string | null
           description?: string | null
           id?: string
+          is_custom?: boolean | null
           is_public?: boolean
           key: string
           monthly_credits?: number | null
           name: string
+          price_monthly?: number | null
+          price_yearly?: number | null
           sort_order?: number
           status?: string
           trial_days?: number | null
@@ -3879,12 +3887,16 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string | null
           description?: string | null
           id?: string
+          is_custom?: boolean | null
           is_public?: boolean
           key?: string
           monthly_credits?: number | null
           name?: string
+          price_monthly?: number | null
+          price_yearly?: number | null
           sort_order?: number
           status?: string
           trial_days?: number | null

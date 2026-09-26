@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 /** Pflege nur über platform_upsert_* RPCs (Plattform-Admin, Audit-Eintrag). Keine erfundenen Werte. */
 const CATEGORIES = [
-  ["ai", "KI"], ["communication", "Kommunikation"], ["documents", "Dokumente"],
-  ["data", "Daten"], ["marketing", "Marketing"], ["publishing", "Publikation"],
+  ["ai", "KI"], ["financing", "Finanzierung"], ["communication", "Kommunikation"], ["documents", "Dokumente"],
+  ["data", "Daten"], ["media", "Medien"], ["publishing", "Publikation"], ["storage", "Speicher"],
+  ["users", "Benutzer"], ["marketing", "Marketing"],
 ] as const;
 const STATUSES = [["draft", "Entwurf"], ["active", "Aktiv"], ["archived", "Archiviert"]] as const;
 
