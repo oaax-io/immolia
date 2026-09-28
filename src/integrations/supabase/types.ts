@@ -6082,6 +6082,10 @@ export type Database = {
         Args: { _agency_id: string; _days: number; _reason: string }
         Returns: Json
       }
+      platform_feedback_attachments: {
+        Args: { _feedback_id: string }
+        Returns: Json
+      }
       platform_find_user_by_email: { Args: { _email: string }; Returns: Json }
       platform_invite_tenant_owner: {
         Args: {

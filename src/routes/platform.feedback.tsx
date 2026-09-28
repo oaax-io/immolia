@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlatformPage, QueryState } from "@/components/platform/PlatformLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/platform-admin";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { getPlatformFeedbackAttachments } from "@/lib/platform-feedback.functions";
 
 type Row = {
   id: string; agency_id: string | null; agency_name: string | null; author_name: string | null; author_email: string | null;
@@ -44,7 +47,7 @@ function FeedbackCenter() {
           <table className="w-full text-sm">
             <thead className="border-b text-left text-muted-foreground"><tr>
               <th className="p-3">Unternehmen</th><th className="p-3">Benutzer</th><th className="p-3">Kategorie</th>
-              <th className="p-3">Betreff</th><th className="p-3">Status</th><th className="p-3">Priorität</th><th className="p-3">Datum</th>
+              <th className="p-3">Betreff</th><th className="p-3">Status</th><th className="p-3">Priorität</th><th className="p-3">Datum</th><th className="p-3">Anhänge</th>
             </tr></thead>
             <tbody>
               {(q.data ?? []).map((r) => (
@@ -66,13 +69,36 @@ function FeedbackCenter() {
                     </Select>
                   </td>
                   <td className="p-3">{fmtDate(r.created_at)}</td>
+                  <td className="p-3"><AttachmentsCell id={r.id} /></td>
                 </tr>
               ))}
-              {q.data && q.data.length === 0 && <tr><td className="p-6 text-center text-muted-foreground" colSpan={7}>Noch kein Feedback.</td></tr>}
+              {q.data && q.data.length === 0 && <tr><td className="p-6 text-center text-muted-foreground" colSpan={8}>Noch kein Feedback.</td></tr>}
             </tbody>
           </table>
         </div>
       </CardContent></Card>
     </PlatformPage>
+  );
+}
+
+function AttachmentsCell({ id }: { id: string }) {
+  const fetchAtt = useServerFn(getPlatformFeedbackAttachments);
+  const [show, setShow] = useState(false);
+  const q = useQuery({
+    queryKey: ["platform", "feedback-attachments", id],
+    enabled: show,
+    staleTime: 10 * 60 * 1000,
+    queryFn: () => fetchAtt({ data: { feedbackId: id } }),
+  });
+  if (!show) return <button type="button" className="text-xs underline" onClick={() => setShow(true)}>Anzeigen</button>;
+  if (q.isLoading) return <span className="text-xs text-muted-foreground">Lädt…</span>;
+  if (q.error) return <span className="text-xs text-destructive">Kein Zugriff</span>;
+  if (!q.data?.length) return <span className="text-xs text-muted-foreground">Keine</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {q.data.map((a, i) => a.url
+        ? <a key={i} href={a.url} target="_blank" rel="noreferrer" className="text-xs underline">{a.name}</a>
+        : <span key={i} className="text-xs text-muted-foreground">{a.name} (nicht verfügbar)</span>)}
+    </div>
   );
 }

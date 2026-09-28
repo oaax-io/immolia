@@ -52,7 +52,14 @@ const PRIORITIES = [
   { value: "critical", label: "Kritisch" },
 ] as const;
 
-type Attachment = { url: string; name: string; mime: string };
+type Attachment = { url?: string; path?: string; name: string; mime: string };
+
+// Privater Speicher: Pfad aus neuem Feld oder (Altbestand) aus der gespeicherten URL ableiten.
+function attachmentPath(a: Attachment): string | null {
+  if (a.path) return a.path;
+  const m = a.url?.match(/\/feedback\/(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
 function typeMeta(t: string) { return TYPES.find(x => x.value === t) ?? TYPES[3]; }
 function statusMeta(s: string) { return STATUSES.find(x => x.value === s) ?? STATUSES[0]; }
@@ -70,15 +77,15 @@ function useIsSuperadmin() {
   return !!data;
 }
 
-async function uploadFiles(files: File[], userId: string): Promise<Attachment[]> {
+async function uploadFiles(files: File[], userId: string, agencyId: string | null): Promise<Attachment[]> {
+  if (!agencyId) throw new Error("Kein aktives Unternehmen");
   const out: Attachment[] = [];
   for (const f of files) {
     const ext = f.name.split(".").pop() ?? "bin";
-    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const path = `${agencyId}/${userId}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("feedback").upload(path, f, { contentType: f.type });
     if (error) throw error;
-    const { data } = supabase.storage.from("feedback").getPublicUrl(path);
-    out.push({ url: data.publicUrl, name: f.name, mime: f.type });
+    out.push({ path, name: f.name, mime: f.type });
   }
   return out;
 }
@@ -108,7 +115,8 @@ function FeedbackPage() {
   });
 
   const { data: votes = [] } = useQuery({
-    queryKey: ["feedback-votes"],
+    queryKey: ["feedback-votes", fbAgencyId],
+    enabled: !!fbAgencyId,
     queryFn: async () => {
       const { data } = await supabase.from("feedback_votes").select("feedback_id, user_id");
       return data ?? [];
@@ -137,7 +145,8 @@ function FeedbackPage() {
   });
 
   const { data: profiles = [] } = useQuery({
-    queryKey: ["feedback-profiles"],
+    queryKey: ["feedback-profiles", fbAgencyId],
+    enabled: !!fbAgencyId,
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("id, full_name, email");
       return data ?? [];
@@ -246,6 +255,7 @@ function CreateFeedbackDialog({
   open, onOpenChange, userId, profiles, onCreated,
 }: { open: boolean; onOpenChange: (v: boolean) => void; userId: string | null; profiles: Array<{ id: string; full_name: string | null; email: string | null }>; onCreated: () => void }) {
   const isSuperadmin = useIsSuperadmin();
+  const agencyId = useTenantConfig().data?.agency_id ?? null;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<string>("idea");
@@ -267,7 +277,7 @@ function CreateFeedbackDialog({
     setSubmitting(true);
     try {
       const effectiveAuthor = isSuperadmin && authorId ? authorId : userId;
-      const attachments = files.length ? await uploadFiles(files, userId) : [];
+      const attachments = files.length ? await uploadFiles(files, userId, agencyId) : [];
       const payload: any = {
         title: title.trim(),
         description: description.trim() || null,
@@ -411,9 +421,10 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
   const [files, setFiles] = useState<File[]>([]);
   const [posting, setPosting] = useState(false);
 
+  const agencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: item } = useQuery({
-    queryKey: ["feedback", id],
-    enabled: !!id,
+    queryKey: ["feedback", agencyId, "detail", id],
+    enabled: !!id && !!agencyId,
     queryFn: async () => {
       const { data, error } = await supabase.from("feedback").select("*").eq("id", id!).maybeSingle();
       if (error) throw error;
@@ -422,8 +433,8 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
   });
 
   const { data: comments = [] } = useQuery({
-    queryKey: ["feedback-comments", id],
-    enabled: !!id,
+    queryKey: ["feedback-comments", agencyId, id],
+    enabled: !!id && !!agencyId,
     queryFn: async () => {
       const { data, error } = await supabase.from("feedback_comments").select("*").eq("feedback_id", id!).order("created_at");
       if (error) throw error;
@@ -432,7 +443,8 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
   });
 
   const { data: profiles = [] } = useQuery({
-    queryKey: ["feedback-profiles"],
+    queryKey: ["feedback-profiles", agencyId],
+    enabled: !!agencyId,
     queryFn: async () => (await supabase.from("profiles").select("id, full_name, email")).data ?? [],
   });
   const profileById = useMemo(() => new Map(profiles.map(p => [p.id, p])), [profiles]);
@@ -462,13 +474,13 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
     if (!user) return;
     setPosting(true);
     try {
-      const attachments = files.length ? await uploadFiles(files, user.id) : [];
+      const attachments = files.length ? await uploadFiles(files, user.id, agencyId) : [];
       const { error } = await supabase.from("feedback_comments").insert({
         feedback_id: id!, author_id: user.id, body: comment.trim() || "(Anhang)", attachments: attachments as any,
       });
       if (error) throw error;
       setComment(""); setFiles([]);
-      qc.invalidateQueries({ queryKey: ["feedback-comments", id] });
+      qc.invalidateQueries({ queryKey: ["feedback-comments", agencyId, id] });
     } catch (e: any) { toast.error(e.message); }
     finally { setPosting(false); }
   };
@@ -576,7 +588,26 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
   );
 }
 
+// Anhänge sind privat: kurzlebige signierte Links, Speicher-Policies prüfen die aktive Firma.
 function AttachmentGrid({ attachments }: { attachments: Attachment[] }) {
+  const paths = attachments.map(attachmentPath);
+  const { data: signed } = useQuery({
+    queryKey: ["feedback-attachment-urls", ...paths],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const valid = paths.filter((p): p is string => !!p);
+      if (!valid.length) return {} as Record<string, string>;
+      const { data } = await supabase.storage.from("feedback").createSignedUrls(valid, 3600);
+      const m: Record<string, string> = {};
+      (data ?? []).forEach((d) => { if (d.path && d.signedUrl) m[d.path] = d.signedUrl; });
+      return m;
+    },
+  });
+  const resolved = attachments.map((a, i) => ({ ...a, url: (paths[i] && signed?.[paths[i]!]) || "" }));
+  return <AttachmentGridView attachments={resolved} />;
+}
+
+function AttachmentGridView({ attachments }: { attachments: Attachment[] }) {
   const images = attachments.filter(a => a.mime?.startsWith("image/"));
   const [viewerIdx, setViewerIdx] = useState<number | null>(null);
   const [broken, setBroken] = useState<Set<number>>(new Set());
@@ -592,13 +623,13 @@ function AttachmentGrid({ attachments }: { attachments: Attachment[] }) {
                 Bild nicht ladbar
               </span>
             ) : (
-              <img src={a.url} alt={a.name}
+              <img src={a.url || undefined} alt={a.name}
                 onError={() => setBroken(prev => new Set(prev).add(i))}
                 className="h-24 w-24 rounded-md border object-cover transition hover:opacity-80" />
             )}
           </button>
         ) : (
-          <a key={i} href={a.url} target="_blank" rel="noreferrer"
+          <a key={i} href={a.url || undefined} target="_blank" rel="noreferrer"
             className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-xs hover:bg-muted">
             <Paperclip className="h-3 w-3" /> {a.name}
           </a>
