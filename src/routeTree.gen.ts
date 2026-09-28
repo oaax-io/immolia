@@ -22,6 +22,7 @@ import { Route as PlatformUsersRouteImport } from './routes/platform.users'
 import { Route as PlatformSettingsRouteImport } from './routes/platform.settings'
 import { Route as PlatformSecurityRouteImport } from './routes/platform.security'
 import { Route as PlatformModulesRouteImport } from './routes/platform.modules'
+import { Route as PlatformFeedbackRouteImport } from './routes/platform.feedback'
 import { Route as PlatformDomainsRouteImport } from './routes/platform.domains'
 import { Route as PlatformCommercialRouteImport } from './routes/platform.commercial'
 import { Route as PlatformActivityRouteImport } from './routes/platform.activity'
@@ -143,6 +144,11 @@ const PlatformSecurityRoute = PlatformSecurityRouteImport.update({
 const PlatformModulesRoute = PlatformModulesRouteImport.update({
   id: '/modules',
   path: '/modules',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformFeedbackRoute = PlatformFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => PlatformRoute,
 } as any)
 const PlatformDomainsRoute = PlatformDomainsRouteImport.update({
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/platform/activity': typeof PlatformActivityRoute
   '/platform/commercial': typeof PlatformCommercialRoute
   '/platform/domains': typeof PlatformDomainsRoute
+  '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
@@ -542,6 +549,7 @@ export interface FileRoutesByTo {
   '/platform/activity': typeof PlatformActivityRoute
   '/platform/commercial': typeof PlatformCommercialRoute
   '/platform/domains': typeof PlatformDomainsRoute
+  '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
@@ -616,6 +624,7 @@ export interface FileRoutesById {
   '/platform/activity': typeof PlatformActivityRoute
   '/platform/commercial': typeof PlatformCommercialRoute
   '/platform/domains': typeof PlatformDomainsRoute
+  '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
@@ -690,6 +699,7 @@ export interface FileRouteTypes {
     | '/platform/activity'
     | '/platform/commercial'
     | '/platform/domains'
+    | '/platform/feedback'
     | '/platform/modules'
     | '/platform/security'
     | '/platform/settings'
@@ -758,6 +768,7 @@ export interface FileRouteTypes {
     | '/platform/activity'
     | '/platform/commercial'
     | '/platform/domains'
+    | '/platform/feedback'
     | '/platform/modules'
     | '/platform/security'
     | '/platform/settings'
@@ -831,6 +842,7 @@ export interface FileRouteTypes {
     | '/platform/activity'
     | '/platform/commercial'
     | '/platform/domains'
+    | '/platform/feedback'
     | '/platform/modules'
     | '/platform/security'
     | '/platform/settings'
@@ -978,6 +990,13 @@ declare module '@tanstack/react-router' {
       path: '/modules'
       fullPath: '/platform/modules'
       preLoaderRoute: typeof PlatformModulesRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/feedback': {
+      id: '/platform/feedback'
+      path: '/feedback'
+      fullPath: '/platform/feedback'
+      preLoaderRoute: typeof PlatformFeedbackRouteImport
       parentRoute: typeof PlatformRoute
     }
     '/platform/domains': {
@@ -1543,6 +1562,7 @@ interface PlatformRouteChildren {
   PlatformActivityRoute: typeof PlatformActivityRoute
   PlatformCommercialRoute: typeof PlatformCommercialRoute
   PlatformDomainsRoute: typeof PlatformDomainsRoute
+  PlatformFeedbackRoute: typeof PlatformFeedbackRoute
   PlatformModulesRoute: typeof PlatformModulesRoute
   PlatformSecurityRoute: typeof PlatformSecurityRoute
   PlatformSettingsRoute: typeof PlatformSettingsRoute
@@ -1556,6 +1576,7 @@ const PlatformRouteChildren: PlatformRouteChildren = {
   PlatformActivityRoute: PlatformActivityRoute,
   PlatformCommercialRoute: PlatformCommercialRoute,
   PlatformDomainsRoute: PlatformDomainsRoute,
+  PlatformFeedbackRoute: PlatformFeedbackRoute,
   PlatformModulesRoute: PlatformModulesRoute,
   PlatformSecurityRoute: PlatformSecurityRoute,
   PlatformSettingsRoute: PlatformSettingsRoute,

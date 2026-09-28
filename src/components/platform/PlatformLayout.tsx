@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, Users, Globe, Blocks, Activity, ShieldCheck, Settings, LogOut, ArrowLeft, CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
