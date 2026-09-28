@@ -1,0 +1,1 @@
+DELETE FROM public.notifications WHERE title IN ('RT-ASIMO-TEST','RT-OAASE-TEST');

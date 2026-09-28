@@ -623,13 +623,13 @@ function AttachmentGridView({ attachments }: { attachments: Attachment[] }) {
                 Bild nicht ladbar
               </span>
             ) : (
-              <img src={a.url} alt={a.name}
+              <img src={a.url || undefined} alt={a.name}
                 onError={() => setBroken(prev => new Set(prev).add(i))}
                 className="h-24 w-24 rounded-md border object-cover transition hover:opacity-80" />
             )}
           </button>
         ) : (
-          <a key={i} href={a.url} target="_blank" rel="noreferrer"
+          <a key={i} href={a.url || undefined} target="_blank" rel="noreferrer"
             className="flex items-center gap-2 rounded-md border bg-muted/30 px-2 py-1 text-xs hover:bg-muted">
             <Paperclip className="h-3 w-3" /> {a.name}
           </a>
