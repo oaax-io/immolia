@@ -1820,20 +1820,45 @@ const PROPERTY_DOC_TYPES: { value: string; label: string }[] = [
   { value: "other", label: "Sonstiges" },
 ];
 
+// Dokumenttyp aus Dateiname/Dateiart erraten (Vorschlag, im Dialog änderbar)
+function guessPropertyDocType(file: File): string {
+  const n = file.name.toLowerCase();
+  if (file.type.startsWith("image/") || file.type.startsWith("video/")) return "media";
+  const rules: [RegExp, string][] = [
+    [/quittung|receipt/, "reservation_receipt"],
+    [/reserv/, "reservation"],
+    [/nda|geheimhalt|vertraulich/, "nda"],
+    [/mandat|auftrag/, "mandate"],
+    [/finanz|hypo|kredit|bank|lohn|steuer/, "financing"],
+    [/vertrag|kaufv|mietv|contract/, "contract"],
+    [/grundriss|plan|grundbuch|kataster|energie|geak|ausweis|police|versicherung|expos/, "property_document"],
+  ];
+  for (const [re, t] of rules) if (re.test(n)) return t;
+  return "property_document";
+}
+function cleanDocName(file: File): string {
+  return file.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
+}
+type PendingDoc = { id: string; file: File; name: string; docType: string };
+
 function DocumentsTab({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
-  const [docType, setDocType] = useState<string>("property_document");
+  const [pending, setPending] = useState<PendingDoc[]>([]);
   const [notes, setNotes] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [preview, setPreview] = useState<{ name: string; url: string; mime: string | null } | null>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
-
-  const resetForm = () => {
-    setFile(null); setName(""); setDocType("property_document"); setNotes("");
+  const resetForm = () => { setPending([]); setNotes(""); setProgress(null); };
+  const addFiles = (list: FileList | File[] | null) => {
+    if (!list) return;
+    const arr = Array.from(list).map((f) => ({ id: crypto.randomUUID(), file: f, name: cleanDocName(f), docType: guessPropertyDocType(f) }));
+    setPending((p) => [...p, ...arr]);
   };
+  const updatePending = (id: string, patch: Partial<PendingDoc>) => setPending((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)));
 
   const { data: docs = [] } = useQuery({
     queryKey: ["docs", "property", propertyId],
@@ -1845,35 +1870,41 @@ function DocumentsTab({ propertyId }: { propertyId: string }) {
 
   const add = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Bitte Datei auswählen");
-      const ext = file.name.split(".").pop() ?? "bin";
-      const path = await tenantStoragePath(`property/${propertyId}/${crypto.randomUUID()}.${ext}`);
-      const { error: upErr } = await supabase.storage.from("documents").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
-      });
-      if (upErr) throw upErr;
-      const { error } = await supabase.from("documents").insert({
-        related_type: "property",
-        related_id: propertyId,
-        file_name: name.trim() || file.name,
-        file_url: path,
-        document_type: docType as any,
-        mime_type: file.type || null,
-        size_bytes: file.size,
-        uploaded_by: user?.id ?? null,
-        notes: notes.trim() || null,
-      });
-      if (error) throw error;
+      if (!pending.length) throw new Error("Bitte Dateien auswählen");
+      const failed: string[] = [];
+      setProgress({ done: 0, total: pending.length });
+      for (const [i, d] of pending.entries()) {
+        try {
+          const ext = d.file.name.split(".").pop() ?? "bin";
+          const path = await tenantStoragePath(`property/${propertyId}/${crypto.randomUUID()}.${ext}`);
+          const { error: upErr } = await supabase.storage.from("documents").upload(path, d.file, {
+            contentType: d.file.type || "application/octet-stream", upsert: false,
+          });
+          if (upErr) throw upErr;
+          const { error } = await supabase.from("documents").insert({
+            related_type: "property", related_id: propertyId,
+            file_name: d.name.trim() || d.file.name, file_url: path,
+            document_type: d.docType as any, mime_type: d.file.type || null,
+            size_bytes: d.file.size, uploaded_by: user?.id ?? null, notes: notes.trim() || null,
+          });
+          if (error) throw error;
+        } catch (e) {
+          console.error("doc upload failed", d.file.name, e);
+          failed.push(d.file.name);
+        }
+        setProgress({ done: i + 1, total: pending.length });
+      }
+      return { ok: pending.length - failed.length, failed };
     },
-    onSuccess: () => {
-      toast.success("Dokument hochgeladen");
-      resetForm();
-      setOpen(false);
+    onSuccess: ({ ok, failed }) => {
+      if (ok) toast.success(ok === 1 ? "Dokument hochgeladen" : `${ok} Dokumente hochgeladen`);
+      if (failed.length) toast.error(`Nicht hochgeladen: ${failed.join(", ")}`);
+      if (!failed.length) { resetForm(); setOpen(false); }
+      else { setPending((p) => p.filter((x) => failed.includes(x.file.name))); setProgress(null); }
       qc.invalidateQueries({ queryKey: ["docs", "property", propertyId] });
       qc.invalidateQueries({ queryKey: ["property_counts", propertyId] });
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => { toast.error(e.message); setProgress(null); },
   });
 
   const resolveDocUrl = async (d: any): Promise<string | null> => {
@@ -1921,37 +1952,54 @@ function DocumentsTab({ propertyId }: { propertyId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Dokument hochladen</Button>
+        <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Dokumente hochladen</Button>
       </div>
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Dokument hochladen</DialogTitle></DialogHeader>
+      <Dialog open={open} onOpenChange={(v) => { if (add.isPending) return; setOpen(v); if (!v) resetForm(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Dokumente hochladen</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label>Datei</Label>
-              <Input type="file" onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setFile(f);
-                if (f && !name) setName(f.name.replace(/\.[^.]+$/, ""));
-              }} />
+            <div
+              role="button" tabIndex={0}
+              onClick={() => docInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") docInputRef.current?.click(); }}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 text-center transition ${dragOver ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+            >
+              <UploadCloud className="mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-sm font-medium">{dragOver ? "Jetzt loslassen" : "Dateien hierher ziehen oder klicken"}</p>
+              <p className="text-xs text-muted-foreground">Mehrere Dateien möglich. Typ und Bezeichnung werden vorgeschlagen.</p>
+              <input ref={docInputRef} type="file" multiple className="hidden"
+                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
             </div>
-            <div>
-              <Label>Dokumenttyp</Label>
-              <Select value={docType} onValueChange={setDocType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PROPERTY_DOC_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Bezeichnung</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="z.B. Kaufvertrag Entwurf" /></div>
-            <div><Label>Notizen (optional)</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
+            {pending.length > 0 && (
+              <div className="max-h-72 space-y-2 overflow-y-auto">
+                {pending.map((d) => (
+                  <div key={d.id} className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-[1fr_200px_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <Input value={d.name} onChange={(e) => updatePending(d.id, { name: e.target.value })} aria-label="Bezeichnung" />
+                      <p className="mt-1 truncate text-[11px] text-muted-foreground">{d.file.name} · {(d.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <Select value={d.docType} onValueChange={(v) => updatePending(d.id, { docType: v })}>
+                      <SelectTrigger aria-label="Dokumenttyp"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {PROPERTY_DOC_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button type="button" variant="ghost" size="icon" aria-label="Entfernen" disabled={add.isPending}
+                      onClick={() => setPending((p) => p.filter((x) => x.id !== d.id))}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div><Label>Notizen (optional, für alle Dateien)</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           </div>
           <DialogFooter>
-            <Button onClick={() => add.mutate()} disabled={!file || add.isPending}>
-              {add.isPending ? "Lädt hoch…" : "Hochladen"}
+            <Button onClick={() => add.mutate()} disabled={!pending.length || add.isPending}>
+              {add.isPending && progress ? `Lädt hoch… ${progress.done}/${progress.total}` : pending.length > 1 ? `${pending.length} Dokumente hochladen` : "Hochladen"}
             </Button>
           </DialogFooter>
         </DialogContent>
