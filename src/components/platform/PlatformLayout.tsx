@@ -19,6 +19,7 @@ const NAV = [
     { to: "/platform/commercial", label: "Commercial", icon: CreditCard },
   ] },
   { section: "System", items: [
+    { to: "/platform/feedback", label: "Feedback", icon: MessageSquare },
     { to: "/platform/activity", label: "Aktivität", icon: Activity },
     { to: "/platform/security", label: "Sicherheit", icon: ShieldCheck },
   ] },
