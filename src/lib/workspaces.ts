@@ -42,12 +42,18 @@ export function useMyWorkspaces() {
   });
 }
 
-/** Erreichbare Adresse eines Unternehmens (nie erfunden). */
+/**
+ * Kanonische Adresse eines Unternehmens (nie erfunden), zentrale Priorität:
+ * 1. aktive, verifizierte Custom Domain
+ * 2. verifizierte Immolia-Hauptadresse (my_workspaces liefert nur die primäre, einzeln verbundene)
+ * 3. null → Aufrufer nutzt GENERIC_APP_HOST
+ */
 export function reachableHostOf(ws: Workspace): string | null {
   if (ws.custom_domain) return ws.custom_domain;
-  if (IMMOLIA_WILDCARD_READY && ws.subdomain) return ws.subdomain;
+  if (ws.subdomain) return ws.subdomain;
   return null;
 }
+void IMMOLIA_WILDCARD_READY;
 
 export type SwitchPlan =
   | { kind: "local" }
