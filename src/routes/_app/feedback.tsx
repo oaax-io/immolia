@@ -55,7 +55,7 @@ const PRIORITIES = [
 type Attachment = { url?: string; path?: string; name: string; mime: string };
 
 // Privater Speicher: Pfad aus neuem Feld oder (Altbestand) aus der gespeicherten URL ableiten.
-export function attachmentPath(a: Attachment): string | null {
+function attachmentPath(a: Attachment): string | null {
   if (a.path) return a.path;
   const m = a.url?.match(/\/feedback\/(.+)$/);
   return m ? decodeURIComponent(m[1]) : null;
@@ -606,7 +606,7 @@ function AttachmentGrid({ attachments }: { attachments: Attachment[] }) {
   return <AttachmentGridView attachments={resolved} />;
 }
 
-export function AttachmentGridView({ attachments }: { attachments: Attachment[] }) {
+function AttachmentGridView({ attachments }: { attachments: Attachment[] }) {
   const images = attachments.filter(a => a.mime?.startsWith("image/"));
   const [viewerIdx, setViewerIdx] = useState<number | null>(null);
   const [broken, setBroken] = useState<Set<number>>(new Set());
