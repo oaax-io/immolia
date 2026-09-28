@@ -1952,7 +1952,7 @@ function DocumentsTab({ propertyId }: { propertyId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Dokument hochladen</Button>
+        <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />Dokumente hochladen</Button>
       </div>
       <Dialog open={open} onOpenChange={(v) => { if (add.isPending) return; setOpen(v); if (!v) resetForm(); }}>
         <DialogContent className="max-w-2xl">
@@ -1967,7 +1967,7 @@ function DocumentsTab({ propertyId }: { propertyId: string }) {
               onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
               className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-8 text-center transition ${dragOver ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
             >
-              <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+              <UploadCloud className="mb-2 h-6 w-6 text-muted-foreground" />
               <p className="text-sm font-medium">{dragOver ? "Jetzt loslassen" : "Dateien hierher ziehen oder klicken"}</p>
               <p className="text-xs text-muted-foreground">Mehrere Dateien möglich. Typ und Bezeichnung werden vorgeschlagen.</p>
               <input ref={docInputRef} type="file" multiple className="hidden"
