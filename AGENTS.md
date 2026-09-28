@@ -51,3 +51,5 @@
 ## Stripe Billing (5.6)
 - Stripe ist nur Zahlungsquelle: ein Stripe-Kunde pro Firma (stripe_customers, nur service_role), Firma immer serverseitig über current_agency_id + Inhaber/Admin; Abo/Credits nur per verifiziertem Webhook über stripe_sync_subscription / stripe_grant_credit_purchase (idempotent 'stripe:checkout:<session>', stripe_webhook_events); why: nie Browser-Vertrauen, nie Doppelbuchung.
 - past_due mit Frist platform_commercial_settings.past_due_grace_days (14), danach Zustand unpaid = Pay-as-you-use, nie Sperre/Löschung; why: Grace ohne Datenverlust.
+## Invite-only Onboarding (5.6.1)
+- Neue Konten nur über signupWithInvitation (src/lib/invite-signup.functions.ts): Server prüft Token via invitation_signup_target (nur service_role), E-Mail aus Einladung, admin.createUser; Mitgliedschaft danach nur in invitation_accept; öffentliche Registrierung bleibt gesperrt; why: Einladung ohne bestehendes Konto annehmbar ohne offenen Signup.
