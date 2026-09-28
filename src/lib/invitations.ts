@@ -74,6 +74,10 @@ export const usePlatformInvitations = (type?: string, agencyId?: string) => useQ
   queryFn: () => rpc<InvitationRow[]>("platform_list_invitations", { _type: type ?? null, _agency_id: agencyId ?? null }),
 });
 export const invitePlatformUser = (email: string, role: string) => rpc<IssuedInvitation>("platform_invite_user", { _email: email, _role: role });
+export const inviteTenantOwner = (agencyId: string, email: string, firstName?: string, lastName?: string) =>
+  rpc<IssuedInvitation & { account_exists: boolean }>("platform_invite_tenant_owner", {
+    _agency_id: agencyId, _email: email, _first_name: firstName || null, _last_name: lastName || null,
+  });
 
 // Gemeinsam
 export const revokeInvitation = (id: string) => rpc<void>("invitation_revoke", { _invitation_id: id });
