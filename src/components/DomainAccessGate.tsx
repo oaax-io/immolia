@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
@@ -7,18 +7,36 @@ import { checkDomainAccess } from "@/lib/public-domain-branding.functions";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkspacePicker } from "@/components/WorkspaceSwitcher";
-import { useMyWorkspaces } from "@/lib/workspaces";
+import { useMyWorkspaces, setCurrentWorkspace, resetTenantCache } from "@/lib/workspaces";
 
 export function useDomainAccess(enabled: boolean) {
   const { user } = useAuth();
   const fn = useServerFn(checkDomainAccess);
+  const qc = useQueryClient();
   const host = typeof window !== "undefined" ? window.location.hostname : "";
-  return useQuery({
+  const switchedRef = useRef<string | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const q = useQuery({
     queryKey: ["domain-access", host, user?.id],
     queryFn: () => fn(),
     enabled: enabled && !!user,
     staleTime: 5 * 60_000,
   });
+  // Firmen-Adresse einer Firma, in der die Person aktives Mitglied ist (hostAgencyId nur dann gesetzt),
+  // aber gespeicherte aktive Firma ist eine andere → einmalig auf die Firma der Adresse wechseln.
+  // set_current_agency prüft die Mitgliedschaft serverseitig; der Hostname allein gewährt nichts.
+  const target = q.data && !q.data.allowed ? q.data.hostAgencyId : null;
+  useEffect(() => {
+    if (!target || switchedRef.current === target) return;
+    switchedRef.current = target;
+    setSwitching(true);
+    setCurrentWorkspace(target)
+      .then(() => resetTenantCache(qc))
+      .catch(() => { /* bleibt abgelehnt → normale Anzeige */ })
+      .finally(() => setSwitching(false));
+  }, [target, qc]);
+  const pending = switching || !!target;
+  return { ...q, isLoading: q.isLoading || pending, data: pending ? undefined : q.data };
 }
 
 /** 'active' | 'select' | 'unavailable' | 'none' – zentral aus der Datenbank (Mitgliedschaft + Firmenstatus). */
