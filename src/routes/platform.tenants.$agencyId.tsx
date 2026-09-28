@@ -9,6 +9,7 @@ import { AuditLogList } from "@/components/platform/AuditLogList";
 import { TenantAdministration } from "@/components/platform/TenantAdministration";
 import { DomainCenter, WhiteLabelSummary } from "@/components/platform/DomainCenter";
 import { TenantModules } from "@/components/platform/ModuleCenter";
+import { TenantBilling } from "@/components/platform/TenantBilling";
 import { TenantOwnerInvitations } from "@/components/platform/TenantOwnerInvitations";
 import { MembersTable } from "@/components/platform/tables";
 import {
@@ -55,7 +56,7 @@ function TenantDetail() {
         <Tabs defaultValue="overview">
           <TabsList>
             <TabsTrigger value="overview">Übersicht</TabsTrigger><TabsTrigger value="users">Benutzer</TabsTrigger>
-            <TabsTrigger value="domains">Domains</TabsTrigger><TabsTrigger value="modules">Module</TabsTrigger>
+            <TabsTrigger value="domains">Domains</TabsTrigger><TabsTrigger value="modules">Module</TabsTrigger><TabsTrigger value="billing">Abrechnung</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger><TabsTrigger value="activity">Aktivität</TabsTrigger>
           </TabsList>
           <TabsContent value="overview"><Card><CardContent className="p-5">
@@ -95,6 +96,7 @@ function TenantDetail() {
               </div>
             ) : !branding.isLoading && <div className="text-sm text-muted-foreground">Kein Branding hinterlegt.</div>}
           </CardContent></Card></TabsContent>
+          <TabsContent value="billing"><Card><CardContent className="p-5"><TenantBilling agencyId={agencyId} /></CardContent></Card></TabsContent>
           <TabsContent value="activity"><Card><CardContent className="space-y-6 p-5"><div className="text-sm font-semibold">Audit-Aktionen</div><QueryState isLoading={audit.isLoading} error={audit.error} /><AuditLogList items={audit.data ?? []} hideTenant /><div className="text-sm font-semibold">Systemereignisse</div><QueryState isLoading={activity.isLoading} error={activity.error} /><ActivityList items={activity.data ?? []} hideTenant /></CardContent></Card></TabsContent>
         </Tabs>
       )}
