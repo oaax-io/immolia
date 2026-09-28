@@ -6,7 +6,7 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
 - [x] 5.1–5.5 Commercial Foundation, Credits, Usage, Trial, Katalog
 - [x] 5.6 Stripe Billing + E2E (OAASE, Testmodus)
 - [x] 5.6.1 Invite-only Onboarding (Einladung ohne bestehendes Konto annehmbar)
-- [ ] 5.6.2 Manual & Invoice Billing
+- [x] 5.6.2 Manual & Invoice Billing (ASIMO-Migration wartet auf reale Vertragsdaten)
   - Abo und Zahlungsquelle getrennt: stripe, invoice, bank_transfer, complimentary, manual
   - System Owner verwaltet: Plan, individueller Preis, monatlich/jährlich, Beginn, gültig bis, bezahlt/unbezahlt, Auto-Verlängerung, interne Notiz, individuelle Allowances (Credits, User, Storage, Financing Requests)
   - Gleiche Subscription-/Entitlement-/Allowance-Engine wie Stripe; Stripe steuert keine Business-Logik

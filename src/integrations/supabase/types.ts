@@ -5152,24 +5152,64 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_admin_notes: {
+        Row: {
+          note: string
+          subscription_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          note: string
+          subscription_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          note?: string
+          subscription_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_admin_notes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: true
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           agency_id: string | null
+          auto_renew: boolean | null
           billing_period: string | null
+          billing_source: string | null
           cancel_at_period_end: boolean | null
+          contract_currency: string | null
+          contract_price: number | null
           created_at: string | null
+          credit_period: string | null
           current_period_end: string | null
           current_period_start: string | null
           environment: string
           id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          last_payment_amount: number | null
+          paid_at: string | null
+          paid_until: string | null
           past_due_since: string | null
+          payment_due_date: string | null
           plan_id: string | null
-          price_id: string
-          product_id: string
+          price_id: string | null
+          product_id: string | null
           source: string | null
           status: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           trial_end: string | null
           trial_start: string | null
           updated_at: string | null
@@ -5177,21 +5217,32 @@ export type Database = {
         }
         Insert: {
           agency_id?: string | null
+          auto_renew?: boolean | null
           billing_period?: string | null
+          billing_source?: string | null
           cancel_at_period_end?: boolean | null
+          contract_currency?: string | null
+          contract_price?: number | null
           created_at?: string | null
+          credit_period?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
           environment?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          last_payment_amount?: number | null
+          paid_at?: string | null
+          paid_until?: string | null
           past_due_since?: string | null
+          payment_due_date?: string | null
           plan_id?: string | null
-          price_id: string
-          product_id: string
+          price_id?: string | null
+          product_id?: string | null
           source?: string | null
           status?: string
-          stripe_customer_id: string
-          stripe_subscription_id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string | null
@@ -5199,21 +5250,32 @@ export type Database = {
         }
         Update: {
           agency_id?: string | null
+          auto_renew?: boolean | null
           billing_period?: string | null
+          billing_source?: string | null
           cancel_at_period_end?: boolean | null
+          contract_currency?: string | null
+          contract_price?: number | null
           created_at?: string | null
+          credit_period?: string | null
           current_period_end?: string | null
           current_period_start?: string | null
           environment?: string
           id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          last_payment_amount?: number | null
+          paid_at?: string | null
+          paid_until?: string | null
           past_due_since?: string | null
+          payment_due_date?: string | null
           plan_id?: string | null
-          price_id?: string
-          product_id?: string
+          price_id?: string | null
+          product_id?: string | null
           source?: string | null
           status?: string
-          stripe_customer_id?: string
-          stripe_subscription_id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           trial_end?: string | null
           trial_start?: string | null
           updated_at?: string | null
@@ -5622,6 +5684,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _commercial_credit_window: {
+        Args: { _at?: string; _end: string; _start: string }
+        Returns: {
+          ce: string
+          cs: string
+        }[]
+      }
       _commercial_grant_period_credits: {
         Args: { _sub_id: string }
         Returns: string
@@ -5714,6 +5783,10 @@ export type Database = {
           invitation_id: string
           token: string
         }[]
+      }
+      _manual_active_conflict: {
+        Args: { _agency_id: string; _except: string; _start: string }
+        Returns: boolean
       }
       _sole_agency_of: { Args: { _uid: string }; Returns: string }
       admin_get_stats: {
@@ -6018,9 +6091,33 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_cancel_manual_subscription: {
+        Args: { _immediate: boolean; _reason: string; _subscription_id: string }
+        Returns: Json
+      }
       platform_check_owner_email: { Args: { _email: string }; Returns: boolean }
       platform_check_subdomain: { Args: { _slug: string }; Returns: string }
       platform_core_module_keys: { Args: never; Returns: string[] }
+      platform_create_manual_subscription: {
+        Args: {
+          _agency_id: string
+          _auto_renew: boolean
+          _billing_period: string
+          _billing_source: string
+          _currency: string
+          _end: string
+          _invoice_date: string
+          _invoice_number: string
+          _note: string
+          _payment_due_date: string
+          _plan_id: string
+          _price: number
+          _reason: string
+          _start: string
+          _status: string
+        }
+        Returns: Json
+      }
       platform_create_tenant: {
         Args: {
           _modules: string[]
@@ -6087,6 +6184,10 @@ export type Database = {
         Returns: Json
       }
       platform_find_user_by_email: { Args: { _email: string }; Returns: Json }
+      platform_get_agency_billing: {
+        Args: { _agency_id: string }
+        Returns: Json
+      }
       platform_invite_tenant_owner: {
         Args: {
           _agency_id: string
@@ -6237,6 +6338,17 @@ export type Database = {
       }
       platform_module_keys: { Args: never; Returns: string[] }
       platform_overview: { Args: never; Returns: Json }
+      platform_record_manual_payment: {
+        Args: {
+          _amount: number
+          _invoice_number: string
+          _paid_at: string
+          _paid_until: string
+          _reason: string
+          _subscription_id: string
+        }
+        Returns: Json
+      }
       platform_remove_domain: { Args: { _id: string }; Returns: undefined }
       platform_remove_user_access: {
         Args: { _user_id: string }
@@ -6323,6 +6435,24 @@ export type Database = {
       platform_update_feedback: {
         Args: { _id: string; _priority?: string; _status?: string }
         Returns: undefined
+      }
+      platform_update_manual_subscription: {
+        Args: {
+          _auto_renew: boolean
+          _billing_period: string
+          _billing_source: string
+          _currency: string
+          _end: string
+          _invoice_date: string
+          _invoice_number: string
+          _note: string
+          _payment_due_date: string
+          _plan_id: string
+          _price: number
+          _reason: string
+          _subscription_id: string
+        }
+        Returns: Json
       }
       platform_update_tenant: {
         Args: { _agency_id: string; _name: string }
