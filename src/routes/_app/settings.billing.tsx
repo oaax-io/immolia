@@ -23,6 +23,10 @@ const STATE_LABEL: Record<string, string> = {
   no_active_subscription: "Kein aktives Abo",
 };
 
+const SOURCE_LABEL: Record<string, string> = { invoice: "Rechnung", bank_transfer: "Banküberweisung", manual: "Individueller Vertrag", complimentary: "Kostenlos" };
+const BILLING_LABEL: Record<string, string> = { "invoice:yearly": "Jahresrechnung", "invoice:monthly": "Monatsrechnung", "bank_transfer:yearly": "Jährliche Banküberweisung", "bank_transfer:monthly": "Monatliche Banküberweisung" };
+const PERIOD_SUFFIX: Record<string, string> = { monthly: " / Monat", yearly: " / Jahr" };
+
 type Checkout = { kind: "plan" | "credits"; key: string } | null;
 
 function BillingPage() {
@@ -36,7 +40,7 @@ function BillingPage() {
       const sb = supabase as any;
       const { data: agencyId } = await sb.rpc("current_agency_id");
       const [plans, packs, state, balance] = await Promise.all([
-        sb.from("plans").select("key,name,price_monthly,monthly_credits,stripe_price_key,status,is_custom").eq("status", "active").order("sort_order"),
+        sb.from("plans").select("id,key,name,price_monthly,monthly_credits,stripe_price_key,status,is_custom").eq("status", "active").order("sort_order"),
         sb.from("credit_packages").select("key,name,credits,price_amount,status").eq("status", "active").order("sort_order"),
         agencyId ? sb.rpc("commercial_subscription_state", { _agency_id: agencyId }) : Promise.resolve({ data: null }),
         agencyId ? sb.rpc("credit_balance", { _agency_id: agencyId }) : Promise.resolve({ data: null }),
@@ -64,7 +68,11 @@ function BillingPage() {
     } catch (e: any) { toast.error(e.message); } finally { setPortalBusy(false); }
   };
 
-  const st = (q.data?.state as any)?.state as string | undefined;
+  const stObj = q.data?.state as any;
+  const st = stObj?.state as string | undefined;
+  const src = stObj?.billing_source as string | undefined;
+  const isManual = !!src && src !== "stripe";
+  const planName = q.data?.plans.find((p: any) => p.id === stObj?.plan_id)?.name ?? stObj?.plan_name;
   const hasPaidSub = st === "active" || st === "past_due" || st === "canceled_until_period_end";
   const balance = typeof q.data?.balance === "number" ? q.data.balance : (q.data?.balance as any)?.total ?? null;
 
@@ -81,10 +89,22 @@ function BillingPage() {
               <div className="text-sm text-muted-foreground">Status</div>
               <div className="font-medium">{st ? STATE_LABEL[st] ?? "Kein aktives Abo" : "Status nicht verfügbar"}</div>
               {balance !== null && <div className="text-sm text-muted-foreground mt-1">Guthaben: {balance} Credits</div>}
+              {isManual && (
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                  {planName && <><dt className="text-muted-foreground">Plan</dt><dd>{planName}</dd></>}
+                  <dt className="text-muted-foreground">Abrechnung</dt><dd>{BILLING_LABEL[`${src}:${stObj?.billing_period}`] ?? SOURCE_LABEL[src!] ?? src}</dd>
+                  {stObj?.paid_until && <><dt className="text-muted-foreground">Bezahlt bis</dt><dd>{new Date(stObj.paid_until).toLocaleDateString("de-CH")}</dd></>}
+                  {stObj?.contract_price != null && <><dt className="text-muted-foreground">Preis</dt><dd>{stObj.contract_currency ?? "CHF"} {Number(stObj.contract_price).toLocaleString("de-CH")}{PERIOD_SUFFIX[stObj?.billing_period] ?? ""}</dd></>}
+                </dl>
+              )}
             </div>
-            <Button variant="outline" onClick={openPortal} disabled={portalBusy}>
-              {portalBusy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Zahlungsmethode, Rechnungen & Abo verwalten
-            </Button>
+            {isManual ? (
+              <p className="max-w-sm text-sm text-muted-foreground">Dieses Abonnement wird direkt mit Immolia abgerechnet.</p>
+            ) : (
+              <Button variant="outline" onClick={openPortal} disabled={portalBusy}>
+                {portalBusy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Zahlungsmethode, Rechnungen & Abo verwalten
+              </Button>
+            )}
           </Card>
 
           {checkout ? (
@@ -106,8 +126,8 @@ function BillingPage() {
                       <div className="font-medium">{p.name}</div>
                       <div className="text-2xl font-semibold">CHF {Number(p.price_monthly).toFixed(0)}<span className="text-sm font-normal text-muted-foreground"> / Monat</span></div>
                       <div className="text-sm text-muted-foreground">{p.monthly_credits ?? 0} Credits pro Monat</div>
-                      <Button className="w-full" disabled={hasPaidSub} onClick={() => setCheckout({ kind: "plan", key: p.key })}>
-                        {hasPaidSub ? "Wechsel über «verwalten»" : "Abo abschliessen"}
+                      <Button className="w-full" disabled={hasPaidSub || isManual} onClick={() => setCheckout({ kind: "plan", key: p.key })}>
+                        {isManual ? "Über Immolia abgerechnet" : hasPaidSub ? "Wechsel über «verwalten»" : "Abo abschliessen"}
                       </Button>
                     </Card>
                   ))}

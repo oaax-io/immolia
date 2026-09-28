@@ -89,6 +89,19 @@ export const createPlanCheckout = createServerFn({ method: "POST" })
       if (existing?.length) {
         return { error: "Diese Firma hat bereits ein Abo. Planwechsel bitte über «Abo verwalten»." };
       }
+      // Kein Stripe-Abo parallel zu einem laufenden manuellen Vertrag
+      const { data: manual } = await (supabaseAdmin as any)
+        .from("subscriptions")
+        .select("id")
+        .eq("agency_id", agencyId)
+        .eq("source", "internal")
+        .not("billing_source", "is", null)
+        .in("status", ["active", "past_due"])
+        .gt("current_period_end", new Date().toISOString())
+        .limit(1);
+      if (manual?.length) {
+        return { error: "Dieses Abonnement wird direkt mit Immolia abgerechnet. Bitte wende dich an Immolia für Änderungen." };
+      }
 
       const stripe = createStripeClient(data.environment);
       const prices = await stripe.prices.list({ lookup_keys: [plan.stripe_price_key] });
