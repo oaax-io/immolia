@@ -1,3 +1,4 @@
+import { useTenantConfig } from "@/lib/tenant-config";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -92,8 +93,10 @@ function FeedbackPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  const fbAgencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["feedback", filterStatus, filterType],
+    queryKey: ["feedback", fbAgencyId, filterStatus, filterType],
+    enabled: !!fbAgencyId,
     queryFn: async () => {
       let q = supabase.from("feedback").select("*").order("created_at", { ascending: false });
       if (filterStatus !== "all") q = q.eq("status", filterStatus as any);

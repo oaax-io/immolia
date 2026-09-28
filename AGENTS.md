@@ -53,3 +53,5 @@
 - past_due mit Frist platform_commercial_settings.past_due_grace_days (14), danach Zustand unpaid = Pay-as-you-use, nie Sperre/Löschung; why: Grace ohne Datenverlust.
 ## Invite-only Onboarding (5.6.1)
 - Neue Konten nur über signupWithInvitation (src/lib/invite-signup.functions.ts): Server prüft Token via invitation_signup_target (nur service_role), E-Mail aus Einladung, admin.createUser; Mitgliedschaft danach nur in invitation_accept; öffentliche Registrierung bleibt gesperrt; why: Einladung ohne bestehendes Konto annehmbar ohne offenen Signup.
+## Tenant-Isolation Kommunikation (5.6.1a)
+- notifications/direct_messages/feedback tragen agency_id (Trigger setzt aus current_agency_id, nie aus dem Browser); RESTRICTIVE sec561a_* verlangen agency_id = current_agency_id(), auch für Plattformrollen; globale Feedback-Sicht nur über platform_list_feedback/platform_update_feedback (Audit); why: benutzerbezogene Tabellen ohne Firma zeigten Mehrfach-Mitgliedern Daten der anderen Firma.

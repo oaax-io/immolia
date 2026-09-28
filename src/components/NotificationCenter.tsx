@@ -1,3 +1,4 @@
+import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useRef, useState } from "react";
 import { Bell, Check, CheckCheck, Calendar, CheckSquare, UserPlus, Info, Target, Settings2, Volume2, VolumeX } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -125,9 +126,10 @@ export function NotificationCenter() {
     }
   };
 
+  const agencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notifications"],
-    enabled: !!user,
+    queryKey: ["notifications", agencyId, user?.id],
+    enabled: !!user && !!agencyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")

@@ -1,3 +1,4 @@
+import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff } from "lucide-react";
@@ -50,13 +51,21 @@ export function TeamInbox() {
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState("");
 
+  const agencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: members = [] } = useQuery({
-    queryKey: ["inbox-members"],
-    enabled: !!user?.id,
+    queryKey: ["inbox-members", agencyId],
+    enabled: !!user?.id && !!agencyId,
     queryFn: async () => {
+      // nur Mitglieder der aktiven Firma
+      const { data: mem, error: mErr } = await supabase
+        .from("agency_memberships").select("user_id").eq("agency_id", agencyId!).eq("is_active", true);
+      if (mErr) throw mErr;
+      const ids = (mem ?? []).map((m) => m.user_id);
+      if (!ids.length) return [] as Member[];
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email, avatar_url, presence_status, presence_updated_at")
+        .in("id", ids)
         .eq("is_active", true)
         .order("full_name");
       if (error) throw error;
@@ -65,8 +74,8 @@ export function TeamInbox() {
   });
 
   const { data: messages = [] } = useQuery({
-    queryKey: ["direct-messages", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["direct-messages", user?.id, agencyId],
+    enabled: !!user?.id && !!agencyId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("direct_messages")

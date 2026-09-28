@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, Users, Globe, Blocks, Activity, ShieldCheck, Settings, LogOut, ArrowLeft, CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const NAV = [
     { to: "/platform/commercial", label: "Commercial", icon: CreditCard },
   ] },
   { section: "System", items: [
+    { to: "/platform/feedback", label: "Feedback", icon: MessageSquare },
     { to: "/platform/activity", label: "Aktivität", icon: Activity },
     { to: "/platform/security", label: "Sicherheit", icon: ShieldCheck },
   ] },

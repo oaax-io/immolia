@@ -2051,6 +2051,7 @@ export type Database = {
       }
       direct_messages: {
         Row: {
+          agency_id: string | null
           attachments: Json
           body: string
           created_at: string
@@ -2061,6 +2062,7 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          agency_id?: string | null
           attachments?: Json
           body: string
           created_at?: string
@@ -2071,6 +2073,7 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          agency_id?: string | null
           attachments?: Json
           body?: string
           created_at?: string
@@ -2081,6 +2084,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "direct_messages_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "direct_messages_recipient_id_fkey"
             columns: ["recipient_id"]
@@ -2237,6 +2247,7 @@ export type Database = {
       }
       feedback: {
         Row: {
+          agency_id: string | null
           assigned_to: string | null
           attachments: Json
           created_at: string
@@ -2252,6 +2263,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          agency_id?: string | null
           assigned_to?: string | null
           attachments?: Json
           created_at?: string
@@ -2267,6 +2279,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          agency_id?: string | null
           assigned_to?: string | null
           attachments?: Json
           created_at?: string
@@ -2281,7 +2294,15 @@ export type Database = {
           type?: Database["public"]["Enums"]["feedback_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feedback_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback_comments: {
         Row: {
@@ -3731,6 +3752,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          agency_id: string | null
           created_at: string
           id: string
           is_read: boolean
@@ -3744,6 +3766,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agency_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -3757,6 +3780,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agency_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -3769,7 +3793,15 @@ export type Database = {
           type?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_entitlements: {
         Row: {
@@ -5683,6 +5715,7 @@ export type Database = {
           token: string
         }[]
       }
+      _sole_agency_of: { Args: { _uid: string }; Returns: string }
       admin_get_stats: {
         Args: never
         Returns: {
@@ -6100,6 +6133,24 @@ export type Database = {
           verified_at: string
         }[]
       }
+      platform_list_feedback: {
+        Args: { _agency_id?: string }
+        Returns: {
+          agency_id: string
+          agency_name: string
+          author_email: string
+          author_name: string
+          comments: number
+          created_at: string
+          description: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          type: string
+          votes: number
+        }[]
+      }
       platform_list_invitations: {
         Args: { _agency_id?: string; _type?: string }
         Returns: {
@@ -6265,6 +6316,10 @@ export type Database = {
         Returns: string
       }
       platform_tenant_branding: { Args: { _agency_id: string }; Returns: Json }
+      platform_update_feedback: {
+        Args: { _id: string; _priority?: string; _status?: string }
+        Returns: undefined
+      }
       platform_update_tenant: {
         Args: { _agency_id: string; _name: string }
         Returns: undefined
