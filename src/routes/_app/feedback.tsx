@@ -255,6 +255,7 @@ function CreateFeedbackDialog({
   open, onOpenChange, userId, profiles, onCreated,
 }: { open: boolean; onOpenChange: (v: boolean) => void; userId: string | null; profiles: Array<{ id: string; full_name: string | null; email: string | null }>; onCreated: () => void }) {
   const isSuperadmin = useIsSuperadmin();
+  const agencyId = useTenantConfig().data?.agency_id ?? null;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<string>("idea");
@@ -423,7 +424,7 @@ function FeedbackDetailDialog({ id, onClose }: { id: string | null; onClose: () 
   const agencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: item } = useQuery({
     queryKey: ["feedback", agencyId, "detail", id],
-    enabled: !!id,
+    enabled: !!id && !!agencyId,
     queryFn: async () => {
       const { data, error } = await supabase.from("feedback").select("*").eq("id", id!).maybeSingle();
       if (error) throw error;

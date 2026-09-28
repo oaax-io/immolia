@@ -142,15 +142,17 @@ export function NotificationCenter() {
   });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !agencyId) return;
+    // Kanal pro Firma + Benutzer; beim Firmenwechsel wird der alte Kanal entfernt. RLS bleibt die Sicherheitsgrenze.
     const ch = supabase
-      .channel("notifications-stream")
+      .channel(`notifications:${agencyId}:${user.id}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
         (payload) => {
-          qc.invalidateQueries({ queryKey: ["notifications"] });
-          const n = payload.new as Notification;
+          const n = payload.new as Notification & { agency_id?: string | null };
+          if (n.agency_id !== agencyId) return;
+          qc.invalidateQueries({ queryKey: ["notifications", agencyId] });
           playDing();
           setShake(true);
           setTimeout(() => setShake(false), 950);
@@ -165,13 +167,16 @@ export function NotificationCenter() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+        (payload) => {
+          if ((payload.new as { agency_id?: string | null }).agency_id !== agencyId) return;
+          qc.invalidateQueries({ queryKey: ["notifications", agencyId] });
+        },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user, qc]);
+  }, [user, agencyId, qc]);
 
   const markRead = useMutation({
     mutationFn: async (id: string) => {

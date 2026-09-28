@@ -127,15 +127,17 @@ export function TeamInbox() {
 
   // Realtime
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !agencyId) return;
+    // Kanal pro Firma + Benutzer, serverseitig auf agency_id gefiltert; RLS bleibt die Sicherheitsgrenze.
     const channel = supabase
-      .channel("direct-messages-live")
+      .channel(`direct-messages:${agencyId}:${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "direct_messages" },
+        { event: "*", schema: "public", table: "direct_messages", filter: `agency_id=eq.${agencyId}` },
         (payload) => {
-          const row = payload.new as Message | undefined;
-          qc.invalidateQueries({ queryKey: ["direct-messages", user.id] });
+          const row = payload.new as (Message & { agency_id?: string | null }) | undefined;
+          if (row && row.agency_id && row.agency_id !== agencyId) return;
+          qc.invalidateQueries({ queryKey: ["direct-messages", user.id, agencyId] });
           if (payload.eventType === "INSERT" && row?.recipient_id === user.id) {
             const from = members.find((m) => m.id === row.sender_id);
             toast.message(`Neue Nachricht von ${from?.full_name ?? "Kollege"}`, {
@@ -152,7 +154,7 @@ export function TeamInbox() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, members, qc, openChat]);
+  }, [user?.id, agencyId, members, qc, openChat]);
 
   const unreadTotal = useMemo(
     () => messages.filter((m) => m.recipient_id === user?.id && !m.read_at).length,
