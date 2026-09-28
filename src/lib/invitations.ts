@@ -21,8 +21,9 @@ export type InvitationRow = {
 };
 export type IssuedInvitation = { invitation_id: string; token: string; email_delivery_status: string };
 export type InvitationPreview = {
-  status: "pending" | "accepted" | "expired" | "revoked" | "invalid";
-  type?: InvitationRow["invitation_type"]; company_name?: string | null; role?: string; email_match?: boolean;
+  status: "pending" | "accepted" | "expired" | "revoked" | "invalid" | "unavailable";
+  type?: InvitationRow["invitation_type"]; company_name?: string | null; role?: string;
+  email?: string; account_exists?: boolean; email_match?: boolean | null;
 };
 
 export const INVITATION_STATUS_LABEL: Record<string, string> = {
