@@ -5917,6 +5917,7 @@ export type Database = {
         Args: { _invitation_id: string }
         Returns: undefined
       }
+      invitation_signup_target: { Args: { _token: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_agency_commission_admin: {
         Args: { _agency_id: string }

@@ -5,7 +5,7 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
 ## Commercial – Reihenfolge
 - [x] 5.1–5.5 Commercial Foundation, Credits, Usage, Trial, Katalog
 - [x] 5.6 Stripe Billing + E2E (OAASE, Testmodus)
-- [ ] 5.6.1 Invite-only Onboarding (Einladung ohne bestehendes Konto annehmbar)
+- [x] 5.6.1 Invite-only Onboarding (Einladung ohne bestehendes Konto annehmbar)
 - [ ] 5.6.2 Manual & Invoice Billing
   - Abo und Zahlungsquelle getrennt: stripe, invoice, bank_transfer, complimentary, manual
   - System Owner verwaltet: Plan, individueller Preis, monatlich/jährlich, Beginn, gültig bis, bezahlt/unbezahlt, Auto-Verlängerung, interne Notiz, individuelle Allowances (Credits, User, Storage, Financing Requests)
