@@ -1,0 +1,2 @@
+DELETE FROM public.documents WHERE related_type='property' AND related_id='26a059cf-bafe-49c4-9538-8a90bc654072';
+DELETE FROM public.properties WHERE id='26a059cf-bafe-49c4-9538-8a90bc654072' AND title='E2E Dokument-Test';
