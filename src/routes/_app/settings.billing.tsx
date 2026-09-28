@@ -18,9 +18,9 @@ export const Route = createFileRoute("/_app/settings/billing")({
 });
 
 const STATE_LABEL: Record<string, string> = {
-  trialing: "Testphase", active: "Aktiv", past_due: "Zahlung offen (Frist läuft)", unpaid: "Zahlung offen",
-  canceled_until_period_end: "Gekündigt per Periodenende", post_trial: "Testphase beendet – Nutzung über Credits",
-  no_active_subscription: "Kein Abo – Nutzung über Credits",
+  trialing: "Testphase", active: "Aktiv", past_due: "Zahlung überfällig", unpaid: "Unbezahlt",
+  canceled_until_period_end: "Gekündigt", post_trial: "Kein aktives Abo",
+  no_active_subscription: "Kein aktives Abo",
 };
 
 type Checkout = { kind: "plan" | "credits"; key: string } | null;
@@ -79,7 +79,7 @@ function BillingPage() {
           <Card className="p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-sm text-muted-foreground">Status</div>
-              <div className="font-medium">{st ? STATE_LABEL[st] ?? st : "–"}</div>
+              <div className="font-medium">{st ? STATE_LABEL[st] ?? "Kein aktives Abo" : "Status nicht verfügbar"}</div>
               {balance !== null && <div className="text-sm text-muted-foreground mt-1">Guthaben: {balance} Credits</div>}
             </div>
             <Button variant="outline" onClick={openPortal} disabled={portalBusy}>
