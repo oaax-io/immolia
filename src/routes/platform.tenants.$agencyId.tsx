@@ -9,6 +9,7 @@ import { AuditLogList } from "@/components/platform/AuditLogList";
 import { TenantAdministration } from "@/components/platform/TenantAdministration";
 import { DomainCenter, WhiteLabelSummary } from "@/components/platform/DomainCenter";
 import { TenantModules } from "@/components/platform/ModuleCenter";
+import { TenantOwnerInvitations } from "@/components/platform/TenantOwnerInvitations";
 import { MembersTable } from "@/components/platform/tables";
 import {
   usePlatformTenants, usePlatformMembers, usePlatformActivity, usePlatformBranding, usePlatformAuditLogs, useOwnerInvitations, OWNER_STATUS_LABEL,
@@ -68,6 +69,7 @@ function TenantDetail() {
             <Row k="Custom Domain" v={t.custom_domain ? `${t.custom_domain} (${domainStatusLabel({ verification_status: t.custom_domain_status, activated_at: t.custom_domain_active ? "x" : null, domain_type: "custom" })})` : "–"} />
             <Row k="Branding vorhanden" v={t.has_branding ? "Ja" : "Nein"} />
             <Row k="Aktivierte Module" v={t.modules_active} />
+            <div className="mt-6 border-t pt-5"><TenantOwnerInvitations agencyId={t.id} /></div>
             <div className="mt-6 border-t pt-5"><TenantAdministration key={t.id + t.name + t.status} tenant={t} /></div>
           </CardContent></Card></TabsContent>
           <TabsContent value="users"><Card><QueryState isLoading={members.isLoading} error={members.error} /><MembersTable rows={members.data ?? []} /></Card></TabsContent>

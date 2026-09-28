@@ -6049,6 +6049,15 @@ export type Database = {
         Returns: Json
       }
       platform_find_user_by_email: { Args: { _email: string }; Returns: Json }
+      platform_invite_tenant_owner: {
+        Args: {
+          _agency_id: string
+          _email: string
+          _first_name?: string
+          _last_name?: string
+        }
+        Returns: Json
+      }
       platform_invite_user: {
         Args: { _email: string; _role: string }
         Returns: Json
