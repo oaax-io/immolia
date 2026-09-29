@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useDomainAccess } from "@/components/DomainAccessGate";
 import {
-  useMyWorkspaces, planSwitch, setCurrentWorkspace, resetTenantCache, type Workspace,
+  useMyWorkspaces, planSwitch, switchWorkspace, resetTenantCache, isWorkspaceSwitching, type Workspace,
 } from "@/lib/workspaces";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -29,6 +29,7 @@ function useSwitch() {
       toast.error("Dieses Unternehmen ist unter dieser Adresse nicht verfügbar, und es gibt noch keine andere erreichbare Adresse.");
       return;
     }
+    if (busy || isWorkspaceSwitching()) return;
     setBusy(ws.agency_id);
     try {
       // Andere Adresse: keine Daten dieses Unternehmens unter fremdem Branding zeigen.

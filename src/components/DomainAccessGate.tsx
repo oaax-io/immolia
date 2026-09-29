@@ -7,7 +7,7 @@ import { checkDomainAccess } from "@/lib/public-domain-branding.functions";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkspacePicker } from "@/components/WorkspaceSwitcher";
-import { useMyWorkspaces, setCurrentWorkspace, resetTenantCache } from "@/lib/workspaces";
+import { useMyWorkspaces, switchWorkspace } from "@/lib/workspaces";
 
 export function useDomainAccess(enabled: boolean) {
   const { user } = useAuth();
@@ -30,10 +30,8 @@ export function useDomainAccess(enabled: boolean) {
     if (!target || switchedRef.current === target) return;
     switchedRef.current = target;
     setSwitching(true);
-    setCurrentWorkspace(target)
-      .then(() => resetTenantCache(qc))
-      .catch(() => { /* bleibt abgelehnt → normale Anzeige */ })
-      .finally(() => setSwitching(false));
+    switchWorkspace(qc, target, { path: window.location.pathname + window.location.search })
+      .catch(() => { /* bleibt abgelehnt → normale Anzeige */ setSwitching(false); });
   }, [target, qc]);
   const pending = switching || !!target;
   return { ...q, isLoading: q.isLoading || pending, data: pending ? undefined : q.data };
