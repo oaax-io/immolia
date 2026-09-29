@@ -1,0 +1,35 @@
+/**
+ * Hotfix Zero Stale Tenant Data – zentraler Zustand der bestätigten Firma im Browser.
+ * Nur Cache-/Render-Isolation (Defense in Depth). Sicherheit bleibt serverseitig:
+ * auth → current_agency_id() → Mitgliedschaft → RLS.
+ */
+import { useSyncExternalStore } from "react";
+import { hashKey, type QueryKey } from "@tanstack/react-query";
+
+let confirmedAgencyId: string | null = null;
+let switching = false;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((l) => l());
+
+export function getConfirmedAgencyId() { return confirmedAgencyId; }
+export function setConfirmedAgencyId(id: string | null) {
+  if (confirmedAgencyId === id) return;
+  confirmedAgencyId = id;
+  emit();
+}
+
+/** Ab Klick auf eine andere Firma: Tenant-Oberfläche sofort ausblenden (fail-closed). */
+export function beginTenantSwitch() { switching = true; confirmedAgencyId = null; emit(); }
+export function abortTenantSwitch() { switching = false; emit(); }
+
+function subscribe(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
+export function useTenantSwitching() { return useSyncExternalStore(subscribe, () => switching, () => false); }
+export function useConfirmedAgencyId() { return useSyncExternalStore(subscribe, () => confirmedAgencyId, () => null); }
+
+/**
+ * Jeder Query-Key wird zentral mit der bestätigten Firma präfixiert → Tenant-Daten liegen
+ * nie unter tenant-unabhängigen Cache-Keys, auch wenn eine Seite agencyId vergisst.
+ */
+export function tenantQueryKeyHash(key: QueryKey) {
+  return `${confirmedAgencyId ?? "-"}|${hashKey(key)}`;
+}
