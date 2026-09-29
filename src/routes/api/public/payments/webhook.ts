@@ -306,7 +306,12 @@ async function dispatch(event: any, env: StripeEnv) {
   const obj = event.data.object;
   if (event.type.startsWith("customer.subscription.") && (await syncImmoliaSubscription(obj, env))) {
     if (event.type === "customer.subscription.deleted") {
-      await (getSupabase() as any).from("subscriptions").update({ status: "canceled", updated_at: new Date().toISOString() })
+      // Abo ist beendet (nicht „kündigt zum Periodenende"): Laufzeit endet mit ended_at,
+      // sonst bliebe es als „Gekündigt zum …" aktiv und ein neues Abo wäre blockiert.
+      const endedAt = obj.ended_at ?? obj.canceled_at;
+      const endIso = endedAt ? new Date(endedAt * 1000).toISOString() : new Date().toISOString();
+      await (getSupabase() as any).from("subscriptions")
+        .update({ status: "canceled", cancel_at_period_end: false, current_period_end: endIso, updated_at: new Date().toISOString() })
         .eq("stripe_subscription_id", obj.id).eq("environment", env);
     }
     return;
