@@ -61,3 +61,5 @@
 - Credits haben eine eigene monatliche Periode (credit_period), unabhängig von der Abrechnungsperiode; Grant-Key pro Abo + Credit-Monat, täglicher Lauf commercial_advance_due_periods (nur Plattform/Datenbank); why: Jahresrechnung vergibt trotzdem monatlich, nie doppelt.
 ## Billing UI (5.7)
 - Tenant-Billing-Seite liest nur bestehende RPCs (commercial_subscription_state, agency_commercial_state, credit_balance_breakdown, credit_ledger per RLS) plus read-only tenant_billing_catalog (aktive Pläne/Pakete/Credit-Kosten); Query Keys ["billing"|"usage"|"credits", agencyId]; why: Katalogtabellen sind nur für Plattform lesbar, Frontend rechnet nie selbst, kein Cache über Firmen hinweg.
+## Workspace-Wechsel (Hotfix)
+- Jeder Firmenwechsel läuft über switchWorkspace() in src/lib/workspaces.ts: Sperre gegen Doppelklick, Overlay, set_current_agency, Serverbestätigung via current_agency_id(), Queries abbrechen, Realtime-Kanäle entfernen, Cache leeren, dann vollständiges Neuladen; why: nur so werden React-/Router-State, verspätete Antworten und alte Kanäle deterministisch verworfen.
