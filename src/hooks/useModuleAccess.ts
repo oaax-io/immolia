@@ -32,7 +32,8 @@ export function useModuleAccess() {
     },
   });
   const isEnabled = (module: string | null) => {
-    if (!module || !q.data) return true;
+    if (!module) return true;
+    if (!q.data) return false; // Default-Deny: vor bestätigter Freischaltung keine Modul-Navigation
     const row = q.data.find((r) => r.module === module);
     return row ? row.is_entitled && row.is_enabled : false;
   };
