@@ -1,3 +1,4 @@
+import { useModuleAccess, moduleForPath } from "@/hooks/useModuleAccess";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,11 +24,12 @@ const TILES = [
 
 function SettingsHome() {
   const { t } = useTranslation();
+  const modAccess = useModuleAccess();
   return (
     <>
       <PageHeader i18nKey="settings" title={t("common.settings")} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {TILES.map((tile) => (
+        {TILES.filter((tile) => modAccess.isEnabled(moduleForPath(tile.to))).map((tile) => (
           <Link key={tile.to} to={tile.to} className="group block">
             <Card className="h-full transition hover:border-primary/50 hover:shadow-md">
               <CardContent className="flex items-start gap-4 p-6">

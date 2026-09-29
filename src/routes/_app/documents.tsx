@@ -1,3 +1,4 @@
+import { useModuleAccess, moduleForPath } from "@/hooks/useModuleAccess";
 import { tenantStoragePath } from "@/lib/tenant-storage";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ function DocumentsPage() {
   const relatedLabel = (k: string) => t(`documents.related.${k}`);
   const qc = useQueryClient();
   const { user } = useAuth();
+  const modAccess = useModuleAccess();
   const [open, setOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -350,7 +352,7 @@ function DocumentsPage() {
       })()}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {DOC_CENTER_TILES.map((tile) => (
+        {DOC_CENTER_TILES.filter((tile) => modAccess.isEnabled(moduleForPath(tile.to))).map((tile) => (
           <Link
             key={tile.to}
             to={tile.to}
