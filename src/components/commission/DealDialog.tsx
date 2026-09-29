@@ -1,7 +1,7 @@
 // Dialog "Deal erfassen / bearbeiten" – erfasst den kompletten Abschluss
 // eines Objekts (Käufer, Verkaufspreis, Provision, Beteiligte, Finanzierung,
 // Abschlussdatum) und kann bestehende Buchungen nachträglich korrigieren.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -149,6 +149,7 @@ export function DealDialog({
   const [value, setValue] = useState("3");
   const [override, setOverride] = useState("");
   const loadedOverride = useRef("");
+  const loadedInputs = useRef("");
   const [closedBy, setClosedBy] = useState("");
   const [splits, setSplits] = useState<SplitRow[]>([]);
   const [finMode, setFinMode] = useState<"none" | "dossier" | "manual">("none");
@@ -179,6 +180,7 @@ export function DealDialog({
       const manual = d && stored > 0 && Math.abs(stored - calc) > 0.005;
       setOverride(manual ? String(stored) : "");
       loadedOverride.current = manual ? String(stored) : "";
+      loadedInputs.current = `${String(d?.sale_price ?? listPrice ?? "")}|${String(m?.commission_value ?? (mdl === "fixed" ? "" : "3"))}|${mdl}`;
     }
     setClosedBy(d?.closed_by ?? p?.assigned_to ?? "");
     setSplits(
@@ -208,6 +210,7 @@ export function DealDialog({
 
   // Ändert der Benutzer Preis/Satz/Modell, verliert ein nur übernommener alter Endbetrag seine Gültigkeit.
   useEffect(() => {
+    if (`${salePrice}|${value}|${model}` === loadedInputs.current) return; // Vorbelegung, keine Änderung
     if (loadedOverride.current && override === loadedOverride.current) setOverride("");
     loadedOverride.current = "";
     // eslint-disable-next-line react-hooks/exhaustive-deps

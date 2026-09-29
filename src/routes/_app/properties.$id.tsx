@@ -898,7 +898,7 @@ function OverviewAppointmentsCard({ propertyId }: { propertyId: string }) {
           {items.map((a: any) => (
             <li key={a.id} className="rounded-md border p-2 text-sm">
               <p className="truncate font-medium">{a.title}</p>
-              <p className="text-xs text-muted-foreground">{formatDateTime(a.start_time)}</p>
+              <p className="text-xs text-muted-foreground">{formatDateTime(a.starts_at)}</p>
             </li>
           ))}
         </ul>
