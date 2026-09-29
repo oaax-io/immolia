@@ -873,13 +873,14 @@ function OverviewAppointmentsCard({ propertyId }: { propertyId: string }) {
   const { data: items = [] } = useQuery({
     queryKey: ["property_overview_appointments", propertyId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("appointments")
-        .select("id,title,start_time,appointment_type,status")
+        .select("id,title,starts_at,appointment_type,status")
         .eq("property_id", propertyId)
-        .gte("start_time", new Date().toISOString())
-        .order("start_time", { ascending: true })
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: true })
         .limit(4);
+      if (error) throw error;
       return data ?? [];
     },
   });
@@ -897,7 +898,7 @@ function OverviewAppointmentsCard({ propertyId }: { propertyId: string }) {
           {items.map((a: any) => (
             <li key={a.id} className="rounded-md border p-2 text-sm">
               <p className="truncate font-medium">{a.title}</p>
-              <p className="text-xs text-muted-foreground">{formatDateTime(a.start_time)}</p>
+              <p className="text-xs text-muted-foreground">{formatDateTime(a.starts_at)}</p>
             </li>
           ))}
         </ul>
