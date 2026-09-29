@@ -14,7 +14,7 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
   - Gleiche Subscription-/Entitlement-/Allowance-Engine wie Stripe; Stripe steuert keine Business-Logik
   - Jede Änderung ein Audit-Eintrag; Tenant aktiviert nie selbst
   - Use Case: ASIMO Jahresmitgliedschaft per Rechnung bezahlt
-- [ ] 5.7 Billing & Credits UI
+- [x] 5.7 Billing & Credits UI
 - [ ] 5.8 Credit Enforcement
 - [ ] 5.9 Commercial/Billing Security Audit
 
