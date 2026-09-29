@@ -72,3 +72,6 @@
 - Angebunden: KI-Beschreibung → ai_expose_generations, KI-Lagebeschreibung → ai_assistant_usage; ohne plan_limits-Eintrag kostenlos; why: nur explizit konfigurierte Aktionen verbrauchen Credits.
 ## Credit UX (5.8D)
 - Credit-Zustände healthy/low/insufficient nur über creditUxState + LOW_BALANCE_THRESHOLD (src/lib/credit-ux.ts); Kostenvorschau vor gezählten Aktionen nur über getUsagePreview + UsageCostNotice; why: eine Stelle für Schwellen/Texte, Preise kommen immer vom Server.
+
+## Reservation Cleanup (5.8E)
+- Abgelaufene Credit-Reservierungen gibt nur credit_reservations_expire() zurück, zeitgesteuert per Datenbank-Job alle 15 Min (immolia-credit-reservations-expire); manuell nur Plattform-Admin mit Audit-Eintrag; Usage wird nur gevoidet, wenn die Rückgabe tatsächlich stattfand; why: kein Tenant-Eingriff, Finalize/Expire gewinnen nie beide.
