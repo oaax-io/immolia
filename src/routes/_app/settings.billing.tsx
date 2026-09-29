@@ -183,7 +183,7 @@ function BillingPage() {
           <Card className="flex flex-wrap items-start justify-between gap-4 p-5">
             <div className="min-w-0">
               <h2 className="text-lg font-medium">Abonnement</h2>
-              {!s?.subscription_id && !st ? <p className="text-sm text-muted-foreground">Kein Abonnement vorhanden.</p> : (
+              {!s?.subscription_id ? <p className="text-sm text-muted-foreground">Kein Abonnement vorhanden.</p> : (
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   <dt className="text-muted-foreground">Plan</dt><dd>{planName ?? "–"}</dd>
                   <dt className="text-muted-foreground">Zahlungsweg</dt><dd>{src ? SOURCE_LABEL[src] ?? src : "–"}</dd>
