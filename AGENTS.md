@@ -81,3 +81,4 @@
 ## Zero Stale Tenant Data (Hotfix)
 - Tenant-App rendert nur hinter dem fail-closed DomainAccessGate: serverseitig bestätigte current_agency_id (+ Firma der Adresse), Baum gekeyed auf die Firma, Fehler → neutraler Bildschirm, andere Firma (anderer Tab, BFCache) → Neuladen; why: nie Daten einer Firma unter dem Branding einer anderen.
 - Alle Query-Keys werden zentral per queryKeyHashFn (src/lib/tenant-session.ts) mit der bestätigten Firma präfixiert; Branding nur, wenn tenant-config zur bestätigten Firma passt; why: Cache-Isolation auch wo Seiten agencyId vergessen.
+- Papierkorb-Löschen nur über RPC trash_delete (SECURITY INVOKER, RLS gilt): Snapshot + Löschen in einer Transaktion, kein Browser-Fallback auf reines Löschen; why: fehlgeschlagene Sicherung darf nie Daten vernichten.

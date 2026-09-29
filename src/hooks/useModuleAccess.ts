@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
 
 /** Pfad → Modul. Ohne Eintrag gilt eine Seite als nicht modulgebunden. */
 export const PATH_MODULE: Array<[string, string]> = [
@@ -19,12 +20,13 @@ export const moduleForPath = (p: string) => PATH_MODULE.find(([pre]) => p === pr
  */
 export function useModuleAccess() {
   const { user } = useAuth();
+  const agencyId = useConfirmedAgencyId();
   const q = useQuery({
-    queryKey: ["agency-modules", user?.id ?? null],
-    enabled: !!user,
+    queryKey: ["agency-modules", agencyId, user?.id ?? null],
+    enabled: !!user && !!agencyId,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("agency_modules").select("module, is_entitled, is_enabled");
+      const { data, error } = await supabase.from("agency_modules").select("module, is_entitled, is_enabled").eq("agency_id", agencyId!);
       if (error) throw error;
       return data ?? [];
     },

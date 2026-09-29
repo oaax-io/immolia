@@ -110,7 +110,7 @@ function hideSwitchOverlay() {
  * Kontexte, verspätete Antworten und Kanäle der alten Firma.
  * Bei Fehler bleibt die alte Firma aktiv und die Oberfläche unverändert.
  */
-export async function switchWorkspace(qc: QueryClient, agencyId: string, opts: { host?: string; path?: string } = {}) {
+export async function switchWorkspace(qc: QueryClient, agencyId: string, opts: { host?: string; path?: string; reloadOnError?: boolean } = {}) {
   if (switchInFlight) return false;
   switchInFlight = true;
   // Fail-closed: Tenant-Oberfläche SOFORT ausblenden, bevor irgendetwas am Server passiert.
@@ -135,7 +135,7 @@ export async function switchWorkspace(qc: QueryClient, agencyId: string, opts: {
     hideSwitchOverlay();
     switchInFlight = false;
     abortTenantSwitch();
-    window.location.reload();
+    if (opts.reloadOnError !== false) window.location.reload();
     throw e;
   }
 }
