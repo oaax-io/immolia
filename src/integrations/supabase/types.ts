@@ -5586,6 +5586,32 @@ export type Database = {
         }
         Relationships: []
       }
+      usage_event_voids: {
+        Row: {
+          created_at: string
+          reason: string | null
+          usage_event_id: string
+        }
+        Insert: {
+          created_at?: string
+          reason?: string | null
+          usage_event_id: string
+        }
+        Update: {
+          created_at?: string
+          reason?: string | null
+          usage_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_event_voids_usage_event_id_fkey"
+            columns: ["usage_event_id"]
+            isOneToOne: true
+            referencedRelation: "usage_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_events: {
         Row: {
           agency_id: string
