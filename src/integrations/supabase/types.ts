@@ -5602,7 +5602,9 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
+          reservation_id: string | null
           usage_key: string
+          voided_at: string | null
         }
         Insert: {
           agency_id: string
@@ -5619,7 +5621,9 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           reference_type?: string | null
+          reservation_id?: string | null
           usage_key: string
+          voided_at?: string | null
         }
         Update: {
           agency_id?: string
@@ -5636,7 +5640,9 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          reservation_id?: string | null
           usage_key?: string
+          voided_at?: string | null
         }
         Relationships: [
           {
@@ -5651,6 +5657,13 @@ export type Database = {
             columns: ["credit_operation_id"]
             isOneToOne: false
             referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_reservations"
             referencedColumns: ["id"]
           },
           {
@@ -5975,6 +5988,21 @@ export type Database = {
           _reference_type?: string
           _usage_key: string
         }
+        Returns: Json
+      }
+      commercial_usage_reserve: {
+        Args: {
+          _agency_id?: string
+          _idempotency_key: string
+          _quantity: number
+          _reference_id?: string
+          _reference_type?: string
+          _usage_key: string
+        }
+        Returns: Json
+      }
+      commercial_usage_settle: {
+        Args: { _reason?: string; _success: boolean; _usage_event_id: string }
         Returns: Json
       }
       commercial_valid_entitlement_key: {
