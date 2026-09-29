@@ -17,6 +17,7 @@ export function useDomainAccess(enabled: boolean) {
   const host = typeof window !== "undefined" ? window.location.hostname : "";
   const switchedRef = useRef<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [switchFailed, setSwitchFailed] = useState(false);
   const q = useQuery({
     queryKey: ["domain-access", host, user?.id],
     queryFn: () => fn(),
@@ -33,11 +34,11 @@ export function useDomainAccess(enabled: boolean) {
     if (!enabled || !target || switchedRef.current === target) return;
     switchedRef.current = target;
     setSwitching(true);
-    switchWorkspace(qc, target, { path: window.location.pathname + window.location.search })
-      .catch(() => { setSwitching(false); });
+    switchWorkspace(qc, target, { path: window.location.pathname + window.location.search, reloadOnError: false })
+      .catch(() => { setSwitching(false); setSwitchFailed(true); });
   }, [enabled, target, qc]);
-  const pending = switching || !!target;
-  return { ...q, isLoading: q.isLoading || pending, data: pending ? undefined : q.data };
+  const pending = !switchFailed && (switching || !!target);
+  return { ...q, switchFailed, isLoading: q.isLoading || pending, data: pending ? undefined : q.data };
 }
 
 /** 'active' | 'select' | 'unavailable' | 'none' – zentral aus der Datenbank (Mitgliedschaft + Firmenstatus). */
@@ -90,13 +91,16 @@ function NeutralScreen({ text = "Unternehmen wird geladen …" }: { text?: strin
   );
 }
 
-function NeutralError({ onRetry }: { onRetry: () => void }) {
+function NeutralError({ onRetry, onPick }: { onRetry: () => void; onPick?: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="max-w-md rounded-2xl border bg-card p-8 text-center shadow-soft">
-        <h1 className="text-lg font-semibold">Unternehmen konnte nicht bestätigt werden</h1>
+        <h1 className="text-lg font-semibold">Unternehmen konnte nicht geöffnet werden.</h1>
         <p className="mt-2 text-sm text-muted-foreground">Aus Sicherheitsgründen werden keine Daten angezeigt. Bitte erneut versuchen.</p>
-        <Button className="mt-6" onClick={onRetry}>Erneut versuchen</Button>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button onClick={onRetry}>Erneut versuchen</Button>
+          {onPick && <Button variant="outline" onClick={onPick}>Unternehmen auswählen</Button>}
+        </div>
       </div>
     </div>
   );
@@ -153,8 +157,11 @@ export function DomainAccessGate({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("pageshow", onShow);
   }, [qc]);
 
+  const [picking, setPicking] = useState(false);
   if (switching) return <NeutralScreen text="Unternehmen wird gewechselt …" />;
-  if (q.isError || ws.isError) return <NeutralError onRetry={() => { void q.refetch(); void ws.refetch(); }} />;
+  if (picking) return <WorkspacePicker />;
+  if (q.switchFailed) return <NeutralError onRetry={() => window.location.reload()} onPick={() => setPicking(true)} />;
+  if (q.isError || ws.isError) return <NeutralError onRetry={() => { void q.refetch(); void ws.refetch(); }} onPick={() => setPicking(true)} />;
   if (q.isLoading || ws.isLoading || !q.data || !ws.data) return <NeutralScreen />;
   if (ws.data === "select") return <WorkspacePicker />;
   if (ws.data === "unavailable")
