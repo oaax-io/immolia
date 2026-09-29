@@ -6576,6 +6576,7 @@ export type Database = {
         }
         Returns: string
       }
+      tenant_billing_catalog: { Args: never; Returns: Json }
       tenant_branding_of: { Args: { _agency: string }; Returns: Json }
       tenant_custom_domain_activate: { Args: never; Returns: undefined }
       tenant_custom_domain_remove: { Args: never; Returns: undefined }
