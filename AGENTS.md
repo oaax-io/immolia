@@ -70,3 +70,5 @@
 ## Metered Actions (5.8C)
 - Gezählte App-Aktionen laufen nur über withMeteredUsage (src/lib/metered-usage.server.ts): commercial_usage_reserve (nur service_role, Firma = current_agency_id des Benutzers) → Leistung → commercial_usage_settle(ok|fail); Stornos in usage_event_voids statt Journal-Update; why: usage_events/credit_ledger bleiben unveränderlich, Fehler geben Credits und Kontingent zurück.
 - Angebunden: KI-Beschreibung → ai_expose_generations, KI-Lagebeschreibung → ai_assistant_usage; ohne plan_limits-Eintrag kostenlos; why: nur explizit konfigurierte Aktionen verbrauchen Credits.
+## Credit UX (5.8D)
+- Credit-Zustände healthy/low/insufficient nur über creditUxState + LOW_BALANCE_THRESHOLD (src/lib/credit-ux.ts); Kostenvorschau vor gezählten Aktionen nur über getUsagePreview + UsageCostNotice; why: eine Stelle für Schwellen/Texte, Preise kommen immer vom Server.

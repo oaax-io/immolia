@@ -1,3 +1,4 @@
+import { UsageCostNotice, useUsagePreview, costButtonLabel, isBlocked } from "@/components/credits/UsageCostNotice";
 import { tenantStoragePath } from "@/lib/tenant-storage";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -639,6 +640,7 @@ function InlineEditCard({
   useEffect(() => { setDraft(value ?? ""); }, [value]);
 
   const startEdit = () => { if (aiProperty) setAskAi(true); else setEditing(true); };
+  const aiPreview = useUsagePreview("ai_expose_generations", !!aiProperty && askAi);
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -657,7 +659,7 @@ function InlineEditCard({
       const res = await generatePropertyDescription({ data: { property: payload as any, tone: aiTone, extra: aiExtra || undefined, requestId: crypto.randomUUID() } });
       return res.text;
     },
-    onSuccess: (text) => { setDraft(text); setAskAi(false); setEditing(true); toast.success("Text generiert"); },
+    onSuccess: (text) => { setDraft(text); setAskAi(false); setEditing(true); toast.success("Text generiert"); qc.invalidateQueries({ queryKey: ["usage"] }); qc.invalidateQueries({ queryKey: ["credits"] }); },
     onError: (e: any) => toast.error(e?.message ?? "Generierung fehlgeschlagen"),
   });
 
@@ -728,13 +730,14 @@ function InlineEditCard({
                 <Label>Zusätzliche Hinweise (optional)</Label>
                 <Textarea rows={3} value={aiExtra} onChange={(e) => setAiExtra(e.target.value)} placeholder="z.B. Highlights, Zielgruppe, Besonderheiten…" />
               </div>
+              <UsageCostNotice usageKey="ai_expose_generations" preview={aiPreview.data} />
             </div>
             <DialogFooter className="gap-2 sm:justify-between">
               <Button variant="ghost" onClick={() => { setAskAi(false); setEditing(true); }} disabled={generate.isPending}>
                 Selbst schreiben
               </Button>
-              <Button onClick={() => generate.mutate()} disabled={generate.isPending}>
-                {generate.isPending ? <><RefreshCw className="mr-1 h-3.5 w-3.5 animate-spin" />Generiere…</> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Text generieren</>}
+              <Button onClick={() => generate.mutate()} disabled={generate.isPending || aiPreview.isLoading || isBlocked(aiPreview.data)}>
+                {generate.isPending ? <><RefreshCw className="mr-1 h-3.5 w-3.5 animate-spin" />Generiere…</> : <><Sparkles className="mr-1 h-3.5 w-3.5" />{costButtonLabel("Text generieren", aiPreview.data)}</>}
               </Button>
             </DialogFooter>
           </DialogContent>

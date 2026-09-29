@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { actionLabel, creditUxState, USAGE_LABELS } from "@/lib/credit-ux";
 import { createPlanCheckout, createCreditTopupCheckout, createAgencyPortal } from "@/utils/billing.functions";
 
 export const Route = createFileRoute("/_app/settings/billing")({
@@ -36,7 +37,8 @@ const fmtChf = (n: number | string, cur = "CHF") => `${cur} ${Number(n).toLocale
 function historyLabel(e: any): { title: string; type: string } {
   if (e.delta < 0) {
     if (e.reference_type === "refund_of_entry" || e.source === "refund") return { title: "Rückbuchung", type: "Korrektur" };
-    return { title: e.action_name ?? (e.action_key ? `Aktion: ${e.action_key}` : "Verbrauch"), type: "Verbrauch" };
+    if (e.metadata?.reason === "usage_overage_reservation" || e.metadata?.reason?.startsWith?.("recurring")) return { title: actionLabel(e.action_key), type: "Verbrauch" };
+    return { title: actionLabel(e.action_key, e.action_name), type: "Verbrauch" };
   }
   switch (e.source) {
     case "subscription": return { title: "Monatliches Abo-Kontingent", type: "Abo" };
@@ -203,13 +205,20 @@ function BillingPage() {
             ) : null}
           </Card>
 
+          {balance !== null && creditUxState(balance) !== "healthy" && (
+            <Card className={`flex flex-wrap items-center justify-between gap-3 p-4 ${balance <= 0 ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+              <div className="flex items-center gap-2 text-sm"><AlertTriangle className="h-4 w-4 shrink-0" />{balance <= 0 ? "Kein Credit-Guthaben mehr. Inkludierte Leistungen funktionieren weiter; zusätzliche Nutzung braucht Credits." : `Dein Credit-Guthaben ist niedrig (${fmtNum(balance)} Credits).`}</div>
+              <Button size="sm" asChild><a href="#credits">Credits kaufen</a></Button>
+            </Card>
+          )}
+
           {/* 3. Allowances */}
           <section className="space-y-3">
             <h2 className="text-lg font-medium">Enthaltene Ressourcen</h2>
             {usageQ.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : usageQ.data?.forbidden ? (
               <p className="text-sm text-muted-foreground">Nur Inhaber und Administratoren sehen die Nutzung.</p>
             ) : (
-              <Allowances items={usageQ.data?.data?.allowances ?? []} monthlyCredits={plan?.monthly_credits} subscriptionBucket={bd?.buckets?.subscription} balance={balance} />
+              <Allowances items={usageQ.data?.data?.allowances ?? []} monthlyCredits={plan?.monthly_credits} subscriptionBucket={bd?.buckets?.subscription} balance={balance} periodEnd={s?.current_period_end ?? null} />
             )}
           </section>
 
@@ -288,7 +297,7 @@ function BillingPage() {
           )}
 
           {/* 6. Packages */}
-          <section className="space-y-3">
+          <section id="credits" className="scroll-mt-20 space-y-3">
             <h2 className="text-lg font-medium">Credits kaufen</h2>
             <p className="text-sm text-muted-foreground">Einmalkauf – Ihr Abo bleibt unverändert. Gekaufte Credits verfallen nicht.</p>
             {balance !== null && balance <= 0 && <p className="text-sm text-destructive">Nicht genügend Credits.</p>}
@@ -366,10 +375,12 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Allowances({ items, monthlyCredits, subscriptionBucket, balance }: { items: any[]; monthlyCredits?: number; subscriptionBucket?: any; balance: number | null }) {
-  const NAMES: Record<string, string> = { users: "Benutzer", storage_gb: "Speicher", financing_requests: "Finanzierungsanfragen", domains: "Eigene Domains", properties: "Immobilien", leads: "Leads", clients: "Kunden" };
-  const order = ["users", "storage_gb", "financing_requests", "domains", "properties", "leads", "clients"];
-  const sorted = [...items].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+function Allowances({ items, monthlyCredits, subscriptionBucket, balance, periodEnd }: { items: any[]; monthlyCredits?: number; subscriptionBucket?: any; balance: number | null; periodEnd: string | null }) {
+  const NAMES: Record<string, string> = { users: "Benutzer", storage_gb: "Speicher", domains: "Eigene Domains", properties: "Immobilien", leads: "Leads", clients: "Kunden",
+    ...Object.fromEntries(Object.entries(USAGE_LABELS).map(([k, v]) => [k, v.plural])) };
+  const order = ["users", "storage_gb", "ai_expose_generations", "market_analyses", "financing_requests", "ai_assistant_usage", "ai_image_generations", "domains", "properties", "leads", "clients"];
+  // Nur aktive Kontingente zeigen (plus Kerndaten „unbegrenzt"); Zähler ohne Kontingent bleiben verborgen.
+  const sorted = [...items].filter((a) => a.defined || a.core).sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {monthlyCredits ? (
@@ -400,11 +411,29 @@ function Allowances({ items, monthlyCredits, subscriptionBucket, balance }: { it
         }
         const used = Number(a.used ?? 0), value = Number(a.value ?? 0);
         const exhausted = value > 0 ? used >= value : used > 0;
+        const overage = Math.max(0, used - value);
+        if (a.key === "storage_gb" || a.key === "users") {
+          return (
+            <Card key={a.key} className="space-y-2 p-4">
+              <div className="text-sm text-muted-foreground">{name}</div>
+              <div className="font-medium">{fmtNum(used)} / {fmtNum(value)} {unit} inkludiert</div>
+              <Progress value={value > 0 ? Math.min(100, (used / value) * 100) : 0} />
+              <dl className="grid grid-cols-2 gap-x-2 text-xs text-muted-foreground">
+                <dt>Inkludiert</dt><dd className="text-right">{fmtNum(value)} {unit}</dd>
+                <dt>Verwendet</dt><dd className="text-right">{fmtNum(used)} {unit}</dd>
+                <dt>Mehrverbrauch</dt><dd className="text-right">{fmtNum(overage)} {unit}</dd>
+                {overage > 0 && <><dt>Nächste Abrechnung</dt><dd className="text-right">{a.overage_credit_cost != null ? fmtDate(periodEnd) : "noch kein Preis festgelegt"}</dd></>}
+              </dl>
+              {overage > 0 && a.overage_credit_cost == null && <p className="text-xs text-muted-foreground">Ohne festgelegten Preis wird nichts abgebucht.</p>}
+            </Card>
+          );
+        }
         return (
           <Card key={a.key} className="space-y-2 p-4">
             <div className="text-sm text-muted-foreground">{name}</div>
-            <div className="font-medium">{fmtNum(used)} / {fmtNum(value)} {unit}</div>
+            <div className="font-medium">{fmtNum(used)} / {fmtNum(value)} {unit} verwendet</div>
             <Progress value={value > 0 ? Math.min(100, (used / value) * 100) : 0} />
+            <div className="text-xs text-muted-foreground">Verbleibend: {fmtNum(Math.max(0, value - used))}{overage > 0 ? ` · Über Credits: ${fmtNum(overage)}` : ""}</div>
             {exhausted && a.policy !== "hard_limit" && (
               <p className="text-xs text-muted-foreground">
                 Kontingent aufgebraucht. Weitere Nutzung erfolgt über Credits.
