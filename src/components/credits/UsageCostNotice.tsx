@@ -35,6 +35,9 @@ export function UsageCostNotice({ usageKey, preview }: { usageKey: string; previ
     ? <div>{fmt(preview.used)} / {fmt(preview.included)} {name} inklusive verwendet</div>
     : null;
 
+  if (preview.priceMissing && preview.result !== "included") {
+    return <div className="space-y-1 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{allowance}<div>Das inkludierte Kontingent ist ausgeschöpft. Für zusätzliche Nutzung ist noch kein Preis festgelegt.</div></div>;
+  }
   if (preview.result === "included") {
     return <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{allowance}</div>;
   }
