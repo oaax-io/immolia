@@ -178,6 +178,7 @@ function ModuleGate({ children }: { children: ReactNode }) {
 
 export default function AppLayout({ children }: { children?: ReactNode }) {
   const { user, loading, signOut, isSuperadmin } = useAuth();
+  const modAccess = useModuleAccess();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -239,10 +240,12 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
 
 
             <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate({ to: "/feedback" })}>
-                <MessageSquarePlus className="h-4 w-4" />
-                <span className="hidden sm:inline">{t("common.feedback")}</span>
-              </Button>
+              {modAccess.isEnabled("feedback") && (
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate({ to: "/feedback" })}>
+                  <MessageSquarePlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("common.feedback")}</span>
+                </Button>
+              )}
               <TeamInbox />
               <NotificationCenter />
               <DropdownMenu>
@@ -301,15 +304,21 @@ export default function AppLayout({ children }: { children?: ReactNode }) {
                     </>
                   )}
                   <DropdownMenuSeparator />
+                  {modAccess.isEnabled("employees") && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/team" })}>
                     <Users2 className="mr-2 h-4 w-4" />{t("nav.team")}
                   </DropdownMenuItem>
+                  )}
+                  {modAccess.isEnabled("feedback") && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/feedback" })}>
                     <MessageSquarePlus className="mr-2 h-4 w-4" />{t("nav.feedback")}
                   </DropdownMenuItem>
+                  )}
+                  {modAccess.isEnabled("docs") && (
                   <DropdownMenuItem onClick={() => navigate({ to: "/docs" })}>
                     <BookOpen className="mr-2 h-4 w-4" />{t("nav.docs")}
                   </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
                     <Settings className="mr-2 h-4 w-4" />{t("common.settings")}
