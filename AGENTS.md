@@ -67,3 +67,6 @@
 ## Allowance & Overage (5.8A)
 - Monatliche Kontingente (period 'monthly') zählen pro Credit-Monat des Abos (Key 'cm:<sub>:<start>'), nicht pro Abrechnungsperiode; why: Jahresrechnung erhält trotzdem monatliche Kontingente.
 - _commercial_usage_decision liefert zusätzlich result (free/included/credit_required/insufficient_credits/hard_blocked/not_available) und usage_type; Gauges (storage_gb, users) ergeben RECURRING_OVERAGE statt Belastung pro Aktion, ohne Preis 'commercial_configuration_required' und erlaubt; why: Speicher nie pro Upload doppelt verrechnen, Arbeit nie blockieren.
+## Metered Actions (5.8C)
+- Gezählte App-Aktionen laufen nur über withMeteredUsage (src/lib/metered-usage.server.ts): commercial_usage_reserve (nur service_role, Firma = current_agency_id des Benutzers) → Leistung → commercial_usage_settle(ok|fail); Stornos in usage_event_voids statt Journal-Update; why: usage_events/credit_ledger bleiben unveränderlich, Fehler geben Credits und Kontingent zurück.
+- Angebunden: KI-Beschreibung → ai_expose_generations, KI-Lagebeschreibung → ai_assistant_usage; ohne plan_limits-Eintrag kostenlos; why: nur explizit konfigurierte Aktionen verbrauchen Credits.

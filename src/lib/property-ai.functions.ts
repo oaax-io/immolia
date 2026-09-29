@@ -1,16 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { withMeteredUsage } from "./metered-usage.server";
+
+const RequestId = z.string().min(8).max(100).regex(/^[A-Za-z0-9_-]+$/).optional();
 
 const InputSchema = z.object({
   property: z.record(z.string(), z.any()),
   tone: z.enum(["sachlich", "emotional", "premium"]).default("sachlich"),
   extra: z.string().max(2000).optional(),
+  requestId: RequestId,
 });
 
 export const generatePropertyDescription = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => InputSchema.parse(data))
-  .handler(async ({ data }): Promise<{ text: string }> => {
+  .handler(async ({ data, context }): Promise<{ text: string }> =>
+    withMeteredUsage(context.supabase, "ai_expose_generations", data.requestId ?? crypto.randomUUID(), () => runDescription(data), { type: "ai_property_description" }));
+
+async function runDescription(data: z.infer<typeof InputSchema>): Promise<{ text: string }> {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("KI ist nicht konfiguriert (LOVABLE_API_KEY fehlt).");
 
@@ -83,7 +91,7 @@ ${data.extra ? `\nZusätzliche Hinweise des Maklers:\n${data.extra}` : ""}`;
 
     if (!text.trim()) throw new Error("Die KI hat keinen Text zurückgegeben. Bitte erneut versuchen.");
     return { text: text.trim() };
-  });
+}
 
 const LocationInputSchema = z.object({
   address: z.string().max(300).optional(),
@@ -92,12 +100,16 @@ const LocationInputSchema = z.object({
   country: z.string().max(80).optional(),
   property_type: z.string().max(80).optional(),
   extra: z.string().max(1000).optional(),
+  requestId: RequestId,
 });
 
 export const generateLocationDescription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => LocationInputSchema.parse(data))
-  .handler(async ({ data }): Promise<{ text: string }> => {
+  .handler(async ({ data, context }): Promise<{ text: string }> =>
+    withMeteredUsage(context.supabase, "ai_assistant_usage", data.requestId ?? crypto.randomUUID(), () => runLocation(data), { type: "ai_location_description" }));
+
+async function runLocation(data: z.infer<typeof LocationInputSchema>): Promise<{ text: string }> {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("KI ist nicht konfiguriert.");
     const prompt = `Du bist ein Schweizer Immobilienmakler. Formuliere eine prägnante Lagebeschreibung in Schweizer Hochdeutsch (kein ß) für ein Exposé.
@@ -115,4 +127,4 @@ Schreibe 80–130 Wörter in zwei kurzen Absätzen. Beschreibe nur plausible all
     const text = json.output_text ?? json.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text ?? "";
     if (!text.trim()) throw new Error("Die KI hat keinen Text zurückgegeben.");
     return { text: text.trim() };
-  });
+  }
