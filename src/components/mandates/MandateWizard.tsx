@@ -40,7 +40,6 @@ import { resolveDocumentContext } from "@/lib/document-context";
 import { formatCurrency } from "@/lib/format";
 import {
   CommissionSplitEditor,
-  saveMandateSplits,
   useTeamProfiles,
   SPLIT_ROLE_LABELS,
   type SplitRow,
