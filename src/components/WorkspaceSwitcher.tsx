@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useDomainAccess } from "@/components/DomainAccessGate";
 import {
-  useMyWorkspaces, planSwitch, setCurrentWorkspace, resetTenantCache, type Workspace,
+  useMyWorkspaces, planSwitch, switchWorkspace, resetTenantCache, isWorkspaceSwitching, type Workspace,
 } from "@/lib/workspaces";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -29,20 +29,13 @@ function useSwitch() {
       toast.error("Dieses Unternehmen ist unter dieser Adresse nicht verfügbar, und es gibt noch keine andere erreichbare Adresse.");
       return;
     }
+    if (busy || isWorkspaceSwitching()) return;
     setBusy(ws.agency_id);
     try {
-      await setCurrentWorkspace(ws.agency_id);
-      if (plan.kind === "redirect") {
-        // Andere Adresse: keine Daten dieses Unternehmens unter fremdem Branding zeigen.
-        await resetTenantCache(qc);
-        window.location.assign(`https://${plan.host}/dashboard`);
-        return;
-      }
-      await resetTenantCache(qc);
-      navigate({ to: "/dashboard", replace: true });
+      // Andere Adresse: keine Daten dieses Unternehmens unter fremdem Branding zeigen.
+      await switchWorkspace(qc, ws.agency_id, plan.kind === "redirect" ? { host: plan.host } : {});
     } catch (e: any) {
       toast.error(e?.message ?? "Wechsel nicht möglich");
-    } finally {
       setBusy(null);
     }
   };

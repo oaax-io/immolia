@@ -83,3 +83,50 @@ export async function resetTenantCache(qc: QueryClient) {
   await qc.cancelQueries();
   qc.clear();
 }
+
+let switchInFlight = false;
+export function isWorkspaceSwitching() { return switchInFlight; }
+
+function showSwitchOverlay() {
+  if (typeof document === "undefined" || document.getElementById("ws-switch-overlay")) return;
+  const el = document.createElement("div");
+  el.id = "ws-switch-overlay";
+  el.setAttribute("role", "status");
+  el.style.cssText = "position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:hsl(var(--background, 0 0% 100%) / 0.96);backdrop-filter:blur(2px);font:500 14px system-ui,sans-serif;color:inherit";
+  el.textContent = "Unternehmen wird gewechselt …";
+  document.body.appendChild(el);
+}
+function hideSwitchOverlay() {
+  document.getElementById("ws-switch-overlay")?.remove();
+}
+
+/**
+ * Einzige Wechsel-Transaktion (Hotfix Workspace-Switch):
+ * Sperre gegen Doppelklick → Overlay → set_current_agency (Server prüft Mitgliedschaft)
+ * → Server bestätigt via current_agency_id() → alle Queries abbrechen, Realtime-Kanäle
+ * entfernen, Cache leeren → vollständiges Neuladen der Zielseite.
+ * Das Neuladen ist bewusst: es verwirft deterministisch React-State, Router-State,
+ * Kontexte, verspätete Antworten und Kanäle der alten Firma.
+ * Bei Fehler bleibt die alte Firma aktiv und die Oberfläche unverändert.
+ */
+export async function switchWorkspace(qc: QueryClient, agencyId: string, opts: { host?: string; path?: string } = {}) {
+  if (switchInFlight) return false;
+  switchInFlight = true;
+  showSwitchOverlay();
+  try {
+    await setCurrentWorkspace(agencyId);
+    const { data: confirmed, error } = await (supabase.rpc as any)("current_agency_id");
+    if (error) throw error;
+    if (confirmed !== agencyId) throw new Error("Wechsel wurde vom Server nicht bestätigt.");
+    await qc.cancelQueries();
+    try { await supabase.removeAllChannels(); } catch { /* ignore */ }
+    qc.clear();
+    const path = opts.path ?? "/dashboard";
+    window.location.assign(opts.host ? `https://${opts.host}${path}` : path);
+    return true; // Overlay bleibt bis zum Neuladen; Sperre ebenso.
+  } catch (e) {
+    hideSwitchOverlay();
+    switchInFlight = false;
+    throw e;
+  }
+}
