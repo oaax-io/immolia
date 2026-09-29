@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.credit_reservations_expire() FROM authenticated;
