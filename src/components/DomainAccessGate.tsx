@@ -136,6 +136,16 @@ export function DomainAccessGate({ children }: { children: ReactNode }) {
     renderedRef.current = confirmed;
   }, [confirmed, qc]);
 
+  // Tab wieder aktiv / regelmässig: serverseitige Firma erneut bestätigen (Wechsel in anderem Tab).
+  useEffect(() => {
+    const recheck = () => { if (document.visibilityState === "visible") { void q.refetch(); void ws.refetch(); } };
+    window.addEventListener("focus", recheck);
+    document.addEventListener("visibilitychange", recheck);
+    const t = window.setInterval(recheck, 60_000);
+    return () => { window.removeEventListener("focus", recheck); document.removeEventListener("visibilitychange", recheck); window.clearInterval(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // BFCache: wiederhergestellte Seite nie als alten Snapshot zeigen.
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => { if (e.persisted) hardReload(qc); };
