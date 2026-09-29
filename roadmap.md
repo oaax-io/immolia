@@ -6,6 +6,8 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
 - [x] 5.1–5.5 Commercial Foundation, Credits, Usage, Trial, Katalog
 - [x] 5.6 Stripe Billing + E2E (OAASE, Testmodus)
 - [x] 5.6.1 Invite-only Onboarding (Einladung ohne bestehendes Konto annehmbar)
+- [x] 5.6.1a Tenant Isolation Fix
+  - Notifications / Inbox / Feedback / Feedback Storage
 - [x] 5.6.2 Manual & Invoice Billing (ASIMO-Migration wartet auf reale Vertragsdaten)
   - Abo und Zahlungsquelle getrennt: stripe, invoice, bank_transfer, complimentary, manual
   - System Owner verwaltet: Plan, individueller Preis, monatlich/jährlich, Beginn, gültig bis, bezahlt/unbezahlt, Auto-Verlängerung, interne Notiz, individuelle Allowances (Credits, User, Storage, Financing Requests)
@@ -13,8 +15,20 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
   - Jede Änderung ein Audit-Eintrag; Tenant aktiviert nie selbst
   - Use Case: ASIMO Jahresmitgliedschaft per Rechnung bezahlt
 - [ ] 5.7 Billing & Credits UI
-- [ ] 5.8 Credit Enforcement in echten Funktionen
+- [ ] 5.8 Credit Enforcement
 - [ ] 5.9 Commercial/Billing Security Audit
+
+## Phase 6 – Platform Product Control (noch nicht umsetzen)
+- [ ] 6.1 Platform Feature Flags
+- [ ] 6.2 Release & Version Management
+- [ ] 6.3 Changelog
+- [ ] 6.4 Platform Documentation
+- [ ] 6.5 Feedback Intelligence
+- [ ] 6.6 Platform Communication Center
+- [ ] 6.7 Integration Provider Registry
+- [ ] 6.8 Tenant Integration Connections
+- [ ] 6.9 Platform/Tenant Email Architecture
+- [ ] 6.10 Platform Product Control Security Audit
 
 ## Spätere Workstreams (noch nicht umsetzen)
 - [ ] Tenant Feature Flags: generische Feature Keys (z. B. advanced_commission_management), Kategorien standard/beta/custom/enterprise, zusätzlich zum Modulsystem, nie `if agency === ASIMO`; Platform Admin → Unternehmen → Features; umgehen nie RLS/Tenant-Isolation
