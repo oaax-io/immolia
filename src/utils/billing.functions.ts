@@ -68,7 +68,9 @@ export const createPlanCheckout = createServerFn({ method: "POST" })
     try {
       const supabase = context.supabase as any;
       const agencyId = await resolveBillingAgency(supabase);
-      const { data: plan } = await supabase
+      // Katalog ist nur für die Plattform lesbar: Preis serverseitig nach Firmenprüfung lesen
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: plan } = await (supabaseAdmin as any)
         .from("plans")
         .select("stripe_price_key, status, is_custom")
         .eq("key", data.planKey)
@@ -77,7 +79,6 @@ export const createPlanCheckout = createServerFn({ method: "POST" })
         return { error: "Dieser Plan kann nicht online abgeschlossen werden" };
       }
       // Keine doppelte Subscription
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: existing } = await (supabaseAdmin as any)
         .from("subscriptions")
         .select("id")
@@ -135,7 +136,8 @@ export const createCreditTopupCheckout = createServerFn({ method: "POST" })
     try {
       const supabase = context.supabase as any;
       const agencyId = await resolveBillingAgency(supabase);
-      const { data: pkg } = await supabase
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: pkg } = await (supabaseAdmin as any)
         .from("credit_packages")
         .select("key, name, stripe_price_id, status")
         .eq("key", data.packageKey)

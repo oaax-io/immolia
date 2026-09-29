@@ -75,3 +75,6 @@
 
 ## Reservation Cleanup (5.8E)
 - Abgelaufene Credit-Reservierungen gibt nur credit_reservations_expire() zurück, zeitgesteuert per Datenbank-Job alle 15 Min (immolia-credit-reservations-expire); manuell nur Plattform-Admin mit Audit-Eintrag; Usage wird nur gevoidet, wenn die Rückgabe tatsächlich stattfand; why: kein Tenant-Eingriff, Finalize/Expire gewinnen nie beide.
+## Commercial Audit (5.9)
+- Abrechnungs-/Credit-Tabellen: anon/authenticated haben kein INSERT/UPDATE/DELETE, anon kein SELECT; Schreiben nur über SECURITY-DEFINER-RPCs oder service_role; why: Schutz zusätzlich zu RLS, Journal bleibt unveränderlich.
+- Stripe-Checkout liest Plan/Paket-Preis serverseitig mit Admin-Client erst nach resolveBillingAgency; why: Katalog ist nur für Plattform lesbar, Preis nie vom Browser.
