@@ -12,11 +12,13 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
 export function getConfirmedAgencyId() { return confirmedAgencyId; }
-export function setConfirmedAgencyId(id: string | null) {
+/** silent: während Render setzen (Cache-Keys der Kinder), Benachrichtigung danach per notifyTenant(). */
+export function setConfirmedAgencyId(id: string | null, silent = false) {
   if (confirmedAgencyId === id) return;
   confirmedAgencyId = id;
-  emit();
+  if (!silent) emit();
 }
+export function notifyTenant() { emit(); }
 
 /** Ab Klick auf eine andere Firma: Tenant-Oberfläche sofort ausblenden (fail-closed). */
 export function beginTenantSwitch() { switching = true; confirmedAgencyId = null; emit(); }

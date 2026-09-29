@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkspacePicker } from "@/components/WorkspaceSwitcher";
 import { useMyWorkspaces, switchWorkspace } from "@/lib/workspaces";
-import { setConfirmedAgencyId, useTenantSwitching, beginTenantSwitch } from "@/lib/tenant-session";
+import { setConfirmedAgencyId, notifyTenant, useTenantSwitching, beginTenantSwitch } from "@/lib/tenant-session";
 
 export function useDomainAccess(enabled: boolean) {
   const { user } = useAuth();
@@ -126,7 +126,8 @@ export function DomainAccessGate({ children }: { children: ReactNode }) {
   const renderedRef = useRef<string | null>(null);
 
   // Bestätigte Firma zentral setzen, bevor Kinder rendern (Cache-Keys, Branding).
-  if (confirmed && !switching) setConfirmedAgencyId(confirmed);
+  if (confirmed && !switching) setConfirmedAgencyId(confirmed, true);
+  useEffect(() => { if (confirmed && !switching) notifyTenant(); }, [confirmed, switching]);
 
   // Andere Firma als bisher gerendert (anderer Tab, Server-Wechsel) → nie weiterzeigen.
   useEffect(() => {
