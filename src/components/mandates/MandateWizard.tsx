@@ -196,55 +196,37 @@ export function MandateWizard({ open, onOpenChange, onCreated }: Props) {
       if (!clientId || !propertyId) throw new Error("Kunde und Immobilie sind erforderlich");
       if (!commissionValue) throw new Error("Provision fehlt");
 
-      // 1. Insert mandate
-      const { data: mandate, error: mErr } = await supabase
-        .from("mandates")
-        .insert({
+      // Validierung VOR jeder Speicherung: leere Zeilen (ohne Person und ohne Anteil) ignorieren,
+      // Zeilen mit Person, aber 0 % bzw. > 100 % → Korrektur verlangen.
+      const cleanSplits = splits.filter((r) => r.user_id || Number(r.split_percent) > 0);
+      if (cleanSplits.some((r) => !r.user_id)) throw new Error("Bitte jeder Aufteilungszeile eine Person zuweisen oder die Zeile entfernen.");
+      if (cleanSplits.some((r) => !(Number(r.split_percent) > 0) || Number(r.split_percent) > 100))
+        throw new Error("Jeder Anteil muss grösser als 0 % und höchstens 100 % sein. Bitte korrigieren oder die Zeile entfernen.");
+
+      // Mandat + Aufteilung + Dokument atomar in einer Transaktion (kein halbes Mandat).
+      const { data, error } = await supabase.rpc("create_mandate_atomic" as any, {
+        _mandate: {
           client_id: clientId,
           property_id: propertyId,
           commission_model: commissionType,
           commission_value: Number(commissionValue),
           valid_from: validFrom || null,
           valid_until: validUntil || null,
-          status: "draft",
           mandate_type: mandateType,
           cancellation_fee: cancellationFee ? Number(cancellationFee) : null,
           cancellation_fee_notes: cancellationNotes.trim() || null,
-        } as any)
-        .select("id")
-        .single();
-      if (mErr) throw mErr;
-
-      // 1b. Geplante Provisions-Aufteilung speichern
-      await saveMandateSplits(propertyId, mandate.id as string, splits);
-
-      // 2. Insert generated document
-      const { data: doc, error: dErr } = await supabase
-        .from("generated_documents")
-        .insert({
-          related_type: "mandate",
-          related_id: mandate.id,
+        },
+        _splits: cleanSplits.map((r) => ({ user_id: r.user_id, role: r.role, split_percent: Number(r.split_percent) })),
+        _doc: {
           html_content: previewHtml,
           variables: JSON.parse(JSON.stringify(ctx ?? {})),
-          created_by: user?.id ?? null,
-          title:
-            mandateType === "exclusive"
-              ? "Maklermandat (exklusiv)"
-              : "Maklermandat (teilexklusiv)",
+          title: mandateType === "exclusive" ? "Maklermandat (exklusiv)" : "Maklermandat (teilexklusiv)",
           document_type: docKind,
-          status: "ready",
-        } as any)
-        .select("id")
-        .single();
-      if (dErr) throw dErr;
-
-      // 3. Link back
-      await supabase
-        .from("mandates")
-        .update({ generated_document_id: doc.id })
-        .eq("id", mandate.id);
-
-      return { mandateId: mandate.id as string, documentId: doc.id as string };
+        },
+      });
+      if (error) throw error;
+      const res = data as { mandate_id: string; document_id: string };
+      return { mandateId: res.mandate_id, documentId: res.document_id };
     },
     onSuccess: ({ mandateId, documentId }) => {
       toast.success("Mandat gespeichert – PDF kann jetzt generiert werden");
