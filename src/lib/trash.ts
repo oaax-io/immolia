@@ -39,7 +39,7 @@ export const TRASH_LABELS: Record<TrashTable, string> = {
   matches: "Matching",
 };
 
-function guessLabel(row: Record<string, any>): string {
+export function guessLabel(row: Record<string, any>): string {
   const first =
     row.title ||
     row.name ||
@@ -52,47 +52,19 @@ function guessLabel(row: Record<string, any>): string {
   return (first as string) || "Eintrag";
 }
 
-function guessSubtitle(row: Record<string, any>): string | null {
+export function guessSubtitle(row: Record<string, any>): string | null {
   return (row.reference || row.city || row.status || row.email || null) as string | null;
 }
 
 /**
- * Verschiebt Datensätze in den Papierkorb und löscht sie anschliessend.
- * Fällt auf einen einfachen Delete zurück, wenn der Snapshot nicht gelesen werden kann.
+ * Verschiebt Datensätze atomar in den Papierkorb (Server-Funktion trash_delete):
+ * Snapshot schreiben und Original löschen in EINER Transaktion. Schlägt die Sicherung
+ * fehl, bleibt das Original vollständig erhalten. Kein Fallback auf einfaches Löschen.
  */
 export async function deleteToTrash(table: TrashTable, ids: string | string[]) {
   const list = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
   if (!list.length) return;
-
-  const { data: rows } = await supabase.from(table as any).select("*").in("id", list);
-
-  if (rows?.length) {
-    const { data: auth } = await supabase.auth.getUser();
-    const userId = auth?.user?.id ?? null;
-    let agencyId: string | null = null;
-    if (userId) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("agency_id")
-        .eq("id", userId)
-        .maybeSingle();
-      agencyId = (profile as any)?.agency_id ?? null;
-    }
-
-    const entries = (rows as Record<string, any>[]).map((row) => ({
-      agency_id: (row.agency_id as string) ?? agencyId,
-      table_name: table,
-      record_id: row.id as string,
-      label: guessLabel(row),
-      subtitle: guessSubtitle(row),
-      payload: row,
-      deleted_by: userId,
-    }));
-
-    await supabase.from("trash_items").insert(entries as any);
-  }
-
-  const { error } = await supabase.from(table as any).delete().in("id", list);
+  const { error } = await supabase.rpc("trash_delete" as any, { _table: table, _ids: list });
   if (error) throw error;
 }
 
