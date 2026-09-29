@@ -8,6 +8,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { IMMOLIA_WILDCARD_READY } from "@/lib/platform-admin";
+import { beginTenantSwitch, abortTenantSwitch } from "@/lib/tenant-session";
 
 export type Workspace = {
   agency_id: string;
@@ -112,21 +113,29 @@ function hideSwitchOverlay() {
 export async function switchWorkspace(qc: QueryClient, agencyId: string, opts: { host?: string; path?: string } = {}) {
   if (switchInFlight) return false;
   switchInFlight = true;
+  // Fail-closed: Tenant-Oberfläche SOFORT ausblenden, bevor irgendetwas am Server passiert.
+  beginTenantSwitch();
   showSwitchOverlay();
   try {
+    await qc.cancelQueries();
+    try { await supabase.removeAllChannels(); } catch { /* ignore */ }
     await setCurrentWorkspace(agencyId);
     const { data: confirmed, error } = await (supabase.rpc as any)("current_agency_id");
     if (error) throw error;
     if (confirmed !== agencyId) throw new Error("Wechsel wurde vom Server nicht bestätigt.");
     await qc.cancelQueries();
-    try { await supabase.removeAllChannels(); } catch { /* ignore */ }
     qc.clear();
     const path = opts.path ?? "/dashboard";
     window.location.assign(opts.host ? `https://${opts.host}${path}` : path);
     return true; // Overlay bleibt bis zum Neuladen; Sperre ebenso.
   } catch (e) {
+    // Unklarer Zustand → nie alte Tenant-Oberfläche zurückholen: Cache leeren und neu laden;
+    // der Render-Gate prüft danach serverseitig, welche Firma aktiv ist.
+    qc.clear();
     hideSwitchOverlay();
     switchInFlight = false;
+    abortTenantSwitch();
+    window.location.reload();
     throw e;
   }
 }
