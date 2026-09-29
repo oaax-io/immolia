@@ -6035,6 +6035,10 @@ export type Database = {
         Args: { _key: string }
         Returns: boolean
       }
+      create_mandate_atomic: {
+        Args: { _doc: Json; _mandate: Json; _splits: Json }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           _link: string
