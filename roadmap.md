@@ -21,6 +21,7 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
 - [x] 5.8C Metered Actions & Resource Overage
 - [x] 5.8D Credit UX & Low Balance
   - Offene Commercial-Entscheide: Overage-Kosten für KI-Exposé, Marktanalyse, KI, Speicher-Blockgrösse/Kosten, Kontingente je Plan
+- [x] 5.8E Reservation Recovery & Cleanup (automatisch alle 15 Min)
 - [ ] 5.9 Commercial/Billing Security Audit
 
 ## Phase 6 – Platform Product Control (noch nicht umsetzen)
