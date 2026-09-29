@@ -272,11 +272,13 @@ function MediaPage() {
 
   const remove = useMutation({
     mutationFn: async (item: MediaItem) => {
+      // Zuerst Datensatz löschen (RLS entscheidet), Datei nur nach bestätigter Löschung entfernen.
+      const { data: deleted, error } = await supabase.from("property_media").delete().eq("id", item.id).select("id");
+      if (error) throw error;
+      if (!deleted || deleted.length === 0) throw new Error("Keine Berechtigung zum Löschen dieses Mediums.");
       if (item.file_url && !item.file_url.startsWith("http")) {
         await supabase.storage.from("media").remove([item.file_url]);
       }
-      const { error } = await supabase.from("property_media").delete().eq("id", item.id);
-      if (error) throw error;
       await syncPropertyImages(item.property_id);
     },
     onSuccess: () => {

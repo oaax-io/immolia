@@ -159,6 +159,7 @@ function AppointmentsPage() {
       await deleteToTrash("appointments", id);
     },
     onSuccess: () => { toast.success(t("appointments.toasts.deleted")); qc.invalidateQueries({ queryKey: ["appointments"] }); setEditId(null); },
+    onError: (e: Error) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["appointments"] }); },
   });
 
   const editing = appts.find((a: any) => a.id === editId);

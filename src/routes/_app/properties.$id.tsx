@@ -286,8 +286,10 @@ function PropertyDetail() {
       const nextPaths = new Set(payload.media.map((m) => m.file_url).filter(Boolean));
       const removedPaths = [...previousPaths].filter((path) => !nextPaths.has(path));
 
-      const { error: deleteMediaError } = await supabase.from("property_media").delete().eq("property_id", id);
+      const { data: deletedMedia, error: deleteMediaError } = await supabase.from("property_media").delete().eq("property_id", id).select("id");
       if (deleteMediaError) throw deleteMediaError;
+      // Teilweise abgelehnte Löschung würde beim Neuanlegen Duplikate erzeugen → abbrechen.
+      if ((deletedMedia?.length ?? 0) !== (previousMedia?.length ?? 0)) throw new Error("Keine Berechtigung, alle Bilder dieses Objekts zu ersetzen.");
 
       if (payload.media.length > 0) {
         const mediaRows = payload.media.map((m, index) => ({
@@ -1758,10 +1760,12 @@ function MediaTab({ propertyId, cover }: { propertyId: string; cover?: string | 
 
   const del = useMutation({
     mutationFn: async (mid: string) => {
-      const { error } = await supabase.from("property_media").delete().eq("id", mid);
+      const { data: deleted, error } = await supabase.from("property_media").delete().eq("id", mid).select("id");
       if (error) throw error;
+      if (!deleted || deleted.length === 0) throw new Error("Keine Berechtigung zum Löschen dieses Mediums.");
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["property_media", propertyId] }); },
+    onError: (e: any) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["property_media", propertyId] }); },
   });
 
   return (

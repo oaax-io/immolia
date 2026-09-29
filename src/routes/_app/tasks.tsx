@@ -204,6 +204,7 @@ function TasksPage() {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       setEditId(null);
     },
+    onError: (e: Error) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["tasks"] }); },
   });
 
   // Live updates: toast when somebody else changes tasks
