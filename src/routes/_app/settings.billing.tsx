@@ -74,6 +74,8 @@ function BillingPage() {
         sb.rpc("commercial_subscription_state", { _agency_id: agencyId }),
         sb.rpc("tenant_billing_catalog"),
       ]);
+      // Fehler nicht als „leerer Katalog" verschlucken: React Query wiederholt, danach Hinweis
+      if (catalog.error) throw new Error(catalog.error.message);
       return { state: state.data as any, catalog: (catalog.data ?? { plans: [], packages: [], action_costs: [] }) as any };
     },
   });
@@ -156,6 +158,12 @@ function BillingPage() {
         <p className="mt-1 text-sm text-muted-foreground">Immolia beschränkt nicht die Arbeit. Zusätzlicher Verbrauch wird über Credits verrechnet.</p>
       </div>
 
+      {billingQ.isError && (
+        <Card className="flex items-center justify-between gap-3 p-4 text-sm">
+          <span>Pläne und Credit-Pakete konnten nicht geladen werden.</span>
+          <Button variant="outline" size="sm" onClick={() => billingQ.refetch()}>Erneut versuchen</Button>
+        </Card>
+      )}
       {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : checkout ? (
         <Card className="space-y-3 p-4">
           <Button variant="ghost" size="sm" onClick={() => setCheckout(null)}>Abbrechen</Button>
