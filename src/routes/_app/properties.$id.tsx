@@ -654,7 +654,7 @@ function InlineEditCard({
         ausstattung: aiProperty?.features, energie: aiProperty?.energy_class,
         bisherige_beschreibung: aiProperty?.description,
       };
-      const res = await generatePropertyDescription({ data: { property: payload as any, tone: aiTone, extra: aiExtra || undefined } });
+      const res = await generatePropertyDescription({ data: { property: payload as any, tone: aiTone, extra: aiExtra || undefined, requestId: crypto.randomUUID() } });
       return res.text;
     },
     onSuccess: (text) => { setDraft(text); setAskAi(false); setEditing(true); toast.success("Text generiert"); },

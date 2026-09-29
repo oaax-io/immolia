@@ -949,7 +949,7 @@ function Step4Address({ d, update }: { d: WizardData; update: (p: Partial<Wizard
     if (!d.city && !d.address) return toast.error("Bitte zuerst eine Adresse erfassen.");
     setAiLoading(true);
     try {
-      const result = await generateLocation({ data: { address: d.address, postal_code: d.postal_code, city: d.city, country: d.country, property_type: d.property_type } });
+      const result = await generateLocation({ data: { address: d.address, postal_code: d.postal_code, city: d.city, country: d.country, property_type: d.property_type, requestId: crypto.randomUUID() } });
       update({ location_description: result.text });
       toast.success("Lagebeschreibung erstellt.");
     } catch (error) {
