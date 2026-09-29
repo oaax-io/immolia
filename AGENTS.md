@@ -59,3 +59,5 @@
 ## Manuelle Abrechnung (5.6.2)
 - Manuelle/Rechnungs-/Complimentary-Abos laufen im selben subscriptions-Datensatz (source='internal', billing_source, Stripe-IDs NULL), Mutationen nur über platform_*-Billing-RPCs mit Audit; interne Notizen in subscription_admin_notes (nur Plattform); why: eine Commercial Engine, keine Parallel-Abrechnung.
 - Credits haben eine eigene monatliche Periode (credit_period), unabhängig von der Abrechnungsperiode; Grant-Key pro Abo + Credit-Monat, täglicher Lauf commercial_advance_due_periods (nur Plattform/Datenbank); why: Jahresrechnung vergibt trotzdem monatlich, nie doppelt.
+## Billing UI (5.7)
+- Tenant-Billing-Seite liest nur bestehende RPCs (commercial_subscription_state, agency_commercial_state, credit_balance_breakdown, credit_ledger per RLS) plus read-only tenant_billing_catalog (aktive Pläne/Pakete/Credit-Kosten); Query Keys ["billing"|"usage"|"credits", agencyId]; why: Katalogtabellen sind nur für Plattform lesbar, Frontend rechnet nie selbst, kein Cache über Firmen hinweg.
