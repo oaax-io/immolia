@@ -303,7 +303,13 @@ async function handleWebhook(req: Request, env: StripeEnv) {
 }
 
 async function dispatch(event: any, env: StripeEnv) {
-  const obj = event.data.object;
+  let obj = event.data.object;
+  if (event.type.startsWith("customer.subscription.")) {
+    // Stripe liefert Events verspätet/ungeordnet (Retries bis 3 Tage): immer den aktuellen
+    // Stand von Stripe laden, damit ein altes Event ein beendetes Abo nie wiederbelebt.
+    const { createStripeClient } = await import("@/lib/stripe.server");
+    obj = await createStripeClient(env).subscriptions.retrieve(String(obj.id));
+  }
   if (event.type.startsWith("customer.subscription.") && (await syncImmoliaSubscription(obj, env))) {
     if (event.type === "customer.subscription.deleted") {
       // Abo ist beendet (nicht „kündigt zum Periodenende"): Laufzeit endet mit ended_at,
