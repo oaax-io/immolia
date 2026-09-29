@@ -1819,6 +1819,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          settlement_policy: string | null
           updated_at: string
         }
         Insert: {
@@ -1830,6 +1831,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          settlement_policy?: string | null
           updated_at?: string
         }
         Update: {
@@ -1841,6 +1843,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          settlement_policy?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2016,6 +2019,82 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      credit_reservations: {
+        Row: {
+          action_key: string
+          agency_id: string
+          amount: number
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          operation_id: string
+          reference_id: string | null
+          reference_type: string | null
+          release_operation_id: string | null
+          release_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_key: string
+          agency_id: string
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          idempotency_key: string
+          operation_id: string
+          reference_id?: string | null
+          reference_type?: string | null
+          release_operation_id?: string | null
+          release_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_key?: string
+          agency_id?: string
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          operation_id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          release_operation_id?: string | null
+          release_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_reservations_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_reservations_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_reservations_release_operation_id_fkey"
+            columns: ["release_operation_id"]
+            isOneToOne: false
+            referencedRelation: "credit_operations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_wallets: {
         Row: {
@@ -5755,6 +5834,10 @@ export type Database = {
         }
         Returns: string
       }
+      _credit_reservation_release: {
+        Args: { _new_status: string; _reason: string; _reservation_id: string }
+        Returns: Json
+      }
       _credit_wallet: { Args: { _agency_id: string }; Returns: string }
       _invitation_audit: {
         Args: {
@@ -5942,6 +6025,26 @@ export type Database = {
       credit_refund: {
         Args: { _amount?: number; _operation_id: string; _reason?: string }
         Returns: string
+      }
+      credit_reservation_finalize: {
+        Args: { _reservation_id: string }
+        Returns: Json
+      }
+      credit_reservation_release: {
+        Args: { _reason?: string; _reservation_id: string }
+        Returns: Json
+      }
+      credit_reservations_expire: { Args: never; Returns: number }
+      credit_reserve: {
+        Args: {
+          _action_key: string
+          _agency_id?: string
+          _idempotency_key: string
+          _reference_id?: string
+          _reference_type?: string
+          _ttl_seconds?: number
+        }
+        Returns: Json
       }
       current_agency_id: { Args: never; Returns: string }
       financing_link_resolve: {
