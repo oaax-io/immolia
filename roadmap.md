@@ -15,7 +15,11 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
   - Jede Änderung ein Audit-Eintrag; Tenant aktiviert nie selbst
   - Use Case: ASIMO Jahresmitgliedschaft per Rechnung bezahlt
 - [x] 5.7 Billing & Credits UI
-- [ ] 5.8 Credit Enforcement
+- [x] 5.8A Allowance & Overage Engine
+- [ ] 5.8B Credit Reservation & Enforcement
+- [ ] 5.8C Metered Actions & Resource Overage
+- [ ] 5.8D Credit UX & Low Balance
+  - Offene Commercial-Entscheide: Overage-Kosten für KI-Exposé, Marktanalyse, KI, Speicher-Blockgrösse/Kosten, Kontingente je Plan
 - [ ] 5.9 Commercial/Billing Security Audit
 
 ## Phase 6 – Platform Product Control (noch nicht umsetzen)

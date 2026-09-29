@@ -63,3 +63,7 @@
 - Tenant-Billing-Seite liest nur bestehende RPCs (commercial_subscription_state, agency_commercial_state, credit_balance_breakdown, credit_ledger per RLS) plus read-only tenant_billing_catalog (aktive Pläne/Pakete/Credit-Kosten); Query Keys ["billing"|"usage"|"credits", agencyId]; why: Katalogtabellen sind nur für Plattform lesbar, Frontend rechnet nie selbst, kein Cache über Firmen hinweg.
 ## Workspace-Wechsel (Hotfix)
 - Jeder Firmenwechsel läuft über switchWorkspace() in src/lib/workspaces.ts: Sperre gegen Doppelklick, Overlay, set_current_agency, Serverbestätigung via current_agency_id(), Queries abbrechen, Realtime-Kanäle entfernen, Cache leeren, dann vollständiges Neuladen; why: nur so werden React-/Router-State, verspätete Antworten und alte Kanäle deterministisch verworfen.
+
+## Allowance & Overage (5.8A)
+- Monatliche Kontingente (period 'monthly') zählen pro Credit-Monat des Abos (Key 'cm:<sub>:<start>'), nicht pro Abrechnungsperiode; why: Jahresrechnung erhält trotzdem monatliche Kontingente.
+- _commercial_usage_decision liefert zusätzlich result (free/included/credit_required/insufficient_credits/hard_blocked/not_available) und usage_type; Gauges (storage_gb, users) ergeben RECURRING_OVERAGE statt Belastung pro Aktion, ohne Preis 'commercial_configuration_required' und erlaubt; why: Speicher nie pro Upload doppelt verrechnen, Arbeit nie blockieren.
