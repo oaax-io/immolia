@@ -64,8 +64,13 @@ export function guessSubtitle(row: Record<string, any>): string | null {
 export async function deleteToTrash(table: TrashTable, ids: string | string[]) {
   const list = (Array.isArray(ids) ? ids : [ids]).filter(Boolean);
   if (!list.length) return;
-  const { error } = await supabase.rpc("trash_delete" as any, { _table: table, _ids: list });
-  if (error) throw error;
+  const { data, error } = await supabase.rpc("trash_delete" as any, { _table: table, _ids: list });
+  if (error) {
+    if ((error as any).code === "40001" || (error as any).code === "42501") throw new Error("Keine Berechtigung zum Löschen dieses Eintrags.");
+    throw error;
+  }
+  // Nicht sichtbare/nicht erlaubte Einträge werden von der Datenbank still übersprungen → nie Erfolg vortäuschen.
+  if (typeof data === "number" && data < list.length) throw new Error("Keine Berechtigung zum Löschen dieses Eintrags.");
 }
 
 export async function restoreFromTrash(id: string) {
