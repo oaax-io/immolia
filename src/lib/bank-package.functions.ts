@@ -11,8 +11,10 @@ import { buildBankPackageHtml, type BankPackageInput, type PackageLocale } from 
 
 const BANK_PACKAGES_BUCKET = "bank-packages";
 const PDF_TIMEOUT_MS = 60_000;
-const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024; // 50 MB pro Datei
-const MAX_TOTAL_ATTACHMENT_BYTES = 250 * 1024 * 1024; // 250 MB total
+// Server-Arbeitsspeicher ist begrenzt (~128 MB): Anhänge + ZIP liegen gleichzeitig im Speicher.
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15 MB pro Datei
+const MAX_TOTAL_ATTACHMENT_BYTES = 40 * 1024 * 1024; // 40 MB total
+const MAX_PROXY_DOWNLOAD_BYTES = 8 * 1024 * 1024; // grössere ZIPs per signiertem Link
 
 // ---------- helpers ----------
 
@@ -594,7 +596,9 @@ export const buildBankPackage = createServerFn({ method: "POST" })
 
     let zipBytes: Uint8Array;
     try {
-      zipBytes = zipSync(zipEntries, { level: 6 });
+      // level 0 (Speichern): PDFs/Bilder sind bereits komprimiert; spart Speicher und CPU
+      zipBytes = zipSync(zipEntries, { level: 0 });
+      for (const k of Object.keys(zipEntries)) delete zipEntries[k];
     } catch (err) {
       return {
         ok: false as const,
@@ -758,6 +762,9 @@ export const fetchBankPackageBytes = createServerFn({ method: "POST" })
       .download(data.path);
     if (error || !file) {
       return { ok: false as const, base64: null as string | null, message: error?.message ?? "not_found" };
+    }
+    if (file.size > MAX_PROXY_DOWNLOAD_BYTES) {
+      return { ok: false as const, base64: null as string | null, message: "too_large_use_signed_url" };
     }
     const buf = new Uint8Array(await file.arrayBuffer());
     let binary = "";
