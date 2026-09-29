@@ -6748,6 +6748,10 @@ export type Database = {
       tenant_parent_agencies: { Args: { j: Json }; Returns: string[] }
       tenant_subdomain_available: { Args: { _slug: string }; Returns: boolean }
       tenant_subdomain_root: { Args: never; Returns: string }
+      trash_delete: {
+        Args: { _ids: string[]; _table: string }
+        Returns: number
+      }
       trash_restore: { Args: { _id: string }; Returns: undefined }
       user_can: { Args: { _action: string; _module: string }; Returns: boolean }
     }
