@@ -30,6 +30,8 @@ export function useConfirmedAgencyId() { return useSyncExternalStore(subscribe, 
  * Jeder Query-Key wird zentral mit der bestätigten Firma präfixiert → Tenant-Daten liegen
  * nie unter tenant-unabhängigen Cache-Keys, auch wenn eine Seite agencyId vergisst.
  */
+const TENANT_INDEPENDENT = new Set(["domain-access", "workspace-status", "my-workspaces"]);
 export function tenantQueryKeyHash(key: QueryKey) {
+  if (typeof key[0] === "string" && TENANT_INDEPENDENT.has(key[0])) return `*|${hashKey(key)}`;
   return `${confirmedAgencyId ?? "-"}|${hashKey(key)}`;
 }
