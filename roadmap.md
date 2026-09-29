@@ -16,7 +16,8 @@ Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App is
   - Use Case: ASIMO Jahresmitgliedschaft per Rechnung bezahlt
 - [x] 5.7 Billing & Credits UI
 - [x] 5.8A Allowance & Overage Engine
-- [ ] 5.8B Credit Reservation & Enforcement
+- [x] 5.8B Credit Reservation & Enforcement
+  - Offen: Ablauf-Aufräumen (credit_reservations_expire) noch nicht zeitgesteuert; Settlement-Regel bei Teilleistung pro Aktion
 - [ ] 5.8C Metered Actions & Resource Overage
 - [ ] 5.8D Credit UX & Low Balance
   - Offene Commercial-Entscheide: Overage-Kosten für KI-Exposé, Marktanalyse, KI, Speicher-Blockgrösse/Kosten, Kontingente je Plan
