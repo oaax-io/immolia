@@ -1765,6 +1765,7 @@ function MediaTab({ propertyId, cover }: { propertyId: string; cover?: string | 
       if (!deleted || deleted.length === 0) throw new Error("Keine Berechtigung zum Löschen dieses Mediums.");
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["property_media", propertyId] }); },
+    onError: (e: any) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["property_media", propertyId] }); },
   });
 
   return (
