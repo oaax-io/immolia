@@ -148,6 +148,7 @@ export function DealDialog({
   const [model, setModel] = useState<"percent" | "fixed">("percent");
   const [value, setValue] = useState("3");
   const [override, setOverride] = useState("");
+  const loadedOverride = useRef("");
   const [closedBy, setClosedBy] = useState("");
   const [splits, setSplits] = useState<SplitRow[]>([]);
   const [finMode, setFinMode] = useState<"none" | "dossier" | "manual">("none");
@@ -167,7 +168,18 @@ export function DealDialog({
     setSalePrice(String(d?.sale_price ?? listPrice ?? ""));
     setModel((m?.commission_model === "fixed" ? "fixed" : "percent") as "percent" | "fixed");
     setValue(String(m?.commission_value ?? (m?.commission_model === "fixed" ? "" : "3")));
-    setOverride(d ? String(Number(d.gross_amount) || "") : "");
+    // Endbetrag nur vorbelegen, wenn er eine echte manuelle Abweichung war – sonst ist er
+    // ein abgeleiteter Wert und muss bei Preis-/Satzänderung neu berechnet werden.
+    {
+      const mdl = m?.commission_model === "fixed" ? "fixed" : "percent";
+      const v = Number(m?.commission_value ?? (mdl === "fixed" ? 0 : 3)) || 0;
+      const pr = Number(d?.sale_price ?? listPrice) || 0;
+      const calc = Math.round((mdl === "percent" ? (pr * v) / 100 : v) * 100) / 100;
+      const stored = Number(d?.gross_amount) || 0;
+      const manual = d && stored > 0 && Math.abs(stored - calc) > 0.005;
+      setOverride(manual ? String(stored) : "");
+      loadedOverride.current = manual ? String(stored) : "";
+    }
     setClosedBy(d?.closed_by ?? p?.assigned_to ?? "");
     setSplits(
       data.dealSplits.length
@@ -193,6 +205,13 @@ export function DealDialog({
     setBookedAt((d?.booked_at ?? "").slice(0, 10) || today());
     setNotes(d?.description && d.description !== "Abschlussprovision" ? d.description : "");
   }, [open, data]);
+
+  // Ändert der Benutzer Preis/Satz/Modell, verliert ein nur übernommener alter Endbetrag seine Gültigkeit.
+  useEffect(() => {
+    if (loadedOverride.current && override === loadedOverride.current) setOverride("");
+    loadedOverride.current = "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salePrice, value, model]);
 
   const computed = useMemo(() => {
     const price = Number(salePrice) || 0;

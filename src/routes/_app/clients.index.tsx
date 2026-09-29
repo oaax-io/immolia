@@ -228,9 +228,11 @@ function ClientsPage() {
         const list = assigneesByClient.get(c.id) ?? [];
         const eff = c.assigned_to ?? c.owner_id;
         const all = list.length ? list : (eff ? [eff] : []);
-        if (assignedFilters.includes(UNASSIGNED) && assignedFilters.length === 1 && all.length) return false;
-        if (!assignedFilters.includes(UNASSIGNED) && !assignedFilters.some((f) => all.includes(f))) return false;
-        if (assignedFilters.includes(UNASSIGNED) && assignedFilters.length > 1 && !assignedFilters.some((f) => f !== UNASSIGNED && all.includes(f))) return false;
+        // ODER-Verknüpfung: nicht zugewiesen ODER einem der gewählten Mitarbeitenden zugewiesen.
+        const wantUnassigned = assignedFilters.includes(UNASSIGNED);
+        const matchesUnassigned = wantUnassigned && all.length === 0;
+        const matchesEmployee = assignedFilters.some((f) => f !== UNASSIGNED && all.includes(f));
+        if (!matchesUnassigned && !matchesEmployee) return false;
       }
       if (financingFilter !== ALL) {
         if (financingFilter === NO_FIN && c.financing_status) return false;
