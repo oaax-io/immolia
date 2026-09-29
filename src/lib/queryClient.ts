@@ -1,10 +1,13 @@
 import { QueryClient } from "@tanstack/react-query";
 import { isBackendUnavailableError } from "@/lib/backend-errors";
+import { tenantQueryKeyHash } from "@/lib/tenant-session";
 
 export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
+        // Cache-Isolation pro bestätigter Firma (Hotfix Zero Stale Tenant Data).
+        queryKeyHashFn: tenantQueryKeyHash,
         // Daten 60s als frisch behandeln und 5min im Cache halten – damit
         // Navigation zwischen Seiten ohne erneute Requests funktioniert,
         // selbst wenn das Backend kurz wackelt.

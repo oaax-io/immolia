@@ -10,6 +10,7 @@ import { useRouterState, useLoaderData } from "@tanstack/react-router";
 import type { PublicDomainBranding } from "@/lib/public-domain-branding.functions";
 import { useAuth } from "@/lib/auth";
 import { useTenantConfig, TENANT_CONFIG_QUERY_KEY, type TenantCompany, type TenantBranding } from "@/lib/tenant-config";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
 
 /** Neutraler Plattform-Fallback (kein Tenant-Kontext). Keine ASIMO-Werte. */
 export const PLATFORM_BRANDING = {
@@ -79,7 +80,8 @@ export function TenantBrandingProvider({ children }: { children: ReactNode }) {
   const domainBrand = useLoaderData({ strict: false, from: "__root__" as never, select: (d: any) => d?.branding ?? null }) as PublicDomainBranding | null;
   // Ergebnis der Domain-Prüfung aus dem Cache (DomainAccessGate lädt es). Nur Darstellung.
   const access = useDomainAccess(false);
-  const accessAllowed = access.data?.allowed === true;
+  const confirmedAgencyId = useConfirmedAgencyId();
+  const accessAllowed = access.data?.allowed === true && !!confirmedAgencyId && access.data?.currentAgencyId === confirmedAgencyId;
 
   // Bei Benutzerwechsel/Logout keine fremde Konfiguration im Cache behalten.
   useEffect(() => {
@@ -110,7 +112,8 @@ export function TenantBrandingProvider({ children }: { children: ReactNode }) {
     function computeValue(): TenantBrandingValue {
     const cfg = user && !isPlatformArea ? q.data : null;
     const b = cfg?.branding ?? null;
-    if (!cfg || !b) {
+    // Branding nur aus demselben bestätigten Tenant-Kontext wie die Daten.
+    if (!cfg || !b || (!!cfg.agency_id && confirmedAgencyId !== cfg.agency_id)) {
       return { ...FALLBACK, isLoading: authLoading || (!!user && q.isLoading) };
     }
     return {
@@ -133,7 +136,7 @@ export function TenantBrandingProvider({ children }: { children: ReactNode }) {
       hasTenantContext: true,
     };
     }
-  }, [user, q.data, q.isLoading, authLoading, isPlatformArea, domainBrand, accessAllowed]);
+  }, [user, q.data, q.isLoading, authLoading, isPlatformArea, domainBrand, accessAllowed, confirmedAgencyId]);
 
   // Zentrale CSS-Variablen + Favicon
   useEffect(() => {

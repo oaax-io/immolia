@@ -78,3 +78,6 @@
 ## Commercial Audit (5.9)
 - Abrechnungs-/Credit-Tabellen: anon/authenticated haben kein INSERT/UPDATE/DELETE, anon kein SELECT; Schreiben nur über SECURITY-DEFINER-RPCs oder service_role; why: Schutz zusätzlich zu RLS, Journal bleibt unveränderlich.
 - Stripe-Checkout liest Plan/Paket-Preis serverseitig mit Admin-Client erst nach resolveBillingAgency; why: Katalog ist nur für Plattform lesbar, Preis nie vom Browser.
+## Zero Stale Tenant Data (Hotfix)
+- Tenant-App rendert nur hinter dem fail-closed DomainAccessGate: serverseitig bestätigte current_agency_id (+ Firma der Adresse), Baum gekeyed auf die Firma, Fehler → neutraler Bildschirm, andere Firma (anderer Tab, BFCache) → Neuladen; why: nie Daten einer Firma unter dem Branding einer anderen.
+- Alle Query-Keys werden zentral per queryKeyHashFn (src/lib/tenant-session.ts) mit der bestätigten Firma präfixiert; Branding nur, wenn tenant-config zur bestätigten Firma passt; why: Cache-Isolation auch wo Seiten agencyId vergessen.

@@ -5,15 +5,17 @@ import { AlertTriangle, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUsagePreview, type UsagePreview } from "@/lib/usage-preview.functions";
 import { USAGE_LABELS, creditUxState } from "@/lib/credit-ux";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
 
 const fmt = (n: number) => n.toLocaleString("de-CH");
 
 export function useUsagePreview(usageKey: string, enabled = true) {
   const fn = useServerFn(getUsagePreview);
+  const agencyId = useConfirmedAgencyId();
   return useQuery({
-    queryKey: ["usage", "preview", usageKey],
+    queryKey: ["usage", "preview", agencyId, usageKey],
     queryFn: () => fn({ data: { usageKey } }),
-    enabled,
+    enabled: enabled && !!agencyId,
     staleTime: 0,
   });
 }
