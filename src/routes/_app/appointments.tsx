@@ -593,11 +593,11 @@ function ToolbarNav({ view, anchor, setAnchor }: { view: "month" | "week" | "day
   );
 }
 
-function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [anchor, setAnchor] = useState(() => startOfWeek(new Date()));
-  const days = Array.from({ length: 7 }, (_, i) => new Date(anchor.getTime() + i * 86400000));
+  const weekStart = startOfWeek(anchor);
+  const days = Array.from({ length: 7 }, (_, i) => new Date(weekStart.getTime() + i * 86400000));
   const byDay = useMemo(() => {
     const map: Record<string, { appts: any[]; tasks: any[] }> = {};
     days.forEach((d) => { map[d.toDateString()] = { appts: [], tasks: [] }; });
@@ -610,16 +610,10 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
       if (key in map) map[key].tasks.push(tk);
     }
     return map;
-  }, [appts, tasks, anchor]);
+  }, [appts, tasks, weekStart]);
 
   return (
     <div>
-      <CalendarNav
-        label={`${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(days[0])} – ${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric" }).format(days[6])}`}
-        onPrev={() => setAnchor(new Date(anchor.getTime() - 7 * 86400000))}
-        onNext={() => setAnchor(new Date(anchor.getTime() + 7 * 86400000))}
-        onToday={() => setAnchor(startOfWeek(new Date()))}
-      />
       <div className="grid gap-2 md:grid-cols-7">
         {days.map((d) => {
           const isToday = d.toDateString() === new Date().toDateString();
@@ -698,10 +692,10 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
 const DAY_START = 7;
 const DAY_END = 21;
 
-function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [day, setDay] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
+  const day = useMemo(() => { const d = new Date(anchor); d.setHours(0, 0, 0, 0); return d; }, [anchor]);
   const key = day.toDateString();
   const dayAppts = appts.filter((a) => new Date(a.starts_at).toDateString() === key);
   const dayTasks = tasks.filter((tk) => new Date(tk.due_date).toDateString() === key);
@@ -710,12 +704,6 @@ function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreate
 
   return (
     <div>
-      <CalendarNav
-        label={new Intl.DateTimeFormat(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(day)}
-        onPrev={() => setDay(new Date(day.getTime() - 86400000))}
-        onNext={() => setDay(new Date(day.getTime() + 86400000))}
-        onToday={() => { const d = new Date(); d.setHours(0, 0, 0, 0); setDay(d); }}
-      />
       {hol.length > 0 && (
         <div className="mb-3 space-y-1">
           {hol.map((h) => (
@@ -764,15 +752,12 @@ function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreate
   );
 }
 
-function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [anchor, setAnchor] = useState(() => {
-    const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
-  });
 
   const { gridStart, gridDays, monthIdx } = useMemo(() => {
-    const first = new Date(anchor);
+    const first = new Date(anchor); first.setDate(1); first.setHours(0, 0, 0, 0);
     const dow = (first.getDay() + 6) % 7;
     const start = new Date(first); start.setDate(first.getDate() - dow);
     return {
@@ -802,19 +787,8 @@ function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt 
     return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
   });
 
-  const shift = (delta: number) => {
-    const d = new Date(anchor); d.setMonth(d.getMonth() + delta); setAnchor(d);
-  };
-
   return (
     <div>
-      <CalendarNav
-        label={new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor)}
-        onPrev={() => shift(-1)}
-        onNext={() => shift(1)}
-        onToday={() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); setAnchor(d); }}
-      />
-
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border bg-border">
         {weekdays.map((w) => (
           <div key={w} className="bg-muted/50 px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">{w}</div>
