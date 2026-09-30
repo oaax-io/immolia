@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BankPicker } from "@/components/financing/BankPicker";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2, CheckCircle2, Circle } from "lucide-react";
+import {
+  Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2, CheckCircle2, Circle,
+  Sparkles, Mail, AlertTriangle, Info,
+} from "lucide-react";
 import { DOSSIER_STATUS_LABELS, type DossierStatus } from "@/lib/financing";
 import {
   buildBankPackage,
@@ -21,62 +23,9 @@ import {
   createBankPackageShare,
   deleteBankPackage,
 } from "@/lib/bank-package.functions";
+import { generateBankCoverLetter } from "@/lib/bank-letter.functions";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
-
-const BANK_TYPES = [
-  { value: "ubs", label: "UBS" },
-  { value: "credit_suisse", label: "Credit Suisse" },
-  { value: "raiffeisen", label: "Raiffeisen" },
-  { value: "zkb", label: "Zürcher Kantonalbank (ZKB)" },
-  { value: "postfinance", label: "PostFinance" },
-  { value: "migros_bank", label: "Migros Bank" },
-  { value: "bank_cler", label: "Bank Cler" },
-  { value: "julius_baer", label: "Julius Bär" },
-  { value: "vontobel", label: "Vontobel" },
-  { value: "pictet", label: "Pictet" },
-  { value: "lombard_odier", label: "Lombard Odier" },
-  { value: "edmond_de_rothschild", label: "Edmond de Rothschild" },
-  { value: "safra_sarasin", label: "J. Safra Sarasin" },
-  { value: "ehypo", label: "EFG Bank" },
-  { value: "bcv", label: "Banque Cantonale Vaudoise (BCV)" },
-  { value: "bcge", label: "Banque Cantonale de Genève (BCGE)" },
-  { value: "bcbe", label: "Berner Kantonalbank (BEKB)" },
-  { value: "bcn", label: "Banque Cantonale Neuchâteloise (BCN)" },
-  { value: "bcj", label: "Banque Cantonale du Jura (BCJ)" },
-  { value: "bcf", label: "Banque Cantonale de Fribourg (BCF)" },
-  { value: "bcvs", label: "Walliser Kantonalbank (WKB/BCVs)" },
-  { value: "aargauer_kb", label: "Aargauische Kantonalbank (AKB)" },
-  { value: "basler_kb", label: "Basler Kantonalbank (BKB)" },
-  { value: "bl_kb", label: "Basellandschaftliche Kantonalbank (BLKB)" },
-  { value: "luzerner_kb", label: "Luzerner Kantonalbank (LUKB)" },
-  { value: "sg_kb", label: "St. Galler Kantonalbank (SGKB)" },
-  { value: "thurgauer_kb", label: "Thurgauer Kantonalbank (TKB)" },
-  { value: "graubuendner_kb", label: "Graubündner Kantonalbank (GKB)" },
-  { value: "schwyzer_kb", label: "Schwyzer Kantonalbank (SZKB)" },
-  { value: "zuger_kb", label: "Zuger Kantonalbank (ZGKB)" },
-  { value: "obwaldner_kb", label: "Obwaldner Kantonalbank (OKB)" },
-  { value: "nidwaldner_kb", label: "Nidwaldner Kantonalbank (NKB)" },
-  { value: "urner_kb", label: "Urner Kantonalbank (UKB)" },
-  { value: "glarner_kb", label: "Glarner Kantonalbank (GLKB)" },
-  { value: "appenzeller_kb", label: "Appenzeller Kantonalbank (APPKB)" },
-  { value: "schaffhauser_kb", label: "Schaffhauser Kantonalbank (SHKB)" },
-  { value: "solothurner_kb", label: "Baloise Bank / Solothurner" },
-  { value: "banca_stato", label: "Banca dello Stato del Cantone Ticino" },
-  { value: "valiant", label: "Valiant Bank" },
-  { value: "hypothekarbank_lenzburg", label: "Hypothekarbank Lenzburg" },
-  { value: "clientis", label: "Clientis" },
-  { value: "wir_bank", label: "WIR Bank" },
-  { value: "bank_linth", label: "Bank Linth" },
-  { value: "bank_avera", label: "Bank Avera" },
-  { value: "acrevis", label: "Acrevis Bank" },
-  { value: "regiobank", label: "Regiobank Solothurn" },
-  { value: "cembra", label: "Cembra Money Bank" },
-  { value: "bank_now", label: "Bank Now" },
-  { value: "yuh", label: "Yuh" },
-  { value: "neon", label: "Neon" },
-  { value: "revolut", label: "Revolut" },
-  { value: "other", label: "Andere Bank" },
-];
+import { useIsMasterDataAdmin } from "@/hooks/useIsMasterDataAdmin";
 
 const SUBMISSION_STATUSES: DossierStatus[] = [
   "ready_for_bank", "submitted_to_bank", "documents_missing", "approved", "rejected",
@@ -84,8 +33,8 @@ const SUBMISSION_STATUSES: DossierStatus[] = [
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
-
-
+  const { canEdit: isAdmin } = useIsMasterDataAdmin();
+  const genLetter = useServerFn(generateBankCoverLetter);
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier_bank", dossierId],
@@ -101,28 +50,61 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   });
 
   const [form, setForm] = useState<any>({});
+  const [letter, setLetter] = useState("");
+  const [hint, setHint] = useState("");
   const merged = { ...(dossier ?? {}), ...form };
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (patch: Record<string, any>) => {
       const { error } = await supabase.from("financing_dossiers").update(patch as any).eq("id", dossierId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
-      qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
-      qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
-      toast.success("Gespeichert");
-      setForm({});
-    },
+    onSuccess: () => { invalidate(); toast.success("Gespeichert"); setForm({}); },
     onError: (e: any) => toast.error(e.message ?? "Fehler"),
+  });
+
+  /** Status sofort speichern; Datum für Einreichung/Entscheid automatisch setzen. */
+  const statusMutation = useMutation({
+    mutationFn: async (s: DossierStatus) => {
+      const patch: Record<string, any> = { dossier_status: s };
+      const now = new Date().toISOString();
+      if (s === "submitted_to_bank" && !merged.submitted_to_bank_at) patch.submitted_to_bank_at = now;
+      if (s === "approved" || s === "rejected") {
+        patch.bank_decision_at = now;
+        if (!merged.submitted_to_bank_at) patch.submitted_to_bank_at = now;
+      }
+      const { error } = await supabase.from("financing_dossiers").update(patch as any).eq("id", dossierId);
+      if (error) throw error;
+      return s;
+    },
+    onSuccess: (s) => { invalidate(); toast.success(`Status: ${DOSSIER_STATUS_LABELS[s]}`); },
+    onError: (e: any) => toast.error(e.message ?? "Status konnte nicht gesetzt werden"),
+  });
+
+  const letterMutation = useMutation({
+    mutationFn: () => genLetter({ data: { dossierId, hint } }),
+    onSuccess: (res: any) => {
+      if (res?.ok === false) {
+        toast.error(res.reason === "INSUFFICIENT_CREDITS" ? "Nicht genügend Credits für die KI-Nachricht." : "KI-Nachricht nicht möglich.");
+        return;
+      }
+      const text = res?.result?.text ?? res?.text ?? "";
+      setLetter(text);
+      toast.success("Nachricht erstellt – bitte prüfen");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Laden…</p>;
 
-  const submittedDate = merged.submitted_to_bank_at
-    ? new Date(merged.submitted_to_bank_at).toISOString().slice(0, 10)
-    : "";
+  const hasContact = !!(merged.bank_contact || merged.bank_email || merged.bank_phone);
+  const currentStatus = merged.dossier_status as DossierStatus | undefined;
 
   return (
     <div className="space-y-4">
@@ -134,92 +116,129 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
             currentContact={merged.bank_contact ?? ""}
             currentEmail={merged.bank_email ?? ""}
             currentPhone={merged.bank_phone ?? ""}
+            showContact={isAdmin}
             onSelect={(sel) => setForm({
               ...form,
               bank_name: sel.bank_name,
-              bank_contact: sel.bank_contact,
-              bank_email: sel.bank_email,
-              bank_phone: sel.bank_phone,
+              ...(isAdmin ? {
+                bank_contact: sel.bank_contact,
+                bank_email: sel.bank_email,
+                bank_phone: sel.bank_phone,
+              } : {}),
             })}
           />
-          <p className="text-xs text-muted-foreground">
-            Die Felder werden vorbefüllt und bleiben frei änderbar.
-          </p>
+
+          {isAdmin && merged.bank_name && (
+            <Accordion type="single" collapsible defaultValue={hasContact ? undefined : "contact"}>
+              <AccordionItem value="contact" className="rounded-md border px-3">
+                <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                  <span className="flex items-center gap-2">
+                    {hasContact
+                      ? <CheckCircle2 className="h-4 w-4 text-primary" />
+                      : <AlertTriangle className="h-4 w-4 text-destructive" />}
+                    Ansprechperson bei der Bank
+                    {!hasContact && <span className="text-xs font-normal text-destructive">– noch nicht erfasst</span>}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Kontaktperson" value={merged.bank_contact ?? ""} onChange={(v) => setForm({ ...form, bank_contact: v })} />
+                    <Field label="E-Mail" value={merged.bank_email ?? ""} onChange={(v) => setForm({ ...form, bank_email: v })} />
+                    <Field label="Telefon" value={merged.bank_phone ?? ""} onChange={(v) => setForm({ ...form, bank_phone: v })} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">Nur Inhaber und Admins sehen diese Angaben.</p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
           <SubmissionTimeline
-            status={merged.dossier_status as DossierStatus | undefined}
+            status={currentStatus}
             submittedAt={merged.submitted_to_bank_at}
             decisionAt={merged.bank_decision_at}
           />
 
-          <div className="grid gap-3 sm:grid-cols-2">
-
-            <div>
-              <Label className="text-xs">Banktyp</Label>
-              <Select value={merged.bank_type ?? ""} onValueChange={(v) => setForm({ ...form, bank_type: v })}>
-                <SelectTrigger><SelectValue placeholder="Banktyp" /></SelectTrigger>
-                <SelectContent>
-                  {BANK_TYPES.map((b) => (<SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
+          {Object.keys(form).length > 0 && (
+            <div className="flex justify-end">
+              <Button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}>
+                <Save className="mr-2 h-4 w-4" />Bankangaben speichern
+              </Button>
             </div>
-            <Field label="Bankname" value={merged.bank_name ?? ""} onChange={(v) => setForm({ ...form, bank_name: v })} />
-            <Field label="Kontaktperson" value={merged.bank_contact ?? ""} onChange={(v) => setForm({ ...form, bank_contact: v })} />
-            <Field label="E-Mail" value={merged.bank_email ?? ""} onChange={(v) => setForm({ ...form, bank_email: v })} />
-            <Field label="Telefon" value={merged.bank_phone ?? ""} onChange={(v) => setForm({ ...form, bank_phone: v })} />
-            <div>
-              <Label className="text-xs">Einreichungsdatum</Label>
-              <Input
-                type="date"
-                value={submittedDate}
-                onChange={(e) => setForm({
-                  ...form,
-                  submitted_to_bank_at: e.target.value ? new Date(e.target.value).toISOString() : null,
-                })}
-              />
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-4 space-y-3">
-          <h3 className="font-semibold">Status & Notizen</h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge>{DOSSIER_STATUS_LABELS[merged.dossier_status as DossierStatus] ?? "Entwurf"}</Badge>
-          </div>
+        <CardContent className="p-4 space-y-4">
           <div>
-            <Label className="text-xs">Status setzen</Label>
-            <Select value={merged.dossier_status ?? "draft"} onValueChange={(v) => setForm({ ...form, dossier_status: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SUBMISSION_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{DOSSIER_STATUS_LABELS[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <h3 className="font-semibold">Status</h3>
+            <p className="text-xs text-muted-foreground">Ein Klick speichert sofort; Einreichungs- und Entscheiddatum werden automatisch gesetzt.</p>
           </div>
-          <div>
-            <Label className="text-xs">Notizen zur Einreichung</Label>
+          <div className="flex flex-wrap gap-2">
+            {SUBMISSION_STATUSES.map((s) => (
+              <Button
+                key={s}
+                size="sm"
+                variant={currentStatus === s ? "default" : "outline"}
+                disabled={statusMutation.isPending}
+                onClick={() => currentStatus !== s && statusMutation.mutate(s)}
+              >
+                {currentStatus === s && <CheckCircle2 className="mr-1.5 h-4 w-4" />}
+                {DOSSIER_STATUS_LABELS[s]}
+              </Button>
+            ))}
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label className="text-sm font-semibold">Nachricht an die Bank</Label>
+              <Button size="sm" variant="outline" onClick={() => letterMutation.mutate()} disabled={letterMutation.isPending}>
+                {letterMutation.isPending
+                  ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  : <Sparkles className="mr-1.5 h-4 w-4" />}
+                {letter ? "Neu erstellen" : "Mit KI erstellen"}
+              </Button>
+            </div>
+            <Input
+              value={hint}
+              onChange={(e) => setHint(e.target.value)}
+              placeholder="Optionaler Hinweis für die KI, z. B. «Entscheid bis Ende Monat erwünscht»"
+              maxLength={500}
+            />
             <Textarea
-              rows={4}
+              rows={8}
+              value={letter}
+              onChange={(e) => setLetter(e.target.value)}
+              placeholder="Begleittext für die Bank – mit KI erstellen oder selbst schreiben."
+            />
+            {letter && (
+              <div className="flex justify-end">
+                <Button size="sm" variant="ghost" onClick={async () => { await navigator.clipboard.writeText(letter); toast.success("Nachricht kopiert"); }}>
+                  <Copy className="mr-1.5 h-4 w-4" />Kopieren
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1 border-t pt-4">
+            <Label className="text-xs">Interne Notizen (gehen nicht an die Bank)</Label>
+            <Textarea
+              rows={3}
               value={merged.bank_notes ?? ""}
               onChange={(e) => setForm({ ...form, bank_notes: e.target.value })}
-              placeholder="Nachforderungen, Kommunikation, Auflagen…"
+              onBlur={() => form.bank_notes !== undefined && saveMutation.mutate({ bank_notes: form.bank_notes })}
+              placeholder="Nachforderungen, Auflagen…"
             />
           </div>
         </CardContent>
       </Card>
 
-      <BankPackageCard dossierId={dossierId} />
-
-      <div className="flex justify-end">
-        <Button
-          onClick={() => saveMutation.mutate(form)}
-          disabled={Object.keys(form).length === 0 || saveMutation.isPending}
-        >
-          <Save className="mr-2 h-4 w-4" />Speichern
-        </Button>
-      </div>
+      <BankPackageCard
+        dossierId={dossierId}
+        bankEmail={isAdmin ? merged.bank_email ?? "" : ""}
+        bankName={merged.bank_name ?? ""}
+        letter={letter}
+      />
     </div>
   );
 }
@@ -264,7 +283,9 @@ function formatBytes(n: number | null | undefined) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function BankPackageCard({ dossierId }: { dossierId: string }) {
+function BankPackageCard({
+  dossierId, bankEmail, bankName, letter,
+}: { dossierId: string; bankEmail: string; bankName: string; letter: string }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const build = useServerFn(buildBankPackage);
@@ -348,6 +369,20 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
     }
   }
 
+  /** Öffnet das eigene Mailprogramm mit Begleittext + Download-Link. */
+  async function sendByEmail(generatedDocumentId: string) {
+    const res = await createShare({ data: { generatedDocumentId } });
+    if (!res.ok || !res.token) {
+      toast.error(res.message ?? "Link konnte nicht erstellt werden.");
+      return;
+    }
+    const url = `${window.location.origin}/bank-paket/${res.token}`;
+    const body = `${letter.trim() || "Guten Tag\n\nAnbei erhalten Sie die Unterlagen zum Finanzierungsdossier."}\n\nDownload der Unterlagen (7 Tage gültig):\n${url}`;
+    const subject = `Finanzierungsanfrage${bankName ? ` – ${bankName}` : ""}`;
+    window.location.href = `mailto:${encodeURIComponent(bankEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    await markSubmitted();
+  }
+
   /** Beim Teilen gilt das Dossier als eingereicht – nur setzen, wenn noch offen. */
   async function markSubmitted() {
     const { data } = await supabase
@@ -400,6 +435,14 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
           </Button>
         </div>
 
+        <div className="flex gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p>
+            Viele Banken öffnen keine Links von unbekannten Absendern. Falls der Link blockiert wird: ZIP herunterladen
+            und im Partnerportal der Bank hochladen oder über einen sicheren Mailkanal (z. B. IncaMail) senden.
+          </p>
+        </div>
+
         {items.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">Noch keine Pakete erstellt.</p>
         ) : (
@@ -418,6 +461,14 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
                     {p.attachments ?? 0} Anhänge
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => sendByEmail(p.id)}
+                  title="Per E-Mail an die Bank senden (öffnet dein Mailprogramm)"
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
