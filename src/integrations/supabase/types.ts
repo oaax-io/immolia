@@ -1145,6 +1145,62 @@ export type Database = {
           },
         ]
       }
+      calendar_notification_events: {
+        Row: {
+          agency_id: string
+          created_at: string
+          email_status: string
+          event_key: string
+          id: string
+          in_app_status: string
+          kind: string
+          link: string | null
+          message: string | null
+          recipient_id: string
+          related_id: string | null
+          related_type: string | null
+          title: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          email_status?: string
+          event_key: string
+          id?: string
+          in_app_status?: string
+          kind: string
+          link?: string | null
+          message?: string | null
+          recipient_id: string
+          related_id?: string | null
+          related_type?: string | null
+          title: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          email_status?: string
+          event_key?: string
+          id?: string
+          in_app_status?: string
+          kind?: string
+          link?: string | null
+          message?: string | null
+          recipient_id?: string
+          related_id?: string | null
+          related_type?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_notification_events_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_oauth_attempts: {
         Row: {
           agency_id: string
@@ -6683,6 +6739,20 @@ export type Database = {
         Returns: boolean
       }
       calendar_norm_phone: { Args: { _p: string }; Returns: string }
+      calendar_notify: {
+        Args: {
+          _agency: string
+          _event_key: string
+          _kind: string
+          _link: string
+          _message: string
+          _recipient: string
+          _related_id: string
+          _related_type: string
+          _title: string
+        }
+        Returns: undefined
+      }
       calendar_oauth_consume: {
         Args: { _state_hash: string }
         Returns: {
