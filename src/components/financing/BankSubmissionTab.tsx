@@ -342,10 +342,32 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
       const url = `${window.location.origin}/bank-paket/${res.token}`;
       await navigator.clipboard.writeText(url);
       toast.success("Öffentlicher Download-Link kopiert (7 Tage gültig)");
+      await markSubmitted();
     } else {
       toast.error(res.message ?? "Link konnte nicht erstellt werden.");
     }
   }
+
+  /** Beim Teilen gilt das Dossier als eingereicht – nur setzen, wenn noch offen. */
+  async function markSubmitted() {
+    const { data } = await supabase
+      .from("financing_dossiers")
+      .select("dossier_status, submitted_to_bank_at")
+      .eq("id", dossierId)
+      .maybeSingle();
+    if (!data || data.submitted_to_bank_at) return;
+    if (data.dossier_status === "approved" || data.dossier_status === "rejected") return;
+    const { error } = await supabase
+      .from("financing_dossiers")
+      .update({ dossier_status: "submitted_to_bank", submitted_to_bank_at: new Date().toISOString() })
+      .eq("id", dossierId);
+    if (error) return;
+    qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
+    toast.info("Status auf «Bei Bank eingereicht» gesetzt");
+  }
+
 
   async function downloadPackage(path: string) {
     const res = await getUrl({ data: { path } });
