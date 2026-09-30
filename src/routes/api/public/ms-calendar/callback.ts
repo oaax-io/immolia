@@ -40,7 +40,7 @@ export const Route = createFileRoute("/api/public/ms-calendar/callback")({
             await upsertStatus("admin_approval_required", "admin_consent");
             return ret("admin_approval_required");
           }
-          return ret("canceled");
+          return ret(err === "access_denied" && /AADSTS65004/.test(desc) ? "denied" : "canceled");
         }
         const code = url.searchParams.get("code");
         if (!code) return ret("invalid");
