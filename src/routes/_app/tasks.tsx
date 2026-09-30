@@ -268,6 +268,14 @@ function TasksPage() {
     return true;
   }), [tasks, search, fStatus, fPriority, fAssignee, fDue, now, user?.id]);
 
+  const sorted = useMemo(
+    () => [...filtered].sort((a: any, b: any) => Number(b.is_pinned ?? false) - Number(a.is_pinned ?? false)),
+    [filtered],
+  );
+
+  const togglePin = (tk: any) =>
+    update.mutate({ id: tk.id, patch: { is_pinned: !tk.is_pinned } });
+
   const detailTask = tasks.find((tk: any) => tk.id === detailId);
 
   return (
