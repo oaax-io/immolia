@@ -132,15 +132,32 @@ function AppointmentsPage() {
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error(t("appointments.toasts.titleRequired"));
       if (!form.starts_at) throw new Error(t("appointments.toasts.startRequired"));
-      const startIso = new Date(form.starts_at).toISOString();
-      const endIso = form.ends_at ? new Date(form.ends_at).toISOString() : new Date(new Date(form.starts_at).getTime() + 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from("appointments").insert({
+      const start0 = new Date(form.starts_at);
+      const end0 = form.ends_at ? new Date(form.ends_at) : new Date(start0.getTime() + 60 * 60 * 1000);
+      const step = (d: Date): Date => {
+        const n = new Date(d);
+        if (form.repeat === "daily") n.setDate(n.getDate() + 1);
+        else if (form.repeat === "weekly") n.setDate(n.getDate() + 7);
+        else if (form.repeat === "biweekly") n.setDate(n.getDate() + 14);
+        else if (form.repeat === "monthly") n.setMonth(n.getMonth() + 1);
+        return n;
+      };
+      const until = form.repeat !== "none" && form.repeat_until ? new Date(`${form.repeat_until}T23:59:59`) : null;
+      const occurrences: { s: Date; e: Date }[] = [{ s: start0, e: end0 }];
+      if (until) {
+        let s = step(start0), e = step(end0);
+        while (s <= until && occurrences.length < 52) {
+          occurrences.push({ s, e });
+          s = step(s); e = step(e);
+        }
+      }
+      const rows = occurrences.map(({ s, e }) => ({
         owner_id: user!.id,
         title: form.title.trim(),
         appointment_type: form.appointment_type as any,
         status: form.status as any,
-        starts_at: startIso,
-        ends_at: endIso,
+        starts_at: s.toISOString(),
+        ends_at: e.toISOString(),
         location: form.location || null,
         notes: form.notes || null,
         client_id: form.client_id || null,
@@ -150,7 +167,8 @@ function AppointmentsPage() {
         external_invitees: form.external_invitees?.length ? form.external_invitees : null,
         is_online: form.is_online,
         meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
-      });
+      }));
+      const { error } = await supabase.from("appointments").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => { toast.success(t("appointments.toasts.created")); qc.invalidateQueries({ queryKey: ["appointments"] }); setForm({ ...emptyForm }); setOpen(false); },
@@ -999,7 +1017,6 @@ function AppointmentForm({
 }: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
   const { t } = useTranslation();
   const labels = useApptLabels();
-  const mode: string = form.mode ?? "time";
   const duration: number = form.duration ?? 60;
 
   const setStartDate = (date: string) => {
