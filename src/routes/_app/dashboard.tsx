@@ -19,7 +19,6 @@ import {
   formatCurrency, formatDateTime, formatDate,
 } from "@/lib/format";
 import { isBackendUnavailableError } from "@/lib/backend-errors";
-import { StatusDonutGrid } from "@/components/dashboard/StatusDonutCards";
 
 import { useTranslation } from "react-i18next";
 
@@ -382,17 +381,6 @@ function Dashboard() {
         </Card>
       </div>
 
-      {/* Status-Verteilungen als Ringdiagramme */}
-      <div className="mt-4">
-        <StatusDonutGrid
-          clientCounts={stats.data?.clientCounts ?? {}}
-          propCounts={pipeline.data?.propCounts ?? {}}
-          leadCounts={pipeline.data?.leadCounts ?? {}}
-          dossierCounts={stats.data?.dossierCounts ?? {}}
-          qcCounts={stats.data?.qcCounts}
-          loading={stats.isLoading || pipeline.isLoading}
-        />
-      </div>
 
       {/* Matching suggestions */}
       <Card className="mt-4">
