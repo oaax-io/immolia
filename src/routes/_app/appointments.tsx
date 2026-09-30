@@ -85,7 +85,7 @@ function useHolidays() {
 
 /* -------------------- Layer filter -------------------- */
 
-type LayerKey = "holidays" | "birthdays" | "tasks" | "all" | "mine" | "online";
+type LayerKey = "holidays" | "birthdays" | "tasks" | "all" | "mine" | "online" | "busy";
 const LAYERS: { key: LayerKey; label: string; dot: string }[] = [
   { key: "holidays", label: "Feiertage", dot: "bg-rose-500" },
   { key: "birthdays", label: "Geburtstage Kunden", dot: "bg-amber-500" },
@@ -93,8 +93,9 @@ const LAYERS: { key: LayerKey; label: string; dot: string }[] = [
   { key: "all", label: "Alle Termine", dot: "bg-primary" },
   { key: "mine", label: "Meine Termine", dot: "bg-sky-500" },
   { key: "online", label: "Online-Meetings", dot: "bg-violet-500" },
+  { key: "busy", label: "Outlook-Belegungen", dot: "bg-muted-foreground" },
 ];
-const DEFAULT_LAYERS: LayerKey[] = ["holidays", "birthdays", "tasks", "all"];
+const DEFAULT_LAYERS: LayerKey[] = ["holidays", "birthdays", "tasks", "all", "busy"];
 
 function useLayers() {
   const [layers, setLayers] = useState<LayerKey[]>(DEFAULT_LAYERS);
@@ -259,12 +260,23 @@ function AppointmentsPage() {
 
   const editing = appts.find((a: any) => a.id === editId);
 
+  const { data: busyBlocks = [] } = useQuery({
+    queryKey: ["calendar-busy-blocks"],
+    enabled: layer.has("busy"),
+    queryFn: async () => (await supabase.from("calendar_busy_blocks").select("id, user_id, starts_at, ends_at, is_all_day")
+      .gte("ends_at", new Date(Date.now() - 45 * 86400_000).toISOString()).order("starts_at").limit(2000)).data ?? [],
+  });
   const visibleAppts = useMemo(() => {
-    if (layer.has("all")) return appts;
-    return appts.filter((a: any) =>
+    const base = layer.has("all") ? appts : appts.filter((a: any) =>
       (layer.has("mine") && user && (a.assigned_to === user.id || a.owner_id === user.id || (a.extra_assignee_ids ?? []).includes(user.id))) ||
       (layer.has("online") && a.is_online));
-  }, [appts, layer.layers, user]);
+    if (!layer.has("busy")) return base;
+    // Externe Outlook-Termine nur als „Beschäftigt“, ohne Inhalte
+    const busy = (busyBlocks as any[]).map((b) => ({ id: `busy:${b.id}`, title: "Beschäftigt (Outlook)", starts_at: b.starts_at, ends_at: b.ends_at,
+      owner_id: b.user_id, assigned_to: b.user_id, status: "scheduled", appointment_type: "other", location: null, _busy: true }));
+    return [...base, ...busy];
+  }, [appts, layer.layers, user, busyBlocks]);
+  const openAppt = (id: string) => { if (!id.startsWith("busy:")) setEditId(id); };
   const visibleTasks = layer.has("tasks") ? tasks : [];
 
   const calendarMarks = useMemo(() => {
@@ -357,25 +369,25 @@ function AppointmentsPage() {
 
 
         <TabsContent value="month">
-          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
+          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={openAppt} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="week">
-          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
+          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={openAppt} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="day">
-          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
+          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={openAppt} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="list">
           <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
             <div>
               <ListView
-                appts={visibleAppts}
+                appts={visibleAppts.filter((a: any) => !a._busy)}
                 tasks={visibleTasks}
                 employees={employees}
-                onOpen={setEditId}
+                onOpen={openAppt}
                 onStatus={(id, status) => update.mutate({ id, patch: { status } })}
               />
             </div>

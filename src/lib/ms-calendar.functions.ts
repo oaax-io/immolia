@@ -175,3 +175,35 @@ export const syncMsNow = createServerFn({ method: "POST" })
       idempotency_key: `manual:${Date.now()}` } as never);
     return { queued: true };
   });
+
+export const listMsConflicts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn) return [];
+    const { data } = await admin.from("calendar_event_links").select("id, appointment_id, conflict_payload, conflict_at, last_synced_state")
+      .eq("connection_id", conn.id).eq("conflict_state", "open").limit(50);
+    const ids = (data ?? []).map((l: any) => l.appointment_id).filter(Boolean);
+    const { data: appts } = ids.length ? await admin.from("appointments").select("id, title, starts_at, ends_at, location").in("id", ids).eq("agency_id", agencyId) : { data: [] as any[] };
+    return (data ?? []).map((l: any) => {
+      const a = (appts ?? []).find((x: any) => x.id === l.appointment_id);
+      const r = (l.conflict_payload as any)?.remote ?? null;
+      return { id: l.id as string, local: a ? { title: a.title, starts_at: a.starts_at, ends_at: a.ends_at, location: a.location } : null,
+        remote: r ? { title: r.title, starts_at: r.starts_at, ends_at: r.ends_at, location: r.location } : null };
+    }).filter((c) => c.local);
+  });
+
+export const resolveMsConflict = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ linkId: z.string().uuid(), keep: z.enum(["local", "remote"]) }).parse(d))
+  .handler(async ({ context, data }) => {
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn) throw new Error("Nicht verbunden.");
+    const { data: link } = await admin.from("calendar_event_links").select("id").eq("id", data.linkId).eq("connection_id", conn.id).eq("conflict_state", "open").maybeSingle();
+    if (!link) throw new Error("Konflikt nicht gefunden.");
+    await admin.from("calendar_sync_jobs").insert({ agency_id: agencyId, connection_id: conn.id, job_type: "resolve_conflict",
+      link_id: data.linkId, idempotency_key: `resolve:${data.keep}:${data.linkId}:${Date.now()}` } as never);
+    return { ok: true };
+  });
