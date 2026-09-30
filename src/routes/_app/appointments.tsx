@@ -586,7 +586,23 @@ function ToolbarNav({ view, anchor, setAnchor }: { view: "month" | "week" | "day
   return (
     <div className="flex items-center gap-1.5">
       <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-      <Button variant="outline" size="sm" className="h-9" onClick={() => setAnchor(new Date())}>Heute</Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-9">Heute</Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-0">
+          <Calendar
+            mode="single"
+            locale={de}
+            selected={anchor}
+            onSelect={(d) => { if (d) setAnchor(d); }}
+            initialFocus
+          />
+          <div className="border-t p-2">
+            <Button variant="ghost" size="sm" className="w-full" onClick={() => setAnchor(new Date())}>Zu heute springen</Button>
+          </div>
+        </PopoverContent>
+      </Popover>
       <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
       <p className="ml-1 whitespace-nowrap text-sm font-semibold">{label}</p>
     </div>
