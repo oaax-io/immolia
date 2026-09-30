@@ -855,6 +855,142 @@ function TimeSelect({ value, onChange, disabled }: { value: string; onChange: (t
   );
 }
 
+function initialsOf(name?: string, email?: string) {
+  const src = (name || email || "?").trim();
+  return src.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
+}
+
+function SearchPicker({
+  value, onChange, options, placeholder, emptyLabel,
+}: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder: string; emptyLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
+          <span className={`truncate ${current ? "" : "text-muted-foreground"}`}>{current?.label ?? placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Suchen…" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Keine Treffer</CommandEmpty>
+            <CommandGroup>
+              <CommandItem value="__none__" onSelect={() => { onChange(""); setOpen(false); }}>
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              </CommandItem>
+              {options.map((o) => (
+                <CommandItem key={o.id} value={`${o.label} ${o.id}`} onSelect={() => { onChange(o.id); setOpen(false); }}>
+                  <Check className={`mr-2 h-3.5 w-3.5 ${o.id === value ? "opacity-100" : "opacity-0"}`} />
+                  <span className="truncate">{o.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AssigneeMultiPicker({
+  employees, primary, extraIds, onChange,
+}: { employees: any[]; primary: string; extraIds: string[]; onChange: (primary: string, extra: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = [primary, ...extraIds].filter(Boolean);
+  const toggle = (id: string) => {
+    let next = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
+    onChange(next[0] ?? "", next.slice(1));
+  };
+  const selectedEmps = selected.map((id) => employees.find((e: any) => e.id === id)).filter(Boolean);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
+          {selectedEmps.length ? (
+            <span className="flex flex-wrap items-center gap-1.5">
+              {selectedEmps.map((e: any) => (
+                <span key={e.id} className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
+                  <Avatar className="h-4 w-4"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[8px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
+                  <span className="max-w-28 truncate">{e.full_name || e.email}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Personen wählen…</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Suchen…" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Keine Treffer</CommandEmpty>
+            <CommandGroup>
+              {employees.map((e: any) => {
+                const sel = selected.includes(e.id);
+                return (
+                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)}>
+                    <Check className={`mr-2 h-3.5 w-3.5 ${sel ? "opacity-100" : "opacity-0"}`} />
+                    <Avatar className="mr-2 h-5 w-5"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[9px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
+                    <span className="truncate">{e.full_name || e.email}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ExternalInvitees({ emails, onChange }: { emails: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim().toLowerCase();
+    if (!v) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast.error("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+    if (emails.includes(v)) { setDraft(""); return; }
+    onChange([...emails, v]);
+    setDraft("");
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          type="email"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="name@beispiel.ch"
+          className="h-9"
+        />
+        <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={add}>
+          <UserPlus className="mr-1 h-3.5 w-3.5" />Hinzufügen
+        </Button>
+      </div>
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map((m) => (
+            <span key={m} className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
+              <Mail className="h-3 w-3 text-muted-foreground" />
+              {m}
+              <button type="button" onClick={() => onChange(emails.filter((e) => e !== m))} className="text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppointmentForm({
   form, setForm, clients, properties, employees, appts = [], currentUserId, selfId,
 }: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
