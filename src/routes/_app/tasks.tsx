@@ -309,7 +309,7 @@ function TasksPage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[92vh] w-full max-w-2xl overflow-hidden p-0">
+        <DialogContent className="max-h-[92vh] w-full max-w-3xl overflow-hidden p-0">
           <div className="flex max-h-[92vh] flex-col">
             <DialogHeader className="border-b px-6 pt-6 pb-4">
               <DialogTitle className="flex items-center gap-2 text-xl"><CheckSquare className="h-5 w-5 text-primary" />{t("tasks.new")}</DialogTitle>
@@ -609,7 +609,6 @@ function TaskForm({
   const labels = useTaskLabels();
   const improve = useServerFn(improveTaskText);
   const [aiBusy, setAiBusy] = useState(false);
-  const [tab, setTab] = useState("details");
   const relOptions = optionsFor(form.related_type);
   const relLabel = form.related_id ? relOptions.find((o) => o.id === form.related_id)?.label : undefined;
   const empOptions = employees.map((e: any) => ({ id: e.id, label: e.full_name || e.email }));
@@ -820,7 +819,7 @@ function TaskDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         {mode === "view" ? (
           <>
             <DialogHeader>
