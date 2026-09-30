@@ -740,6 +740,7 @@ function renderLuxury(d: ExposeData, t: ExposeTheme): string {
         </dl>
       </aside>
     </div>
+    ${(d.highlights ?? []).length ? `<h2 class="lx-h2 mt">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="lx-h2 mt">Ausstattung</h2>
       <ul class="lx-features">${(d.features ?? []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${footer(d, t, 2, 0)}
