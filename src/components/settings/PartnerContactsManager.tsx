@@ -46,6 +46,7 @@ const CUSTOM = "__custom__";
 export function PartnerContactsManager() {
   const qc = useQueryClient();
   const { canEdit } = useIsMasterDataAdmin();
+  const agencyId = useConfirmedAgencyId();
   const catalog = usePartnerCatalog();
   const contacts = usePartnerContacts();
   const [category, setCategory] = useState<string>("bank");
