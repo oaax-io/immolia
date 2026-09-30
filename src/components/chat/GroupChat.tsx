@@ -512,6 +512,7 @@ export function GroupChatPanel({
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Anhang" disabled={uploading} onClick={() => fileRef.current?.click()}>
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
           </Button>
+          <VoiceRecorder onRecorded={sendVoice} />
           <Button size="sm" className="ml-auto gap-1.5" disabled={send.isPending || (!draft.trim() && !pending.length)} onClick={() => send.mutate()}>
             <Send className="h-4 w-4" /> Senden
           </Button>
