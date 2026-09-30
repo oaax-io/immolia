@@ -309,16 +309,19 @@ function TasksPage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl gap-3">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground"><CheckSquare className="h-4 w-4" /></span>{t("tasks.new")}</DialogTitle>
-            <DialogDescription>{t("tasks.dialogDescription")}</DialogDescription>
-          </DialogHeader>
-          <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>{t("tasks.actions.cancel")}</Button>
-            <Button onClick={() => create.mutate()} disabled={create.isPending}>{t("tasks.create")}</Button>
-          </DialogFooter>
+        <DialogContent className="max-h-[92vh] w-full max-w-2xl overflow-hidden p-0">
+          <div className="flex max-h-[92vh] flex-col">
+            <DialogHeader className="border-b px-6 pt-6 pb-4">
+              <DialogTitle className="flex items-center gap-2 text-xl"><CheckSquare className="h-5 w-5 text-primary" />{t("tasks.new")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
+            </div>
+            <DialogFooter className="border-t px-6 py-4">
+              <Button variant="outline" onClick={() => setOpen(false)}>{t("tasks.actions.cancel")}</Button>
+              <Button onClick={() => create.mutate()} disabled={create.isPending}>{t("tasks.create")}</Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -631,13 +634,16 @@ function TaskForm({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Input
-          autoFocus
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="Was ist zu tun?"
-          className="h-11 border-0 border-b-2 border-border bg-transparent px-0 text-base font-semibold shadow-none focus-visible:border-primary focus-visible:ring-0"
-        />
+        <div>
+          <Label className="mb-1.5 block">Titel *</Label>
+          <Input
+            autoFocus
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Was ist zu tun?"
+            className="h-10 font-medium"
+          />
+        </div>
         <div className="relative">
           <Textarea
             rows={3}
@@ -655,13 +661,13 @@ function TaskForm({
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid h-9 w-full grid-cols-3 rounded-md bg-muted p-1">
-          <TabsTrigger value="details" className="gap-1.5 text-xs data-[state=active]:bg-background"><SlidersHorizontal className="h-3.5 w-3.5" />Details</TabsTrigger>
-          <TabsTrigger value="link" className="gap-1.5 text-xs data-[state=active]:bg-background">
-            <Link2 className="h-3.5 w-3.5" />Zuweisung{(form.related_id || form.assigned_to) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+        <TabsList className="grid h-9 w-full grid-cols-3 rounded-lg bg-primary/15 p-1">
+          <TabsTrigger value="details" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><SlidersHorizontal className="h-3.5 w-3.5" />Details</TabsTrigger>
+          <TabsTrigger value="link" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+            <Link2 className="h-3.5 w-3.5" />Zuweisung{(form.related_id || form.assigned_to) && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
           </TabsTrigger>
-          <TabsTrigger value="repeat" className="gap-1.5 text-xs data-[state=active]:bg-background">
-            <Repeat className="h-3.5 w-3.5" />Wiederholung{form.recurrence && form.recurrence !== "none" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          <TabsTrigger value="repeat" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+            <Repeat className="h-3.5 w-3.5" />Wiederholung{form.recurrence && form.recurrence !== "none" && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
           </TabsTrigger>
         </TabsList>
 
@@ -814,7 +820,7 @@ function TaskDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         {mode === "view" ? (
           <>
             <DialogHeader>
