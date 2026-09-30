@@ -65,7 +65,7 @@ export function PresenceSubMenu() {
       <DropdownMenuSubContent className="w-48">
         {PRESENCE_OPTIONS.map((o) => (
           <DropdownMenuItem key={o.value} onClick={() => setStatus(o.value)}>
-            <PresenceDot status={o.value} ring={false} className="mr-2" />
+            <PresenceDot status={o.value} ring={false} raw className="mr-2" />
             <span className="flex-1">{o.label}</span>
             {status === o.value && <Check className="h-3.5 w-3.5 text-primary" />}
           </DropdownMenuItem>
