@@ -459,6 +459,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         price: visibleFacts.has("price") && p.price ? Number(p.price) : null,
         rent: visibleFacts.has("rent") && p.rent ? Number(p.rent) : null,
         features: withFeatures ? (p.features ?? []) : [],
+        highlights: withFeatures ? selectedHighlights : [],
         facts,
         cover_url: cover,
         gallery_urls: gallery.filter((u) => u !== cover),
