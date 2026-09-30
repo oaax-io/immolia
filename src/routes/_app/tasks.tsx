@@ -90,6 +90,7 @@ function initials(name?: string | null) {
 const emptyForm = {
   title: "", description: "", status: "open", priority: "normal",
   due_date: "", assigned_to: "", related_type: "none", related_id: "",
+  recurrence: "none", recurrence_until: "",
 };
 
 function useTaskLabels() {
@@ -185,6 +186,8 @@ function TasksPage() {
         assigned_to: form.assigned_to || user?.id || null,
         related_type: form.related_type !== "none" ? form.related_type : null,
         related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
+        recurrence: form.recurrence && form.recurrence !== "none" ? form.recurrence : null,
+        recurrence_until: form.recurrence && form.recurrence !== "none" && form.recurrence_until ? form.recurrence_until : null,
       };
       const { error } = await supabase.from("tasks").insert(payload);
       if (error) throw error;
@@ -306,9 +309,9 @@ function TasksPage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl gap-3">
           <DialogHeader>
-            <DialogTitle>{t("tasks.new")}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground"><CheckSquare className="h-4 w-4" /></span>{t("tasks.new")}</DialogTitle>
             <DialogDescription>{t("tasks.dialogDescription")}</DialogDescription>
           </DialogHeader>
           <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
@@ -789,6 +792,8 @@ function TaskDetailDialog({
         assigned_to: task.assigned_to ?? "",
         related_type: task.related_type ?? "none",
         related_id: task.related_id ?? "",
+        recurrence: task.recurrence ?? "none",
+        recurrence_until: task.recurrence_until ?? "",
       });
     }
   }, [task]);
@@ -889,6 +894,8 @@ function TaskDetailDialog({
                   assigned_to: form.assigned_to || null,
                   related_type: form.related_type !== "none" ? form.related_type : null,
                   related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
+                  recurrence: form.recurrence && form.recurrence !== "none" ? form.recurrence : null,
+                  recurrence_until: form.recurrence && form.recurrence !== "none" && form.recurrence_until ? form.recurrence_until : null,
                 });
               }} disabled={!form.title.trim()}>{t("tasks.actions.save")}</Button>
             </DialogFooter>
