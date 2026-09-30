@@ -80,6 +80,7 @@ import { Route as AppFinancingIdRouteImport } from './routes/_app/financing.$id'
 import { Route as AppClientsIdRouteImport } from './routes/_app/clients.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicMsCalendarWorkerRouteImport } from './routes/api/public/ms-calendar/worker'
+import { Route as ApiPublicMsCalendarNotificationsRouteImport } from './routes/api/public/ms-calendar/notifications'
 import { Route as ApiPublicMsCalendarCallbackRouteImport } from './routes/api/public/ms-calendar/callback'
 import { Route as ApiPublicBankPaketTokenRouteImport } from './routes/api/public/bank-paket.$token'
 import { Route as AppPropertiesIdExposeRouteImport } from './routes/_app/properties.$id.expose'
@@ -442,6 +443,12 @@ const ApiPublicMsCalendarWorkerRoute =
     path: '/api/public/ms-calendar/worker',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMsCalendarNotificationsRoute =
+  ApiPublicMsCalendarNotificationsRouteImport.update({
+    id: '/api/public/ms-calendar/notifications',
+    path: '/api/public/ms-calendar/notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicMsCalendarCallbackRoute =
   ApiPublicMsCalendarCallbackRouteImport.update({
     id: '/api/public/ms-calendar/callback',
@@ -538,6 +545,7 @@ export interface FileRoutesByFullPath {
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
   '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
+  '/api/public/ms-calendar/notifications': typeof ApiPublicMsCalendarNotificationsRoute
   '/api/public/ms-calendar/worker': typeof ApiPublicMsCalendarWorkerRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -610,6 +618,7 @@ export interface FileRoutesByTo {
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
   '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
+  '/api/public/ms-calendar/notifications': typeof ApiPublicMsCalendarNotificationsRoute
   '/api/public/ms-calendar/worker': typeof ApiPublicMsCalendarWorkerRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -688,6 +697,7 @@ export interface FileRoutesById {
   '/_app/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
   '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
+  '/api/public/ms-calendar/notifications': typeof ApiPublicMsCalendarNotificationsRoute
   '/api/public/ms-calendar/worker': typeof ApiPublicMsCalendarWorkerRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -766,6 +776,7 @@ export interface FileRouteTypes {
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
     | '/api/public/ms-calendar/callback'
+    | '/api/public/ms-calendar/notifications'
     | '/api/public/ms-calendar/worker'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -838,6 +849,7 @@ export interface FileRouteTypes {
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
     | '/api/public/ms-calendar/callback'
+    | '/api/public/ms-calendar/notifications'
     | '/api/public/ms-calendar/worker'
     | '/api/public/payments/webhook'
   id:
@@ -915,6 +927,7 @@ export interface FileRouteTypes {
     | '/_app/properties/$id/expose'
     | '/api/public/bank-paket/$token'
     | '/api/public/ms-calendar/callback'
+    | '/api/public/ms-calendar/notifications'
     | '/api/public/ms-calendar/worker'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -935,6 +948,7 @@ export interface RootRouteChildren {
   ApiPublicPortalWebhookRoute: typeof ApiPublicPortalWebhookRoute
   ApiPublicBankPaketTokenRoute: typeof ApiPublicBankPaketTokenRoute
   ApiPublicMsCalendarCallbackRoute: typeof ApiPublicMsCalendarCallbackRoute
+  ApiPublicMsCalendarNotificationsRoute: typeof ApiPublicMsCalendarNotificationsRoute
   ApiPublicMsCalendarWorkerRoute: typeof ApiPublicMsCalendarWorkerRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -1438,6 +1452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMsCalendarWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ms-calendar/notifications': {
+      id: '/api/public/ms-calendar/notifications'
+      path: '/api/public/ms-calendar/notifications'
+      fullPath: '/api/public/ms-calendar/notifications'
+      preLoaderRoute: typeof ApiPublicMsCalendarNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/ms-calendar/callback': {
       id: '/api/public/ms-calendar/callback'
       path: '/api/public/ms-calendar/callback'
@@ -1669,6 +1690,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPortalWebhookRoute: ApiPublicPortalWebhookRoute,
   ApiPublicBankPaketTokenRoute: ApiPublicBankPaketTokenRoute,
   ApiPublicMsCalendarCallbackRoute: ApiPublicMsCalendarCallbackRoute,
+  ApiPublicMsCalendarNotificationsRoute: ApiPublicMsCalendarNotificationsRoute,
   ApiPublicMsCalendarWorkerRoute: ApiPublicMsCalendarWorkerRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
