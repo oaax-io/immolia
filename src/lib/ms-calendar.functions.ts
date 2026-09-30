@@ -247,3 +247,41 @@ export const resolveMsConflict = createServerFn({ method: "POST" })
       link_id: data.linkId, idempotency_key: `resolve:${data.keep}:${data.linkId}:${Date.now()}` } as never);
     return { ok: true };
   });
+
+// Outlook-Termin absagen (Organisator, mit Teilnehmernachricht), Einladung ablehnen (Eingeladener)
+// oder nur lokal ausblenden (ohne Microsoft-Aktion). Eingeladene können nie im Namen des Organisators absagen.
+export const respondMsEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    providerEventId: z.string().min(1).max(500),
+    action: z.enum(["cancel", "decline"]),
+    comment: z.string().max(1000).optional(),
+  }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { getAccessToken, GRAPH } = await import("./ms-calendar.server");
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn || conn.status !== "connected") throw new Error("Keine aktive Microsoft-Verbindung.");
+    const { data: blk } = await admin.from("calendar_busy_blocks").select("provider_event_id, is_organizer, is_cancelled")
+      .eq("connection_id", conn.id).eq("provider_event_id", data.providerEventId).maybeSingle();
+    if (!blk) throw new Error("Termin nicht gefunden.");
+    if ((blk as any).is_cancelled) throw new Error("Der Termin ist bereits abgesagt.");
+    if (data.action === "cancel" && (blk as any).is_organizer !== true) throw new Error("Nur der Organisator kann diesen Termin absagen.");
+    if (data.action === "decline" && (blk as any).is_organizer === true) throw new Error("Als Organisator bitte „Absagen“ verwenden.");
+    const token = await getAccessToken(admin as any, conn.id);
+    const path = data.action === "cancel" ? "cancel" : "decline";
+    const body = data.action === "cancel" ? { comment: data.comment ?? "" } : { comment: data.comment ?? "", sendResponse: true };
+    const res = await fetch(`${GRAPH}/me/events/${encodeURIComponent(data.providerEventId)}/${path}`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error(`Microsoft ${path} failed [${res.status}]`);
+      throw new Error(res.status === 403 ? "Microsoft hat die Aktion abgelehnt (keine Berechtigung)." : `Microsoft-Aktion fehlgeschlagen (${res.status}). Nichts wurde geändert.`);
+    }
+    if (data.action === "cancel") {
+      await admin.from("calendar_busy_blocks").update({ is_cancelled: true } as never).eq("connection_id", conn.id).eq("provider_event_id", data.providerEventId);
+    }
+    await admin.from("calendar_sync_jobs").insert({ agency_id: agencyId, connection_id: conn.id, job_type: "delta",
+      idempotency_key: `respond:${data.providerEventId}:${Date.now()}` } as never);
+    return { ok: true };
+  });
