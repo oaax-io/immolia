@@ -17,7 +17,7 @@ type Caller = { full_name: string | null; email: string | null; avatar_url: stri
 export function IncomingCallListener({
   onAccept,
 }: {
-  onAccept: (callerId: string, callId: string) => void;
+  onAccept: (callerId: string, callId: string, room: string) => void;
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -145,9 +145,10 @@ export function IncomingCallListener({
           onClick={async () => {
             const id = call.id;
             const from = call.created_by;
+            const room = call.room_name;
             clear();
             await setCallStatus(id, "accepted").catch(() => {});
-            onAccept(from, id);
+            onAccept(from, id, room);
           }}
         >
           <Phone className="h-4 w-4" /> Annehmen
