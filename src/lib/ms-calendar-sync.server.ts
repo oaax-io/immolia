@@ -211,18 +211,37 @@ async function applyRemote(admin: Admin, conn: any, token: string, ev: any, show
       change_key: ev.changeKey, last_synced_at: new Date().toISOString(), last_synced_state: snapshot(next) } as never).eq("id", link.id);
     return;
   }
-  // Fremder Outlook-Termin → nur Belegung (keine Inhalte)
-  if (!showBusy || ev.isCancelled || ev.showAs === "free") {
+  // Fremder Outlook-Termin → persönlicher Eintrag (nur für Verbindungseigentümer lesbar; Beschreibung wird nie gespeichert)
+  // Zugeordnete Termine bleiben auch bei Absage erhalten (Status "abgesagt"), damit Kundenzuordnungen nicht verloren gehen.
+  const { data: assigned } = await admin.from("calendar_event_assignments" as never).select("id")
+    .eq("connection_id", conn.id).eq("provider_event_id", ev.id).maybeSingle();
+  if (!assigned && (!showBusy || ev.isCancelled || ev.showAs === "free")) {
     await admin.from("calendar_busy_blocks").delete().eq("connection_id", conn.id).eq("provider_event_id", ev.id);
     return;
   }
   if (!ev.start?.dateTime) return;
   seen.add(ev.id);
+  const isPrivate = ev.sensitivity === "private" || ev.sensitivity === "confidential";
+  const attendeeEmails: string[] = Array.from(new Set<string>((ev.attendees ?? [])
+    .map((x: any) => String(x?.emailAddress?.address ?? "").trim().toLowerCase()).filter((e: string) => e.includes("@"))));
   await admin.from("calendar_busy_blocks").upsert({
     agency_id: conn.agency_id, user_id: conn.user_id, connection_id: conn.id, provider_event_id: ev.id,
     starts_at: utc(ev.start.dateTime), ends_at: utc(ev.end.dateTime), is_all_day: !!ev.isAllDay, show_as: ev.showAs ?? "busy",
+    subject: ev.subject != null ? String(ev.subject).slice(0, 500) : null,
+    location: ev.location?.displayName ? String(ev.location.displayName).slice(0, 500) : null,
+    attendee_emails: attendeeEmails.slice(0, 100), is_private: isPrivate, is_cancelled: !!ev.isCancelled,
+    is_organizer: ev.isOrganizer ?? null,
     updated_at: new Date().toISOString(),
   } as never, { onConflict: "connection_id,provider_event_id" });
+  // Automatische Kundenerkennung nur als Vorschlag, nie für private Termine, nur Kunden derselben Firma
+  if (!isPrivate && attendeeEmails.length) {
+    const { data: clients } = await admin.from("clients").select("id, email").eq("agency_id", conn.agency_id)
+      .in("email", attendeeEmails).limit(20);
+    const rows = (clients ?? []).map((c: any) => ({ agency_id: conn.agency_id, owner_user_id: conn.user_id,
+      connection_id: conn.id, provider_event_id: ev.id, client_id: c.id, reason: "attendee_email" }));
+    if (rows.length) await admin.from("calendar_assignment_suggestions" as never)
+      .upsert(rows as never, { onConflict: "connection_id,provider_event_id,client_id", ignoreDuplicates: true });
+  }
 }
 
 async function resolveConflict(admin: Admin, conn: any, token: string, linkId: string, keep: "local" | "remote") {
