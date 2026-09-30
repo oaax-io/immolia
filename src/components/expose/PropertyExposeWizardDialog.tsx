@@ -30,6 +30,7 @@ import {
 } from "@/lib/expose-template";
 import { renderDocumentPdf, fetchDocumentPdfBytes } from "@/lib/documents.functions";
 import { TEMPLATES, type TemplateMeta, type GalerieLayout } from "@/components/expose/TemplatePreview";
+import { exposeIconSvg, matchExposeIcon } from "@/lib/expose-icons";
 
 type Props = {
   propertyId: string;
