@@ -23,7 +23,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useTranslation } from "react-i18next";
 import { VideoCallDialog } from "@/components/video/VideoCallDialog";
-import { HolidaySettings } from "@/components/appointments/HolidaySettings";
 import { holidayMap, holidaysForCanton, dateKey, type Holiday } from "@/lib/swiss-holidays";
 import { ApptHover, TaskHover, HolidayHover } from "@/components/appointments/CalendarHover";
 import { deleteToTrash } from "@/lib/trash";
@@ -77,15 +76,60 @@ function useApptLabels() {
 /* -------------------- Holiday hook -------------------- */
 
 function useHolidays() {
-  const [canton, setCanton] = useState<string>(() => (typeof window !== "undefined" && localStorage.getItem("cal.canton")) || "ZH");
-  const [showUnpaid, setShowUnpaid] = useState<boolean>(() => (typeof window !== "undefined" ? localStorage.getItem("cal.unpaid") !== "0" : true));
-
-  useEffect(() => { localStorage.setItem("cal.canton", canton); }, [canton]);
-  useEffect(() => { localStorage.setItem("cal.unpaid", showUnpaid ? "1" : "0"); }, [showUnpaid]);
-
+  const canton = (typeof window !== "undefined" && localStorage.getItem("cal.canton")) || "ZH";
   const y = new Date().getFullYear();
-  const map = useMemo(() => holidayMap([y - 1, y, y + 1, y + 2], canton, showUnpaid), [canton, showUnpaid, y]);
-  return { canton, setCanton, showUnpaid, setShowUnpaid, map };
+  const map = useMemo(() => holidayMap([y - 1, y, y + 1, y + 2], canton, true), [canton, y]);
+  return { canton, showUnpaid: true, map };
+}
+
+/* -------------------- Layer filter -------------------- */
+
+type LayerKey = "holidays" | "birthdays" | "tasks" | "all" | "mine" | "online";
+const LAYERS: { key: LayerKey; label: string; dot: string }[] = [
+  { key: "holidays", label: "Feiertage", dot: "bg-rose-500" },
+  { key: "birthdays", label: "Geburtstage Kunden", dot: "bg-amber-500" },
+  { key: "tasks", label: "Aufgaben", dot: "bg-emerald-500" },
+  { key: "all", label: "Alle Termine", dot: "bg-primary" },
+  { key: "mine", label: "Meine Termine", dot: "bg-sky-500" },
+  { key: "online", label: "Online-Meetings", dot: "bg-violet-500" },
+];
+const DEFAULT_LAYERS: LayerKey[] = ["holidays", "birthdays", "tasks", "all"];
+
+function useLayers() {
+  const [layers, setLayers] = useState<LayerKey[]>(DEFAULT_LAYERS);
+  useEffect(() => {
+    try { const s = localStorage.getItem("cal.layers"); if (s) setLayers(JSON.parse(s)); } catch { /* ignore */ }
+  }, []);
+  const toggle = (k: LayerKey) => setLayers((prev) => {
+    const next = prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k];
+    localStorage.setItem("cal.layers", JSON.stringify(next));
+    return next;
+  });
+  return { layers, toggle, has: (k: LayerKey) => layers.includes(k) };
+}
+
+function LayerPanel({ layers, toggle }: { layers: LayerKey[]; toggle: (k: LayerKey) => void }) {
+  return (
+    <div className="ml-auto flex flex-wrap items-center gap-1.5">
+      {LAYERS.map((l) => {
+        const on = layers.includes(l.key);
+        return (
+          <button
+            key={l.key}
+            type="button"
+            onClick={() => toggle(l.key)}
+            aria-pressed={on}
+            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${on ? "border-primary/30 bg-card text-foreground shadow-sm" : "border-transparent bg-transparent text-muted-foreground opacity-60 hover:opacity-100"}`}
+          >
+            <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-[3px] ${on ? l.dot : "border border-muted-foreground/40"}`}>
+              {on && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+            </span>
+            {l.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 /* -------------------- Page -------------------- */
@@ -100,6 +144,15 @@ function AppointmentsPage() {
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
   const holidays = useHolidays();
+  const layer = useLayers();
+
+  const { data: birthdays = [] } = useQuery({
+    queryKey: ["client-birthdays"],
+    queryFn: async () => (await supabase
+      .from("client_self_disclosures")
+      .select("client_id, birth_date, first_name, last_name, clients(full_name)")
+      .not("birth_date", "is", null)).data ?? [],
+  });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks", "with-due"],
@@ -193,6 +246,34 @@ function AppointmentsPage() {
 
   const editing = appts.find((a: any) => a.id === editId);
 
+  const visibleAppts = useMemo(() => {
+    if (layer.has("all")) return appts;
+    return appts.filter((a: any) =>
+      (layer.has("mine") && user && (a.assigned_to === user.id || a.owner_id === user.id || (a.extra_assignee_ids ?? []).includes(user.id))) ||
+      (layer.has("online") && a.is_online));
+  }, [appts, layer.layers, user]);
+  const visibleTasks = layer.has("tasks") ? tasks : [];
+
+  const calendarMarks = useMemo(() => {
+    const map: Record<string, Holiday[]> = {};
+    if (layer.has("holidays")) for (const [k, v] of Object.entries(holidays.map)) map[k] = v.map((h) => ({ ...h, paid: true }));
+    if (layer.has("birthdays")) {
+      const y = new Date().getFullYear();
+      const seen = new Set<string>();
+      for (const b of birthdays as any[]) {
+        if (!b.birth_date || seen.has(b.client_id)) continue;
+        seen.add(b.client_id);
+        const name = b.clients?.full_name || [b.first_name, b.last_name].filter(Boolean).join(" ") || "Kunde";
+        const md = String(b.birth_date).slice(5, 10);
+        for (const yy of [y - 1, y, y + 1, y + 2]) {
+          const key = `${yy}-${md}`;
+          (map[key] ??= []).push({ date: key, name: `🎂 ${name}`, paid: false, scope: "national", cantons: [] });
+        }
+      }
+    }
+    return map;
+  }, [holidays.map, birthdays, layer.layers]);
+
   const startNew = (preset?: Partial<typeof emptyForm>) => {
     const f: any = { ...emptyForm, mode: "time", duration: 60, ...preset };
     if (f.starts_at && !f.ends_at) {
@@ -254,45 +335,35 @@ function AppointmentsPage() {
               <ListIcon className="h-4 w-4" />{t("appointments.tabs.list")}
             </TabsTrigger>
           </TabsList>
-          <div className="h-5 w-px bg-primary/20" />
-          <HolidaySettings
-            canton={holidays.canton}
-            setCanton={holidays.setCanton}
-            showUnpaid={holidays.showUnpaid}
-            setShowUnpaid={holidays.setShowUnpaid}
-          />
-          <div className="ml-auto flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> bezahlt</span>
-            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-slate-400" /> unbezahlt</span>
-          </div>
+          <LayerPanel layers={layer.layers} toggle={layer.toggle} />
         </div>
 
 
         <TabsContent value="month">
-          <MonthView appts={appts} tasks={tasks} employees={employees} holidays={holidays.map} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
         </TabsContent>
 
         <TabsContent value="week">
-          <WeekView appts={appts} tasks={tasks} employees={employees} holidays={holidays.map} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
         </TabsContent>
 
         <TabsContent value="day">
-          <DayView appts={appts} tasks={tasks} employees={employees} holidays={holidays.map} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
         </TabsContent>
 
         <TabsContent value="list">
           <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
             <div>
               <ListView
-                appts={appts}
-                tasks={tasks}
+                appts={visibleAppts}
+                tasks={visibleTasks}
                 employees={employees}
                 onOpen={setEditId}
                 onStatus={(id, status) => update.mutate({ id, patch: { status } })}
               />
             </div>
 
-            <HolidayList canton={holidays.canton} showUnpaid={holidays.showUnpaid} />
+            {layer.has("holidays") && <HolidayList canton={holidays.canton} showUnpaid={holidays.showUnpaid} />}
           </div>
         </TabsContent>
       </Tabs>
@@ -331,9 +402,9 @@ function startOfWeek(d: Date) {
 function HolidayChip({ h }: { h: Holiday }) {
   return (
     <span
-      title={`${h.name} – ${h.paid ? "bezahlter Feiertag" : "nicht bezahlt"}`}
+      title={h.name}
       className={`flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${
-        h.paid ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"
+        h.paid ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
       }`}
     >
       <Flag className="h-3 w-3 shrink-0" />
@@ -361,7 +432,6 @@ function HolidayList({ canton, showUnpaid }: { canton: string; showUnpaid: boole
                   {new Intl.DateTimeFormat("de-CH", { weekday: "short", day: "2-digit", month: "long" }).format(new Date(h.date))}
                 </p>
               </div>
-              <Badge variant={h.paid ? "default" : "outline"} className="shrink-0 text-[10px]">{h.paid ? "bezahlt" : "unbezahlt"}</Badge>
             </div>
           ))}
         </div>
@@ -538,7 +608,7 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
                 {hol.length > 0 && (
                   <HolidayHover holidays={hol}>
                     <span
-                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${paidHol ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"}`}
+                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${paidHol ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}
                     >
                       <Flag className="h-2.5 w-2.5 shrink-0" />
                       <span className="truncate">{hol[0].name}{hol.length > 1 ? ` +${hol.length - 1}` : ""}</span>
@@ -743,7 +813,7 @@ function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt 
                 {hol.length > 0 && (
                   <HolidayHover holidays={hol}>
                     <span
-                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${hol.some((h) => h.paid) ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"}`}
+                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${hol.some((h) => h.paid) ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}
                     >
                       <Flag className="h-2.5 w-2.5 shrink-0" />
                       <span className="truncate">{hol[0].name}{hol.length > 1 ? ` +${hol.length - 1}` : ""}</span>
