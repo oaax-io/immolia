@@ -172,8 +172,8 @@ async function applyRemote(admin: Admin, conn: any, token: string, ev: any, show
       await admin.from("appointments").update({ status: "cancelled" } as never).eq("id", link.appointment_id).eq("agency_id", conn.agency_id);
       const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id).maybeSingle();
       if (a) await admin.from("calendar_event_links").update({ last_local_hash: localHash(a) } as never).eq("id", link.id);
-      await admin.from("activity_logs").insert({ agency_id: conn.agency_id, user_id: conn.user_id, entity_type: "appointment",
-        entity_id: link.appointment_id, action: "calendar_cancelled_in_outlook" } as never).then(() => undefined, () => undefined);
+      await admin.from("activity_logs").insert({ agency_id: conn.agency_id, actor_id: conn.user_id, related_type: "appointment",
+        related_id: link.appointment_id, action: "calendar_cancelled_in_outlook", metadata: { source: "microsoft_365" } } as never).then(() => undefined, () => undefined);
     }
     return;
   }
