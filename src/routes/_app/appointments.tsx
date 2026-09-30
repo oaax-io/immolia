@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon, ChevronsUpDown, Check, X, Mail, UserPlus } from "lucide-react";
+import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon, ChevronsUpDown, Check, X, Mail, UserPlus, SlidersHorizontal } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,25 +110,35 @@ function useLayers() {
 
 function LayerPanel({ layers, toggle }: { layers: LayerKey[]; toggle: (k: LayerKey) => void }) {
   return (
-    <div className="ml-auto flex flex-wrap items-center gap-1.5">
-      {LAYERS.map((l) => {
-        const on = layers.includes(l.key);
-        return (
-          <button
-            key={l.key}
-            type="button"
-            onClick={() => toggle(l.key)}
-            aria-pressed={on}
-            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${on ? "border-primary/30 bg-card text-foreground shadow-sm" : "border-transparent bg-transparent text-muted-foreground opacity-60 hover:opacity-100"}`}
-          >
-            <span className={`flex h-3.5 w-3.5 items-center justify-center rounded-[3px] ${on ? l.dot : "border border-muted-foreground/40"}`}>
-              {on && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
-            </span>
-            {l.label}
-          </button>
-        );
-      })}
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Kalender-Ebenen einblenden">
+          <SlidersHorizontal className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-2">
+        <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Einblenden</p>
+        <div className="space-y-0.5">
+          {LAYERS.map((l) => {
+            const on = layers.includes(l.key);
+            return (
+              <button
+                key={l.key}
+                type="button"
+                onClick={() => toggle(l.key)}
+                aria-pressed={on}
+                className={`flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors ${on ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
+              >
+                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] ${on ? l.dot : "border border-muted-foreground/40"}`}>
+                  {on && <Check className="h-3 w-3 text-primary-foreground" />}
+                </span>
+                {l.label}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -143,6 +153,8 @@ function AppointmentsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
+  const [anchor, setAnchor] = useState(() => new Date());
+  const changeView = (v: string) => { setView(v as any); setAnchor(new Date()); };
   const holidays = useHolidays();
   const layer = useLayers();
 
@@ -319,14 +331,14 @@ function AppointmentsPage() {
         submitting={create.isPending}
       />
 
-      <Tabs value={view} onValueChange={(v) => setView(v as any)} className="space-y-4">
+      <Tabs value={view} onValueChange={changeView} className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 shadow-sm">
           <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
             <TabsTrigger value="month" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
               <CalendarDays className="h-4 w-4" />{t("appointments.tabs.month", { defaultValue: "Monat" })}
             </TabsTrigger>
             <TabsTrigger value="week" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-              <CalendarRange className="h-4 w-4" />{t("appointments.tabs.week")}
+              <CalendarRange className="h-4 w-4" />{t("appointments.tabs.week", { defaultValue: "Woche" })}
             </TabsTrigger>
             <TabsTrigger value="day" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
               <CalendarClock className="h-4 w-4" />Tag
@@ -335,20 +347,23 @@ function AppointmentsPage() {
               <ListIcon className="h-4 w-4" />{t("appointments.tabs.list")}
             </TabsTrigger>
           </TabsList>
-          <LayerPanel layers={layer.layers} toggle={layer.toggle} />
+          {view !== "list" && <ToolbarNav view={view} anchor={anchor} setAnchor={setAnchor} />}
+          <div className="ml-auto">
+            <LayerPanel layers={layer.layers} toggle={layer.toggle} />
+          </div>
         </div>
 
 
         <TabsContent value="month">
-          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="week">
-          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="day">
-          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="list">
@@ -548,25 +563,41 @@ function ApptCard({
   );
 }
 
-function CalendarNav({ label, onPrev, onNext, onToday, right }: any) {
+function ToolbarNav({ view, anchor, setAnchor }: { view: "month" | "week" | "day"; anchor: Date; setAnchor: (d: Date) => void }) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
+  const step = view === "month" ? 0 : view === "week" ? 7 : 1;
+  const shift = (dir: 1 | -1) => {
+    const d = new Date(anchor);
+    if (view === "month") d.setMonth(d.getMonth() + dir);
+    else d.setTime(d.getTime() + dir * step * 86400000);
+    setAnchor(d);
+  };
+  let label: string;
+  if (view === "month") {
+    label = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+  } else if (view === "week") {
+    const s = startOfWeek(anchor);
+    const e = new Date(s.getTime() + 6 * 86400000);
+    label = `${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(s)} – ${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric" }).format(e)}`;
+  } else {
+    label = new Intl.DateTimeFormat(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(anchor);
+  }
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={onPrev}><ChevronLeft className="h-4 w-4" /></Button>
-        <Button variant="outline" size="sm" onClick={onToday}>Heute</Button>
-        <Button variant="outline" size="icon" onClick={onNext}><ChevronRight className="h-4 w-4" /></Button>
-        <p className="ml-2 text-sm font-semibold">{label}</p>
-      </div>
-      {right}
+    <div className="flex items-center gap-1.5">
+      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+      <Button variant="outline" size="sm" className="h-9" onClick={() => setAnchor(new Date())}>Heute</Button>
+      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
+      <p className="ml-1 whitespace-nowrap text-sm font-semibold">{label}</p>
     </div>
   );
 }
 
-function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [anchor, setAnchor] = useState(() => startOfWeek(new Date()));
-  const days = Array.from({ length: 7 }, (_, i) => new Date(anchor.getTime() + i * 86400000));
+  const weekStart = startOfWeek(anchor);
+  const days = Array.from({ length: 7 }, (_, i) => new Date(weekStart.getTime() + i * 86400000));
   const byDay = useMemo(() => {
     const map: Record<string, { appts: any[]; tasks: any[] }> = {};
     days.forEach((d) => { map[d.toDateString()] = { appts: [], tasks: [] }; });
@@ -579,16 +610,10 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
       if (key in map) map[key].tasks.push(tk);
     }
     return map;
-  }, [appts, tasks, anchor]);
+  }, [appts, tasks, weekStart]);
 
   return (
     <div>
-      <CalendarNav
-        label={`${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(days[0])} – ${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric" }).format(days[6])}`}
-        onPrev={() => setAnchor(new Date(anchor.getTime() - 7 * 86400000))}
-        onNext={() => setAnchor(new Date(anchor.getTime() + 7 * 86400000))}
-        onToday={() => setAnchor(startOfWeek(new Date()))}
-      />
       <div className="grid gap-2 md:grid-cols-7">
         {days.map((d) => {
           const isToday = d.toDateString() === new Date().toDateString();
@@ -667,10 +692,10 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
 const DAY_START = 7;
 const DAY_END = 21;
 
-function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks?: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [day, setDay] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
+  const day = useMemo(() => { const d = new Date(anchor); d.setHours(0, 0, 0, 0); return d; }, [anchor]);
   const key = day.toDateString();
   const dayAppts = appts.filter((a) => new Date(a.starts_at).toDateString() === key);
   const dayTasks = tasks.filter((tk) => new Date(tk.due_date).toDateString() === key);
@@ -679,12 +704,6 @@ function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreate
 
   return (
     <div>
-      <CalendarNav
-        label={new Intl.DateTimeFormat(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(day)}
-        onPrev={() => setDay(new Date(day.getTime() - 86400000))}
-        onNext={() => setDay(new Date(day.getTime() + 86400000))}
-        onToday={() => { const d = new Date(); d.setHours(0, 0, 0, 0); setDay(d); }}
-      />
       {hol.length > 0 && (
         <div className="mb-3 space-y-1">
           {hol.map((h) => (
@@ -733,15 +752,12 @@ function DayView({ appts, tasks = [], employees = [], holidays, onOpen, onCreate
   );
 }
 
-function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt }: { appts: any[]; tasks: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void }) {
+function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt, anchor }: { appts: any[]; tasks: any[]; employees?: any[]; holidays: Record<string, Holiday[]>; onOpen: (id: string) => void; onCreateAt: (iso: string) => void; anchor: Date }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
-  const [anchor, setAnchor] = useState(() => {
-    const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); return d;
-  });
 
   const { gridStart, gridDays, monthIdx } = useMemo(() => {
-    const first = new Date(anchor);
+    const first = new Date(anchor); first.setDate(1); first.setHours(0, 0, 0, 0);
     const dow = (first.getDay() + 6) % 7;
     const start = new Date(first); start.setDate(first.getDate() - dow);
     return {
@@ -771,19 +787,8 @@ function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt 
     return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(d);
   });
 
-  const shift = (delta: number) => {
-    const d = new Date(anchor); d.setMonth(d.getMonth() + delta); setAnchor(d);
-  };
-
   return (
     <div>
-      <CalendarNav
-        label={new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor)}
-        onPrev={() => shift(-1)}
-        onNext={() => shift(1)}
-        onToday={() => { const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); setAnchor(d); }}
-      />
-
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border bg-border">
         {weekdays.map((w) => (
           <div key={w} className="bg-muted/50 px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">{w}</div>
