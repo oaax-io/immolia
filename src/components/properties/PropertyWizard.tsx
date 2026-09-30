@@ -27,6 +27,7 @@ import { lookupSwissParcel } from "@/lib/property-location.functions";
 import { generateLocationDescription } from "@/lib/property-ai.functions";
 import { FeaturePickerDialog, useFeatureOptions } from "@/components/properties/FeaturePickerDialog";
 import { featureIcon } from "@/components/properties/feature-icons";
+import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 
 /* -------------------- Typen -------------------- */
 
@@ -364,7 +365,7 @@ function hydrateFromProperty(p: any): WizardData {
     energy_source: p.energy_source ?? "",
     energy_class: p.energy_class ?? "",
     features_extra: extra,
-    image_url: Array.isArray(p.images) ? (p.images[0] ?? "") : "",
+    image_url: Array.isArray(p.images) ? (propertyPhotoCandidates(p.images)[0] ?? "") : "",
     description: p.description ?? "",
     internal_notes: p.internal_notes ?? "",
     media: fallbackMedia,
@@ -1199,12 +1200,6 @@ function detectKindFromFile(file: File): string {
   return "other";
 }
 
-function getMediaPublicUrl(path: string) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
-}
-
 function Step8Media({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"upload" | "library">("upload");
@@ -1357,7 +1352,6 @@ function Step8Media({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
             <div className="grid max-h-[40vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 md:grid-cols-4">
               {(library.data ?? []).map((item: any) => {
                 const picked = !!d.media.find((m) => m.library_media_id === item.id);
-                const url = getMediaPublicUrl(item.file_url);
                 return (
                   <button
                     key={item.id}
@@ -1368,13 +1362,7 @@ function Step8Media({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
                       picked ? "border-primary ring-2 ring-primary/30" : "border-transparent hover:border-primary/40",
                     )}
                   >
-                    {url ? (
-                      <img src={url} alt={item.title ?? ""} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-muted">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                    )}
+                    <PropertyPhoto sources={[item.file_url]} alt={item.title ?? "Immobilie"} />
                     {picked && (
                       <div className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                         <Check className="h-3.5 w-3.5" />
@@ -1396,13 +1384,10 @@ function Step8Media({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {d.media.map((m, idx) => {
-              const url = getMediaPublicUrl(m.file_url);
               return (
                 <div key={idx} className="group relative aspect-square overflow-hidden rounded-lg border bg-card">
                   {m.file_type === "image" || !m.file_type ? (
-                    url ? <img src={url} alt={m.title ?? ""} className="h-full w-full object-cover" /> : (
-                      <div className="flex h-full w-full items-center justify-center bg-muted"><ImageIcon className="h-6 w-6 text-muted-foreground" /></div>
-                    )
+                    <PropertyPhoto sources={[m.file_url]} alt={m.title ?? "Immobilie"} />
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center bg-muted text-xs text-muted-foreground">
                       <ImageIcon className="h-6 w-6" />

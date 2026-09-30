@@ -1,15 +1,9 @@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
 import { formatArea, formatCurrency, getPropertyStatusBadgeClass } from "@/lib/format";
 import { useTranslation } from "react-i18next";
-import { Bath, Bed, Building2, Image as ImageIcon, Layers3, MapPin, Maximize, User } from "lucide-react";
-
-function mediaUrl(path?: string | null) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
-}
+import { Bath, Bed, Building2, Layers3, MapPin, Maximize, User } from "lucide-react";
 
 export function PropertyHoverCard({
   property,
@@ -23,7 +17,6 @@ export function PropertyHoverCard({
   const { t } = useTranslation();
   const statusLabel = (s: string) => t(`properties.status.${s}`, { defaultValue: s });
   const typeLabel = (s: string) => t(`properties.type.${s}`, { defaultValue: s });
-  const img = property.images?.[0] ? mediaUrl(property.images[0]) : "";
   const price =
     property.listing_type === "rent"
       ? property.rent
@@ -38,13 +31,7 @@ export function PropertyHoverCard({
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardContent align="start" className="w-80 overflow-hidden p-0">
         <div className="relative h-36 w-full bg-muted">
-          {img ? (
-            <img src={img} alt={property.title} className="h-full w-full object-cover" loading="lazy" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              <ImageIcon className="h-8 w-8" />
-            </div>
-          )}
+          <PropertyPhoto sources={property.images} alt={property.title} />
           <div className="absolute left-2 top-2 flex gap-1">
             <Badge variant="outline" className={`bg-background/90 text-[10px] ${getPropertyStatusBadgeClass(property.status)}`}>
               {statusLabel(property.status)}

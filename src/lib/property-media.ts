@@ -8,7 +8,8 @@ type PropertyMediaLike = {
 
 export function isImageMedia(item: PropertyMediaLike): boolean {
   const kind = item.file_type?.toLowerCase() ?? null;
-  return !kind || kind === "image" || kind.startsWith("image/");
+  return (!kind || kind === "image" || kind.startsWith("image/")) &&
+    !/\.(?:pdf|docx?|xlsx?|pptx?|txt|csv|zip|mp4|mov|webm)(?:[?#]|$)/i.test(item.file_url ?? "");
 }
 
 export function orderPropertyMedia<T extends PropertyMediaLike>(items: T[]): T[] {

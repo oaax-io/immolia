@@ -24,22 +24,27 @@ import { EmptyState } from "@/components/EmptyState";
 import { PropertyWizard, type WizardSubmit } from "@/components/properties/PropertyWizard";
 import { useTranslation } from "react-i18next";
 import { PropertyHoverCard } from "@/components/properties/PropertyHoverCard";
+import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
 import { AssigneeAvatars } from "@/components/clients/ClientAssignees";
 import { PropertyAssigneePicker, usePropertyAssignees } from "@/components/properties/PropertyAssignees";
 import { PropertyPinButton, usePropertyPins, propertyPinRowClass } from "@/components/properties/PropertyPin";
 import { deleteToTrash } from "@/lib/trash";
 import { DealDialog } from "@/components/commission/DealDialog";
 
-export const Route = createFileRoute("/_app/properties/")({ component: PropertiesPage });
+export const Route = createFileRoute("/_app/properties/")({
+  head: () => ({ meta: [
+    { title: "Immobilien – Immolia" },
+    { name: "description", content: "Immobilien im Immolia CRM verwalten und ansehen." },
+    { property: "og:title", content: "Immobilien – Immolia" },
+    { property: "og:description", content: "Immobilien im Immolia CRM verwalten und ansehen." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+  component: PropertiesPage,
+});
 
 const PROP_TYPES = ["apartment","house","commercial","land","parking","mixed_use","other"] as const;
 const STATUSES = ["draft","preparation","available","reserved","sold","rented","archived"] as const;
-
-function getMediaPublicUrl(path?: string | null) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
-}
 
 type ViewMode = "grid" | "list" | "map";
 
@@ -616,11 +621,7 @@ function PropertiesPage() {
                 </div>
                 <Link to="/properties/$id" params={{ id: p.id }} className="block">
                   <div className="aspect-[4/3] overflow-hidden bg-muted">
-                    {p.images?.[0] ? (
-                      <img src={getMediaPublicUrl(p.images[0])} alt={p.title} className="h-full w-full object-cover transition group-hover:scale-105" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gradient-soft text-muted-foreground">{t("properties.noImage")}</div>
-                    )}
+                    <PropertyPhoto sources={p.images} alt={p.title} className="h-full w-full object-cover transition group-hover:scale-105" />
                   </div>
                   <div className="p-4">
                     <div className="flex flex-wrap items-center gap-1.5">
