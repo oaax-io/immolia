@@ -29,6 +29,8 @@ import {
   Users,
   Video,
   Smile,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -265,59 +267,43 @@ function ChatBubble({
 
 function AttachmentView({ att }: { att: ChatAttachment }) {
   const [zoom, setZoom] = useState(false);
-  const [broken, setBroken] = useState(false);
-  const { data: url, isError, isLoading } = useQuery({
+  const { data, isError, isLoading } = useQuery({
     queryKey: ["chat-att-url", att.path],
     staleTime: 1000 * 60 * 30,
     retry: 1,
-    queryFn: async () => {
+    queryFn: async (): Promise<{ url: string; preview: string | null }> => {
       if (isImage(att)) {
-        // Blob statt signiertem Link: funktioniert auch in eingebetteten Vorschauen zuverlässig.
         const { data, error } = await supabase.storage.from("chat-attachments").download(att.path);
         if (error || !data) throw error ?? new Error("download failed");
-        return URL.createObjectURL(data);
+        const url = URL.createObjectURL(data);
+        return { url, preview: await makePreview(data) };
       }
       const { data, error } = await supabase.storage.from("chat-attachments").createSignedUrl(att.path, 3600);
       if (error || !data?.signedUrl) throw error ?? new Error("sign failed");
-      return data.signedUrl;
+      return { url: data.signedUrl, preview: null };
     },
   });
+  const url = data?.url ?? null;
   if (isImage(att)) {
-    if (isError || broken) {
-      return (
-        <a
-          href={url ?? "#"}
-          download={att.name}
-          className="flex w-40 flex-col items-center justify-center gap-1 rounded-md border bg-background p-2 text-center text-[10px] text-muted-foreground hover:bg-muted"
-        >
-          <Images className="h-4 w-4" />
-          <span>{broken ? "Bild zu gross für die Vorschau" : "Bild nicht verfügbar"}</span>
-          {url && <span className="inline-flex items-center gap-1 text-foreground"><Download className="h-3 w-3" /> Herunterladen</span>}
-        </a>
-      );
-    }
+    const preview = data?.preview ?? null;
     return (
       <>
-        <button type="button" onClick={() => url && setZoom(true)} className="block cursor-zoom-in" title="Vergrössern">
-          {url && !isLoading ? (
-            <img src={url} alt={att.name} onError={() => setBroken(true)} onLoad={(e) => { if (!e.currentTarget.naturalWidth) setBroken(true); }} className="max-h-48 rounded-md border object-cover" />
-          ) : (
+        <button type="button" onClick={() => data && setZoom(true)} className="block cursor-zoom-in" title="Vergrössern">
+          {isLoading ? (
             <div className="flex h-24 w-32 items-center justify-center rounded-md border">
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
+          ) : preview ? (
+            <img src={preview} alt={att.name} className="max-h-48 rounded-md border object-cover" />
+          ) : (
+            <div className="flex w-40 flex-col items-center justify-center gap-1 rounded-md border bg-background p-3 text-center text-[10px] text-muted-foreground">
+              <Images className="h-5 w-5" />
+              <span className="max-w-full truncate text-foreground">{att.name}</span>
+              <span>{isError ? "Bild nicht verfügbar" : "Keine Vorschau möglich"}</span>
+            </div>
           )}
         </button>
-        <Dialog open={zoom} onOpenChange={setZoom}>
-          <DialogContent className="max-w-[min(1100px,95vw)] p-2 sm:p-3">
-            <DialogTitle className="truncate pr-8 text-sm">{att.name}</DialogTitle>
-            {url && <img src={url} alt={att.name} className="mx-auto max-h-[80dvh] w-auto rounded-md object-contain" />}
-            {url && (
-              <a href={url} download={att.name} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                <Download className="h-3.5 w-3.5" /> Herunterladen
-              </a>
-            )}
-          </DialogContent>
-        </Dialog>
+        <ImageLightbox open={zoom} onOpenChange={setZoom} name={att.name} preview={preview} downloadUrl={url} />
       </>
     );
   }
@@ -332,6 +318,97 @@ function AttachmentView({ att }: { att: ChatAttachment }) {
       <span className="max-w-[160px] truncate">{att.name}</span>
       <Download className="h-3.5 w-3.5 opacity-60" />
     </a>
+  );
+}
+
+/** Erstellt eine anzeigbare Vorschau (max. 2560 px). Auch extrem grosse Bilder werden beim Dekodieren verkleinert. */
+async function makePreview(blob: Blob): Promise<string | null> {
+  if (blob.type === "image/svg+xml" || blob.type === "image/gif") return URL.createObjectURL(blob);
+  try {
+    const probe = await createImageBitmap(blob, { resizeWidth: 2560, resizeQuality: "high" }).catch(() => null);
+    if (!probe) return null;
+    const ratio = probe.height / probe.width; // Seitenverhältnis bleibt durch resizeWidth erhalten
+    let bmp = probe;
+    if (ratio > 1) {
+      probe.close();
+      bmp = await createImageBitmap(blob, { resizeHeight: 2560, resizeQuality: "high" });
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width; canvas.height = bmp.height;
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0);
+    bmp.close();
+    const out = await new Promise<Blob | null>((r) => canvas.toBlob(r, blob.type === "image/png" ? "image/png" : "image/jpeg", 0.9));
+    return out ? URL.createObjectURL(out) : null;
+  } catch {
+    return null;
+  }
+}
+
+function ImageLightbox({ open, onOpenChange, name, preview, downloadUrl }: {
+  open: boolean; onOpenChange: (o: boolean) => void; name: string; preview: string | null; downloadUrl: string | null;
+}) {
+  const [scale, setScale] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  useEffect(() => { if (open) { setScale(1); setPos({ x: 0, y: 0 }); } }, [open]);
+  const zoomTo = (v: number) => {
+    const n = Math.min(6, Math.max(1, Math.round(v * 100) / 100));
+    setScale(n);
+    if (n === 1) setPos({ x: 0, y: 0 });
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[90dvh] max-w-[min(1200px,95vw)] flex-col gap-2 p-3">
+        <DialogTitle className="truncate pr-8 text-sm">{name}</DialogTitle>
+        <div
+          className="relative flex-1 overflow-hidden rounded-md bg-muted/40"
+          onWheel={(e) => preview && zoomTo(scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15))}
+          onPointerDown={(e) => {
+            if (scale === 1) return;
+            (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+            drag.current = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y };
+          }}
+          onPointerMove={(e) => {
+            const d = drag.current;
+            if (d) setPos({ x: d.px + e.clientX - d.x, y: d.py + e.clientY - d.y });
+          }}
+          onPointerUp={() => { drag.current = null; }}
+          onDoubleClick={() => zoomTo(scale > 1 ? 1 : 2.5)}
+        >
+          {preview ? (
+            <img
+              src={preview}
+              alt={name}
+              draggable={false}
+              className={cn("absolute inset-0 m-auto max-h-full max-w-full select-none object-contain", scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in")}
+              style={{ transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, transition: drag.current ? "none" : "transform 120ms ease-out" }}
+            />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
+              <Images className="h-8 w-8" />
+              Für dieses Bild ist keine Vorschau möglich (Datei zu gross). Du kannst es herunterladen.
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" title="Verkleinern" disabled={!preview || scale <= 1} onClick={() => zoomTo(scale / 1.25)}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="w-12 text-center text-xs tabular-nums text-muted-foreground">{Math.round(scale * 100)}%</span>
+          <Button variant="outline" size="icon" className="h-8 w-8" title="Vergrössern" disabled={!preview || scale >= 6} onClick={() => zoomTo(scale * 1.25)}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8" disabled={!preview || scale === 1} onClick={() => zoomTo(1)}>
+            Einpassen
+          </Button>
+          {downloadUrl && (
+            <Button asChild size="sm" className="ml-auto h-8 gap-1">
+              <a href={downloadUrl} download={name}><Download className="h-4 w-4" /> Herunterladen</a>
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
