@@ -67,6 +67,7 @@ async function pushAppointment(admin: Admin, conn: any, token: string, appointme
     }
     return;
   }
+  if (!a) return;
   const h = localHash(a);
   if (link && link.last_local_hash === h && !link.deleted_at) return; // unverändert (auch Echo eigener Übernahmen)
   if (link?.conflict_state === "open") return;
@@ -170,7 +171,7 @@ async function applyRemote(admin: Admin, conn: any, token: string, ev: any, show
     await admin.from("calendar_event_links").update({ deleted_at: new Date().toISOString() } as never).eq("id", link.id);
     if (link.appointment_id) {
       await admin.from("appointments").update({ status: "cancelled" } as never).eq("id", link.appointment_id).eq("agency_id", conn.agency_id);
-      const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id).maybeSingle();
+      const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id ?? "").maybeSingle();
       if (a) await admin.from("calendar_event_links").update({ last_local_hash: localHash(a) } as never).eq("id", link.id);
       await admin.from("activity_logs").insert({ agency_id: conn.agency_id, actor_id: conn.user_id, related_type: "appointment",
         related_id: link.appointment_id, action: "calendar_cancelled_in_outlook", metadata: { source: "microsoft_365" } } as never).then(() => undefined, () => undefined);
@@ -183,7 +184,7 @@ async function applyRemote(admin: Admin, conn: any, token: string, ev: any, show
 
   if (link && link.origin === "immolia") {
     if (link.deleted_at || ev.changeKey === link.last_remote_change_key || link.conflict_state === "open") return;
-    const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id).maybeSingle();
+    const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id ?? "").maybeSingle();
     if (!a) return;
     const remote = {
       title: String(ev.subject ?? "").replace(/^Abgesagt: /, ""),
@@ -221,7 +222,7 @@ async function resolveConflict(admin: Admin, conn: any, token: string, linkId: s
   const cur = await graph(token, "GET", `/me/events/${encodeURIComponent(link.provider_event_id)}?$select=id,changeKey,subject,start,end,location`);
   if (!cur.ok) throw new Error(`get_${cur.status}`);
   const ev = await cur.json();
-  const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id).maybeSingle();
+  const { data: a } = await admin.from("appointments").select("*").eq("id", link.appointment_id ?? "").maybeSingle();
   if (!a) return;
   if (keep === "local") {
     const res = await graph(token, "PATCH", `/me/events/${encodeURIComponent(link.provider_event_id)}`, eventBody(a, conn.agency_id));
