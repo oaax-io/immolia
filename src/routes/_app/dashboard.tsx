@@ -384,93 +384,14 @@ function Dashboard() {
       </div>
 
       {/* Status-Verteilungen als Ringdiagramme */}
-      <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-        <DonutCard
-          title={t("dashboard.clientStatus.title")}
-          icon={Users}
-          to="/clients"
-          loading={stats.isLoading}
-          counts={stats.data?.clientCounts ?? {}}
-          emptyText={t("dashboard.pipeline.noData")}
-          rows={[
-            { key: "entwurf", label: t("dashboard.clientStatus.entwurf"), color: "#94a3b8" },
-            { key: "pendent", label: t("dashboard.clientStatus.pendent"), color: "#f59e0b" },
-            { key: "vollstaendig", label: t("dashboard.clientStatus.vollstaendig"), color: "#0ea5e9" },
-            { key: "finanzierung", label: t("dashboard.clientStatus.finanzierung"), color: "#8b5cf6" },
-            { key: "abgeschlossen", label: t("dashboard.clientStatus.abgeschlossen"), color: "#10b981" },
-            { key: "abgelehnt", label: t("dashboard.clientStatus.abgelehnt"), color: "#f43f5e" },
-            { key: "storniert", label: t("dashboard.clientStatus.storniert"), color: "#71717a" },
-          ]}
-        />
-        <DonutCard
-          title={t("dashboard.pipeline.properties")}
-          icon={Building2}
-          to="/properties"
-          loading={pipeline.isLoading}
-          counts={pipeline.data?.propCounts ?? {}}
-          emptyText={t("dashboard.pipeline.noData")}
-          rows={[
-            { key: "draft", label: (propertyStatusLabels as Record<string,string>)["draft"] ?? "draft", color: "#94a3b8" },
-            { key: "preparation", label: (propertyStatusLabels as Record<string,string>)["preparation"] ?? "preparation", color: "#f59e0b" },
-            { key: "available", label: (propertyStatusLabels as Record<string,string>)["available"] ?? "available", color: "#10b981" },
-            { key: "reserved", label: (propertyStatusLabels as Record<string,string>)["reserved"] ?? "reserved", color: "#6366f1" },
-            { key: "sold", label: (propertyStatusLabels as Record<string,string>)["sold"] ?? "sold", color: "#0ea5e9" },
-            { key: "rented", label: (propertyStatusLabels as Record<string,string>)["rented"] ?? "rented", color: "#14b8a6" },
-            { key: "archived", label: (propertyStatusLabels as Record<string,string>)["archived"] ?? "archived", color: "#71717a" },
-          ]}
-        />
-        <DonutCard
-          title={t("dashboard.pipeline.leads")}
-          icon={UserPlus}
-          to="/leads"
-          loading={pipeline.isLoading}
-          counts={pipeline.data?.leadCounts ?? {}}
-          emptyText={t("dashboard.pipeline.noData")}
-          rows={[
-            { key: "new", label: (leadStatusLabels as Record<string,string>)["new"] ?? "new", color: "#0ea5e9" },
-            { key: "contacted", label: (leadStatusLabels as Record<string,string>)["contacted"] ?? "contacted", color: "#6366f1" },
-            { key: "qualified", label: (leadStatusLabels as Record<string,string>)["qualified"] ?? "qualified", color: "#8b5cf6" },
-            { key: "viewing_planned", label: (leadStatusLabels as Record<string,string>)["viewing_planned"] ?? "viewing_planned", color: "#f59e0b" },
-            { key: "converted", label: (leadStatusLabels as Record<string,string>)["converted"] ?? "converted", color: "#10b981" },
-            { key: "lost", label: (leadStatusLabels as Record<string,string>)["lost"] ?? "lost", color: "#f43f5e" },
-          ]}
-        />
-        <DonutCard
-          title={t("dashboard.dossierStatus.title")}
-          icon={Wallet}
-          to="/financing"
-          loading={stats.isLoading}
-          counts={stats.data?.dossierCounts ?? {}}
-          emptyText={t("dashboard.pipeline.noData")}
-          rows={[
-            { key: "draft", label: t("dashboard.dossierStatus.draft"), color: "#94a3b8" },
-            { key: "quick_check", label: t("dashboard.dossierStatus.quick_check"), color: "#06b6d4" },
-            { key: "documents_missing", label: t("dashboard.dossierStatus.documents_missing"), color: "#f59e0b" },
-            { key: "ready_for_bank", label: t("dashboard.dossierStatus.ready_for_bank"), color: "#6366f1" },
-            { key: "submitted_to_bank", label: t("dashboard.dossierStatus.submitted_to_bank"), color: "#3b82f6" },
-            { key: "approved", label: t("dashboard.dossierStatus.approved"), color: "#10b981" },
-            { key: "rejected", label: t("dashboard.dossierStatus.rejected"), color: "#f43f5e" },
-            { key: "cancelled", label: t("dashboard.dossierStatus.cancelled"), color: "#71717a" },
-          ]}
-          footer={
-            <div className="mt-2 grid grid-cols-3 gap-1 border-t border-border/50 pt-2">
-              <div className="flex flex-col items-center gap-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1 py-1">
-                <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                <span className="font-display text-sm font-bold leading-none tabular-nums text-emerald-700 dark:text-emerald-400">{stats.data?.qcCounts.pass ?? 0}</span>
-                <span className="text-[9px] text-emerald-700/80 dark:text-emerald-400/80">{t("dashboard.qc.realistic")}</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-1 py-1">
-                <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                <span className="font-display text-sm font-bold leading-none tabular-nums text-amber-700 dark:text-amber-400">{stats.data?.qcCounts.warn ?? 0}</span>
-                <span className="text-[9px] text-amber-700/80 dark:text-amber-400/80">{t("dashboard.qc.borderline")}</span>
-              </div>
-              <div className="flex flex-col items-center gap-0.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-1 py-1">
-                <XCircle className="h-3 w-3 text-rose-600 dark:text-rose-400" />
-                <span className="font-display text-sm font-bold leading-none tabular-nums text-rose-700 dark:text-rose-400">{stats.data?.qcCounts.fail ?? 0}</span>
-                <span className="text-[9px] text-rose-700/80 dark:text-rose-400/80">{t("dashboard.qc.notFinanceable")}</span>
-              </div>
-            </div>
-          }
+      <div className="mt-4">
+        <StatusDonutGrid
+          clientCounts={stats.data?.clientCounts ?? {}}
+          propCounts={pipeline.data?.propCounts ?? {}}
+          leadCounts={pipeline.data?.leadCounts ?? {}}
+          dossierCounts={stats.data?.dossierCounts ?? {}}
+          qcCounts={stats.data?.qcCounts}
+          loading={stats.isLoading || pipeline.isLoading}
         />
       </div>
 
