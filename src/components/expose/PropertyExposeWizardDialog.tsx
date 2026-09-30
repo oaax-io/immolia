@@ -295,6 +295,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     setSectionOrder([...EXPOSE_SECTION_KEYS]);
     setTitle(property?.title ?? "");
     setDescription(property?.description ?? "");
+    setHighlights(null);
   }, [open, property]);
 
   useEffect(() => {
