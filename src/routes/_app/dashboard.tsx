@@ -303,10 +303,11 @@ function Dashboard() {
       )}
 
       {/* KPI cards */}
-      <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+      <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard icon={Users} label={t("dashboard.kpis.activeClients")} value={kpis.data?.clients ?? "—"} loading={kpis.isLoading} to="/clients" />
         <KpiCard icon={Building2} label={t("dashboard.kpis.activeProperties")} value={kpis.data?.activeProps ?? "—"} loading={kpis.isLoading} to="/properties" />
         <KpiCard icon={FileSignature} label={t("dashboard.kpis.activeReservations")} value={kpis.data?.activeRes ?? "—"} loading={kpis.isLoading} to="/reservations" />
+        <KpiCard icon={UserPlus} label={t("dashboard.lists.newLeads")} value={kpis.data?.newLeads ?? "—"} loading={kpis.isLoading} to="/leads" />
       </div>
       {/* Fokus: Offene Aufgaben + bevorstehende Termine */}
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
@@ -413,25 +414,6 @@ function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Tagesübersicht – kompakt unten */}
-      <div className="mt-4 grid gap-3 lg:grid-cols-3">
-        <CompactList
-          title={t("dashboard.lists.newLeads")}
-          icon={UserPlus}
-          count={kpis.data?.newLeads ?? undefined}
-          countHint={t("dashboard.lists.days7")}
-          loading={today.isLoading}
-          empty={t("dashboard.lists.noLeads")}
-          to="/leads"
-          items={(today.data?.leads ?? []).slice(0, 4)}
-          render={(l: any) => (
-            <Link key={l.id} to="/leads" className="flex items-center justify-between gap-2 rounded px-1.5 py-1 text-xs hover:bg-accent/40">
-              <span className="truncate">{l.full_name}</span>
-              <span className="shrink-0 text-[10px] text-muted-foreground">{formatDate(l.created_at)}</span>
-            </Link>
-          )}
-        />
-      </div>
 
     </>
   );
@@ -567,38 +549,6 @@ function StatusStackCard({ title, icon: Icon, to, counts, rows, loading, footer,
   );
 }
 
-function CompactList({ title, icon: Icon, items, render, loading, empty, count, countHint, to }: {
-  title: string; icon: any; items: any[]; render: (i: any) => React.ReactNode;
-  loading?: boolean; empty: string; count?: number | null; countHint?: string; to: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between p-3 pb-2">
-        <CardTitle className="flex items-center gap-1.5 text-xs font-medium">
-          <Icon className="h-3.5 w-3.5 text-primary" />
-          {title}
-          {count != null && (
-            <Badge variant="secondary" className="ml-1 h-4 px-1.5 font-mono text-[10px] tabular-nums">
-              {count}{countHint ? <span className="ml-0.5 opacity-70">{countHint}</span> : null}
-            </Badge>
-          )}
-        </CardTitle>
-        <Button variant="ghost" size="sm" asChild className="h-6 px-1.5 text-[10px]">
-          <Link to={to}><ArrowRight className="h-3 w-3" /></Link>
-        </Button>
-      </CardHeader>
-      <CardContent className="p-2 pt-0">
-        {loading ? (
-          <div className="space-y-1">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
-        ) : items.length === 0 ? (
-          <p className="py-3 text-center text-[11px] text-muted-foreground">{empty}</p>
-        ) : (
-          <div className="space-y-0.5">{items.map(render)}</div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
   return (
