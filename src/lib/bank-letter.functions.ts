@@ -70,16 +70,45 @@ Regeln: Erfinde keine Zahlen, Namen oder Fristen. Felder mit "unbekannt" weglass
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: "openai/gpt-5-mini", input: prompt, store: false }),
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
+    body: JSON.stringify({
+      model: "openai/gpt-6-astra",
+      input: prompt,
+      store: false,
+      stream: true,
+      reasoning: { effort: "low" },
+    }),
   });
-  if (!res.ok) {
-    throw new Error(res.status === 429 ? "KI-Limit erreicht – bitte später erneut versuchen." : `KI-Fehler (${res.status}).`);
+  if (!res.ok || !res.body) {
+    if (res.status === 429) throw new Error("KI-Limit erreicht – bitte später erneut versuchen.");
+    if (res.status === 402) throw new Error("KI-Guthaben aufgebraucht – bitte Credits aufladen.");
+    throw new Error(`KI-Fehler (${res.status}).`);
   }
-  const json = await res.json() as { output?: Array<{ content?: Array<{ type?: string; text?: string }> }>; output_text?: string };
-  const text = json.output_text
-    ?? json.output?.flatMap((i) => i.content ?? []).find((i) => i.type === "output_text")?.text
-    ?? "";
+  // SSE-Stream lesen und Textdeltas zusammensetzen
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  let text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const ev = JSON.parse(payload);
+        if (ev.type === "response.output_text.delta" && typeof ev.delta === "string") text += ev.delta;
+        if (ev.type === "response.failed" || ev.type === "error") throw new Error("Die KI konnte keinen Text erstellen.");
+      } catch (e) {
+        if (e instanceof Error && e.message.startsWith("Die KI")) throw e;
+      }
+    }
+  }
   if (!text.trim()) throw new Error("Die KI hat keinen Text zurückgegeben.");
   return { text: text.trim() };
 }

@@ -37,17 +37,19 @@ export function BankPicker({
   currentEmail,
   currentPhone,
   onSelect,
+  showContact = true,
 }: {
   currentName: string;
   currentContact: string;
   currentEmail: string;
   currentPhone: string;
   onSelect: (sel: BankSelection) => void;
+  showContact?: boolean;
 }) {
   const catalogQ = usePartnerCatalog("bank");
   const contactsQ = usePartnerContacts("bank");
   const catalog = useMemo(() => catalogQ.data ?? [], [catalogQ.data]);
-  const contacts = useMemo(() => contactsQ.data ?? [], [contactsQ.data]);
+  const contacts = useMemo(() => (showContact ? contactsQ.data ?? [] : []), [contactsQ.data, showContact]);
   const [open, setOpen] = useState(false);
   const [changing, setChanging] = useState(false);
 
@@ -83,16 +85,18 @@ export function BankPicker({
           <PartnerLogo name={currentName} url={logoFor(currentName)} size={48} />
           <div className="min-w-0 flex-1">
             <div className="truncate font-semibold">{currentName}</div>
-            <div className="text-sm text-muted-foreground">
-              {currentContact || "Keine Kontaktperson hinterlegt"}
-            </div>
+            {showContact && (
+              <div className="text-sm text-muted-foreground">
+                {currentContact || "Keine Kontaktperson hinterlegt"}
+              </div>
+            )}
             <div className="mt-2 flex flex-wrap gap-2">
-              {currentEmail && (
+              {showContact && currentEmail && (
                 <Button asChild size="sm" variant="outline">
                   <a href={`mailto:${currentEmail}`}><Mail className="mr-1.5 h-4 w-4" />E-Mail senden</a>
                 </Button>
               )}
-              {currentPhone && (
+              {showContact && currentPhone && (
                 <Button asChild size="sm" variant="outline">
                   <a href={`tel:${currentPhone.replace(/\s/g, "")}`}><Phone className="mr-1.5 h-4 w-4" />Anrufen</a>
                 </Button>
