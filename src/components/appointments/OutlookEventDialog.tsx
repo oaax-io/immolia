@@ -62,8 +62,8 @@ export function OutlookEventDialog({ providerEventId, onClose, employees, curren
     queryKey: ["outlook-client-search", clientQ], enabled: clientQ.trim().length >= 2,
     queryFn: async () => {
       const q = clientQ.trim().replace(/[%,()]/g, "");
-      return (await supabase.from("clients").select("id, first_name, last_name, email")
-        .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`).limit(8)).data ?? [];
+      return (await supabase.from("clients").select("id, full_name, company_name, email")
+        .or(`full_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`).limit(8)).data ?? [];
     },
   });
 
@@ -136,7 +136,7 @@ export function OutlookEventDialog({ providerEventId, onClose, employees, curren
                       <li key={c.id}>
                         <button type="button" className="w-full px-2 py-1.5 text-left text-sm hover:bg-accent"
                           onClick={() => { setClientQ(""); run.mutate(() => assign({ client: c.id })); }}>
-                          {`${c.first_name ?? ""} ${c.last_name ?? ""}`.trim() || c.email}
+                          {c.full_name || c.company_name || c.email}
                           {c.email && <span className="ml-1 text-xs text-muted-foreground">{c.email}</span>}
                         </button>
                       </li>
