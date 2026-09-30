@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AttachmentView, EmojiPicker, shrinkImage, type ChatAttachment } from "@/components/chat/ChatDock";
+import { VoiceRecorder } from "@/components/chat/VoiceNote";
 
 export type GroupMember = { id: string; full_name: string | null; email: string | null; avatar_url: string | null };
 export type ChatGroup = {
