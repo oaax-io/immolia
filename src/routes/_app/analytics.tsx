@@ -361,6 +361,32 @@ function AnalyticsPage() {
     return { noPrice, noArea, noImages, noMandate, reservationsNoDoc, mandatesNoDoc, criticalFinancing, overdueTasks };
   }, [filtered]);
 
+  // ---- Status-Verteilungen (Ringdiagramme wie im Dashboard) ----
+  const statusCounts = useMemo(() => {
+    const count = (items: any[], key: (x: any) => string) => {
+      const out: Record<string, number> = {};
+      items.forEach((x) => { const k = key(x); out[k] = (out[k] ?? 0) + 1; });
+      return out;
+    };
+    const dossierList = filtered?.dossiers ?? [];
+    const qcCounts = { pass: 0, warn: 0, fail: 0, none: 0 };
+    const qcMap: Record<string, "pass" | "warn" | "fail" | "none"> = {
+      realistic: "pass", pass: "pass", critical: "warn", warn: "warn",
+      not_financeable: "fail", fail: "fail", incomplete: "none", none: "none",
+    };
+    dossierList.forEach((d: any) => {
+      const qc = qcMap[(d.quick_check_status ?? "none") as string] ?? "none";
+      qcCounts[qc] += 1;
+    });
+    return {
+      clientCounts: count(filtered?.clients ?? [], (c) => c.status ?? "entwurf"),
+      propCounts: count(filtered?.properties ?? [], (p) => p.status ?? "draft"),
+      leadCounts: count(filtered?.leads ?? [], (l) => l.status ?? "new"),
+      dossierCounts: count(dossierList, (d) => d.dossier_status ?? d.status ?? "draft"),
+      qcCounts,
+    };
+  }, [filtered]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -448,6 +474,19 @@ function AnalyticsPage() {
           <KpiCard icon={FileCheck2} label="Aktive Reservationen" value={kpis?.activeReservations ?? 0} loading={isLoading} />
           <KpiCard icon={Banknote} label="Finanzierungsdossiers" value={kpis?.financingDossiers ?? 0} loading={isLoading} />
         </div>
+      </section>
+
+      {/* Status-Verteilungen */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Status-Verteilungen</h2>
+        <StatusDonutGrid
+          clientCounts={statusCounts.clientCounts}
+          propCounts={statusCounts.propCounts}
+          leadCounts={statusCounts.leadCounts}
+          dossierCounts={statusCounts.dossierCounts}
+          qcCounts={statusCounts.qcCounts}
+          loading={isLoading}
+        />
       </section>
 
       {/* Portfolio */}
