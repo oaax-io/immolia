@@ -1,7 +1,7 @@
 import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff } from "lucide-react";
+import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -369,7 +369,24 @@ export function TeamInbox() {
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {inlineId ? (
-              <ChatPanel key={inlineId} memberId={inlineId} />
+              <>
+                <div className="flex shrink-0 items-center justify-end gap-2 border-b px-3 py-2 pr-12">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => {
+                      const id = inlineId;
+                      setExpanded(false);
+                      setInlineId(null);
+                      openChat(id, { call: true });
+                    }}
+                  >
+                    <Video className="h-4 w-4" /> Videoanruf
+                  </Button>
+                </div>
+                <ChatPanel key={inlineId} memberId={inlineId} />
+              </>
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
                 <Inbox className="h-8 w-8 opacity-50" />
