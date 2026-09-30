@@ -23,7 +23,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useTranslation } from "react-i18next";
 import { VideoCallDialog } from "@/components/video/VideoCallDialog";
-import { HolidaySettings } from "@/components/appointments/HolidaySettings";
 import { holidayMap, holidaysForCanton, dateKey, type Holiday } from "@/lib/swiss-holidays";
 import { ApptHover, TaskHover, HolidayHover } from "@/components/appointments/CalendarHover";
 import { deleteToTrash } from "@/lib/trash";
@@ -403,9 +402,9 @@ function startOfWeek(d: Date) {
 function HolidayChip({ h }: { h: Holiday }) {
   return (
     <span
-      title={`${h.name} – ${h.paid ? "bezahlter Feiertag" : "nicht bezahlt"}`}
+      title={h.name}
       className={`flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium ${
-        h.paid ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"
+        h.paid ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
       }`}
     >
       <Flag className="h-3 w-3 shrink-0" />
@@ -610,7 +609,7 @@ function WeekView({ appts, tasks = [], employees = [], holidays, onOpen, onCreat
                 {hol.length > 0 && (
                   <HolidayHover holidays={hol}>
                     <span
-                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${paidHol ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"}`}
+                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${paidHol ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}
                     >
                       <Flag className="h-2.5 w-2.5 shrink-0" />
                       <span className="truncate">{hol[0].name}{hol.length > 1 ? ` +${hol.length - 1}` : ""}</span>
@@ -815,7 +814,7 @@ function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt 
                 {hol.length > 0 && (
                   <HolidayHover holidays={hol}>
                     <span
-                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${hol.some((h) => h.paid) ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-muted text-muted-foreground"}`}
+                      className={`flex min-w-0 flex-1 cursor-default items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${hol.some((h) => h.paid) ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"}`}
                     >
                       <Flag className="h-2.5 w-2.5 shrink-0" />
                       <span className="truncate">{hol[0].name}{hol.length > 1 ? ` +${hol.length - 1}` : ""}</span>
