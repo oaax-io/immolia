@@ -9,12 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth";
 import {
   Building2, Users, UserPlus, CheckSquare, CalendarDays, FileSignature,
-  ArrowRight, Plus, Upload, Sparkles, AlertTriangle, Clock, ChevronDown,
+  ArrowRight, Sparkles, AlertTriangle, Clock,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   formatCurrency, formatDateTime, formatDate,
 } from "@/lib/format";
