@@ -1,7 +1,7 @@
 import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff } from "lucide-react";
+import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
