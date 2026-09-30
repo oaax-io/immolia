@@ -34,8 +34,19 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/_app/appointments")({ component: AppointmentsPage });
+export const Route = createFileRoute("/_app/appointments")({
+  head: () => ({ meta: [
+    { title: "Termine | Immolia" },
+    { name: "description", content: "Termine und Kalender in Immolia verwalten." },
+    { property: "og:title", content: "Termine | Immolia" },
+    { property: "og:description", content: "Termine und Kalender in Immolia verwalten." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+  component: AppointmentsPage,
+});
 
 const TYPES = ["viewing", "meeting", "call", "other"] as const;
 const STATUSES = ["scheduled", "completed", "cancelled"] as const;
@@ -153,6 +164,7 @@ function AppointmentsPage() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
   const [anchor, setAnchor] = useState(() => new Date());
@@ -244,10 +256,12 @@ function AppointmentsPage() {
 
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: any }) => {
-      const { error } = await supabase.from("appointments").update(patch).eq("id", id);
+      const { data, error } = await supabase.from("appointments").update(patch).eq("id", id).select("id");
       if (error) throw error;
+      if (!data?.length) throw new Error("Der Termin konnte nicht geändert werden. Bitte prüfe deine Berechtigung.");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -259,6 +273,7 @@ function AppointmentsPage() {
   });
 
   const editing = appts.find((a: any) => a.id === editId);
+  const selected = appts.find((a: any) => a.id === detailId);
 
   const { data: busyBlocks = [] } = useQuery({
     queryKey: ["calendar-busy-blocks"],
@@ -278,7 +293,7 @@ function AppointmentsPage() {
   }, [appts, layer.layers, user, busyBlocks]);
   const [outlookId, setOutlookId] = useState<string | null>(null);
   const openAppt = (id: string) => {
-    if (!id.startsWith("busy:")) return setEditId(id);
+    if (!id.startsWith("busy:")) return setDetailId(id);
     const b = (busyBlocks as any[]).find((x) => `busy:${x.id}` === id);
     if (b && b.user_id === user?.id) setOutlookId(b.provider_event_id);
   };
@@ -335,6 +350,16 @@ function AppointmentsPage() {
       />
 
       <OutlookEventDialog providerEventId={outlookId} onClose={() => setOutlookId(null)} employees={employees as any} currentUserId={user?.id} />
+      <AppointmentDetailDialog
+        appt={selected}
+        employees={employees}
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={() => { setEditId(detailId); setDetailId(null); }}
+        onCancel={() => { if (selected) update.mutate({ id: selected.id, patch: { status: "cancelled" } }, { onSuccess: () => toast.success("Termin abgesagt.") }); }}
+        onMove={(starts_at, ends_at) => { if (selected) update.mutate({ id: selected.id, patch: { starts_at, ends_at } }, { onSuccess: () => toast.success("Termin verschoben.") }); }}
+        saving={update.isPending}
+      />
       <AppointmentDialog
         open={open}
         onOpenChange={setOpen}
@@ -415,6 +440,72 @@ function AppointmentsPage() {
         onSave={(patch: any) => editing && update.mutate({ id: editing.id, patch }, { onSuccess: () => { toast.success(t("appointments.toasts.updated")); setEditId(null); } })}
         onDelete={async () => { if (editing && await confirm({ title: t("appointments.confirmDelete.title"), description: t("appointments.confirmDelete.description"), confirmText: t("appointments.confirmDelete.confirm") })) remove.mutate(editing.id); }}
       />
+    </>
+  );
+}
+
+function AppointmentDetailDialog({ appt, employees, open, onClose, onEdit, onCancel, onMove, saving }: {
+  appt: any; employees: any[]; open: boolean; onClose: () => void; onEdit: () => void;
+  onCancel: () => void; onMove: (start: string, end: string) => void; saving: boolean;
+}) {
+  const labels = useApptLabels();
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moveStart, setMoveStart] = useState("");
+  const assignee = employees.find((e) => e.id === appt?.assigned_to);
+  const extras = employees.filter((e) => (appt?.extra_assignee_ids ?? []).includes(e.id));
+  useEffect(() => { setMoving(false); setMoveStart(appt?.starts_at ? localInput(new Date(appt.starts_at)) : ""); }, [appt?.id, appt?.starts_at]);
+  const move = () => {
+    if (!appt || !moveStart) return;
+    const start = new Date(moveStart);
+    if (Number.isNaN(start.getTime())) return;
+    const duration = appt.ends_at ? new Date(appt.ends_at).getTime() - new Date(appt.starts_at).getTime() : 3600000;
+    if (duration <= 0) return;
+    onMove(start.toISOString(), new Date(start.getTime() + duration).toISOString());
+    setMoving(false);
+  };
+  return (
+    <>
+      <Dialog open={open && !!appt} onOpenChange={(value) => { if (!value) onClose(); }}>
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-xl overflow-y-auto">
+          <DialogHeader className="pr-7">
+            <DialogTitle className="break-words text-xl">{appt?.title}</DialogTitle>
+            <DialogDescription>{appt && labels.types[appt.appointment_type]} · Immolia</DialogDescription>
+          </DialogHeader>
+          {appt && <div className="space-y-4 text-sm">
+            <Badge variant={STATUS_VARIANTS[appt.status]}>{labels.statuses[appt.status]}</Badge>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><p className="text-xs text-muted-foreground">Beginn</p><p className="font-medium">{formatDateTime(appt.starts_at)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Ende</p><p className="font-medium">{appt.ends_at ? formatDateTime(appt.ends_at) : "–"}</p></div>
+              {appt.location && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Ort</p><p className="break-words">{appt.location}</p></div>}
+              {appt.clients?.full_name && <div><p className="text-xs text-muted-foreground">Kunde</p><p>{appt.clients.full_name}</p></div>}
+              {appt.properties?.title && <div><p className="text-xs text-muted-foreground">Immobilie</p><p>{appt.properties.title}</p></div>}
+              {(assignee || extras.length > 0) && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Zuständig</p><p>{[assignee, ...extras].filter(Boolean).map((e) => e.full_name || e.email).join(", ")}</p></div>}
+              {appt.external_invitees?.length > 0 && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Externe Gäste</p><p className="break-words">{appt.external_invitees.join(", ")}</p></div>}
+              {appt.notes && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Notizen</p><p className="whitespace-pre-wrap break-words">{appt.notes}</p></div>}
+              {appt.is_online && <div className="sm:col-span-2"><p className="text-xs text-muted-foreground">Online-Meeting</p><p className="break-all">{roomOf(appt)}</p></div>}
+            </div>
+            {moving && <div className="space-y-2 border-t pt-4">
+              <Label htmlFor="move-start">Neuer Beginn</Label>
+              <Input id="move-start" type="datetime-local" value={moveStart} onChange={(e) => setMoveStart(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Die bisherige Dauer bleibt erhalten.</p>
+              <div className="flex gap-2"><Button onClick={move} disabled={!moveStart || saving}>Verschiebung speichern</Button><Button variant="ghost" onClick={() => setMoving(false)}>Zurück</Button></div>
+            </div>}
+          </div>}
+          {!moving && <DialogFooter className="flex-wrap gap-2 border-t pt-4 sm:justify-between">
+            <Button variant="outline" onClick={onEdit}>Bearbeiten</Button>
+            <div className="flex flex-wrap gap-2">
+              {appt?.status !== "cancelled" && <><Button variant="outline" onClick={() => setMoving(true)} disabled={saving}>Verschieben</Button><Button variant="destructive" onClick={() => setConfirmCancel(true)} disabled={saving}>Absagen</Button></>}
+            </div>
+          </DialogFooter>}
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>Termin absagen?</AlertDialogTitle><AlertDialogDescription>Der Termin bleibt als abgesagt im Kalender sichtbar.</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Zurück</AlertDialogCancel><AlertDialogAction disabled={saving} onClick={() => { onCancel(); setConfirmCancel(false); }}>Termin absagen</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
