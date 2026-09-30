@@ -265,6 +265,7 @@ function ChatBubble({
 
 function AttachmentView({ att }: { att: ChatAttachment }) {
   const [zoom, setZoom] = useState(false);
+  const [broken, setBroken] = useState(false);
   const { data: url, isError, isLoading } = useQuery({
     queryKey: ["chat-att-url", att.path],
     staleTime: 1000 * 60 * 30,
@@ -282,19 +283,24 @@ function AttachmentView({ att }: { att: ChatAttachment }) {
     },
   });
   if (isImage(att)) {
-    if (isError) {
+    if (isError || broken) {
       return (
-        <div className="flex h-24 w-32 flex-col items-center justify-center gap-1 rounded-md border bg-muted/40 p-2 text-center text-[10px] text-muted-foreground">
+        <a
+          href={url ?? "#"}
+          download={att.name}
+          className="flex w-40 flex-col items-center justify-center gap-1 rounded-md border bg-background p-2 text-center text-[10px] text-muted-foreground hover:bg-muted"
+        >
           <Images className="h-4 w-4" />
-          Bild nicht verfügbar
-        </div>
+          <span>{broken ? "Bild zu gross für die Vorschau" : "Bild nicht verfügbar"}</span>
+          {url && <span className="inline-flex items-center gap-1 text-foreground"><Download className="h-3 w-3" /> Herunterladen</span>}
+        </a>
       );
     }
     return (
       <>
         <button type="button" onClick={() => url && setZoom(true)} className="block cursor-zoom-in" title="Vergrössern">
           {url && !isLoading ? (
-            <img src={url} alt={att.name} className="max-h-48 rounded-md border object-cover" />
+            <img src={url} alt={att.name} onError={() => setBroken(true)} onLoad={(e) => { if (!e.currentTarget.naturalWidth) setBroken(true); }} className="max-h-48 rounded-md border object-cover" />
           ) : (
             <div className="flex h-24 w-32 items-center justify-center rounded-md border">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -327,6 +333,28 @@ function AttachmentView({ att }: { att: ChatAttachment }) {
       <Download className="h-3.5 w-3.5 opacity-60" />
     </a>
   );
+}
+
+/** Verkleinert grosse Fotos vor dem Hochladen (max. 2560 px Kantenlänge). Bei Fehlern bleibt das Original. */
+async function shrinkImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const MAX = 2560;
+    const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.size < 2 * 1024 * 1024) { bmp.close(); return file; }
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const type = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, type, 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name, { type });
+  } catch {
+    return file;
+  }
 }
 
 const EMOJIS = "😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😎 🤩 🥳 😏 🤔 🤨 😐 😴 😮 😲 😢 😭 😤 😡 🤯 😱 🙄 🤗 🤝 👍 👎 👏 🙌 🙏 💪 👋 ✌️ 👌 ☝️ ❤️ 🧡 💛 💚 💙 💜 🔥 ⭐ ✨ 🎉 🎂 ✅ ❌ ⚠️ ❓ 💡 📌 📎 📅 ⏰ 📞 📧 💬 🏠 🏡 🏢 🔑 📄 ✍️ 💰 💶 📈 🚗 ☕ 🍾".split(" ");
@@ -494,7 +522,8 @@ export function ChatPanel({
     setUploading(true);
     try {
       const uploaded: ChatAttachment[] = [];
-      for (const file of Array.from(files)) {
+      for (const original of Array.from(files)) {
+        const file = await shrinkImage(original);
         const path = await tenantStoragePath(`${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`);
         const { error } = await supabase.storage.from("chat-attachments").upload(path, file);
         if (error) throw error;
