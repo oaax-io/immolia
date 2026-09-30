@@ -358,7 +358,7 @@ const typeMeta: Record<ChangeType, { label: string; className: string }> = {
 
 function DocsPage() {
   return (
-    <div className="container mx-auto max-w-5xl space-y-6 p-6">
+    <div className="container mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Dokumentation</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -367,17 +367,17 @@ function DocsPage() {
       </div>
 
       <Tabs defaultValue="changelog" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="changelog"><Sparkles className="mr-1.5 h-4 w-4" />Changelog</TabsTrigger>
-          <TabsTrigger value="roadmap"><Rocket className="mr-1.5 h-4 w-4" />Roadmap</TabsTrigger>
-          <TabsTrigger value="guide"><BookOpen className="mr-1.5 h-4 w-4" />Anleitung</TabsTrigger>
-          <TabsTrigger value="support"><LifeBuoy className="mr-1.5 h-4 w-4" />Support</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-4 sm:inline-grid sm:w-auto">
+          <TabsTrigger value="changelog" className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm"><Sparkles className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />Changelog</TabsTrigger>
+          <TabsTrigger value="roadmap" className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm"><Rocket className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />Roadmap</TabsTrigger>
+          <TabsTrigger value="guide" className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm"><BookOpen className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />Anleitung</TabsTrigger>
+          <TabsTrigger value="support" className="min-w-0 px-1.5 text-xs sm:px-3 sm:text-sm"><LifeBuoy className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />Support</TabsTrigger>
         </TabsList>
 
         <TabsContent value="changelog" className="space-y-4">
           {CHANGELOG.map((entry) => (
             <Card key={entry.version}>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="mb-4 flex items-baseline justify-between">
                   <div className="flex items-baseline gap-3">
                     <h2 className="font-display text-xl font-semibold">v{entry.version}</h2>
@@ -386,11 +386,11 @@ function DocsPage() {
                 </div>
                 <ul className="space-y-2">
                   {entry.changes.map((c, i) => (
-                    <li key={i} className="flex items-start gap-3">
+                    <li key={i} className="flex items-start gap-2 sm:gap-3">
                       <Badge variant="outline" className={`shrink-0 text-[10px] ${typeMeta[c.type].className}`}>
                         {typeMeta[c.type].label}
                       </Badge>
-                      <span className="text-sm">{c.text}</span>
+                      <span className="min-w-0 break-words text-sm">{c.text}</span>
                     </li>
                   ))}
                 </ul>
