@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Loader2, X } from "lucide-react";
 import { QueryState } from "@/components/platform/PlatformLayout";
+import { PartnerLogo } from "@/components/partners/PartnerLogo";
 import {
   PARTNER_CATEGORIES, PARTNER_CATEGORY_LABEL, usePlatformPartners, savePlatformPartner,
-  setPlatformPartnerActive, removePlatformPartner, type PlatformPartner, type SavePartnerInput,
+  setPlatformPartnerActive, removePlatformPartner, uploadPartnerLogo, type PlatformPartner, type SavePartnerInput,
 } from "@/lib/partners";
 
 const EMPTY: SavePartnerInput = { category: "bank", name: "", website: "", description: "", country: "CH", sort_order: 0, is_active: true };
@@ -30,6 +31,21 @@ export function PartnerCenter() {
   const [edit, setEdit] = useState<SavePartnerInput | null>(null);
   const [remove, setRemove] = useState<PlatformPartner | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const pickLogo = async (file: File | null | undefined) => {
+    if (!file || !edit) return;
+    if (!file.type.startsWith("image/")) { toast.error("Bitte eine Bilddatei wählen (PNG, JPG oder SVG)."); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Das Logo darf höchstens 2 MB gross sein."); return; }
+    setUploading(true);
+    try {
+      const url = await uploadPartnerLogo(file);
+      setEdit((cur) => (cur ? { ...cur, logo_url: url } : cur));
+      toast.success("Logo hochgeladen");
+    } catch (e) {
+      toast.error((e as Error).message ?? "Upload fehlgeschlagen");
+    } finally { setUploading(false); }
+  };
 
   const rows = q.data ?? [];
   const filtered = useMemo(() => {
