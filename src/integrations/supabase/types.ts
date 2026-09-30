@@ -768,6 +768,7 @@ export type Database = {
           selected_calendar_id: string | null
           selected_calendar_name: string | null
           status: string
+          subscription_client_state_hash: string | null
           subscription_expires_at: string | null
           subscription_id: string | null
           sync_direction: string
@@ -791,6 +792,7 @@ export type Database = {
           selected_calendar_id?: string | null
           selected_calendar_name?: string | null
           status?: string
+          subscription_client_state_hash?: string | null
           subscription_expires_at?: string | null
           subscription_id?: string | null
           sync_direction?: string
@@ -814,6 +816,7 @@ export type Database = {
           selected_calendar_id?: string | null
           selected_calendar_name?: string | null
           status?: string
+          subscription_client_state_hash?: string | null
           subscription_expires_at?: string | null
           subscription_id?: string | null
           sync_direction?: string
@@ -6749,6 +6752,7 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_calendar_health: { Args: never; Returns: Json }
       platform_cancel_manual_subscription: {
         Args: { _immediate: boolean; _reason: string; _subscription_id: string }
         Returns: Json
