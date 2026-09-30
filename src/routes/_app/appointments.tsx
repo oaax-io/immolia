@@ -89,7 +89,7 @@ function AppointmentsPage() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [form, setForm] = useState<any>({ ...emptyForm });
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
   const holidays = useHolidays();
 
@@ -271,6 +271,8 @@ function AppointmentsPage() {
 
       <AppointmentEditDrawer
         appt={editing}
+        appts={appts}
+        currentUserId={user?.id}
         open={!!editId}
         onClose={() => setEditId(null)}
         clients={clients}
@@ -1028,10 +1030,10 @@ function AppointmentDialog({
 }
 
 function AppointmentEditDrawer({
-  appt, open, onClose, clients, properties, employees, onSave, onDelete,
+  appt, open, onClose, clients, properties, employees, onSave, onDelete, appts, currentUserId,
 }: any) {
   const { t } = useTranslation();
-  const [form, setForm] = useState({ ...emptyForm });
+  const [form, setForm] = useState<any>({ ...emptyForm });
   const [callOpen, setCallOpen] = useState(false);
 
   useEffect(() => {
@@ -1049,13 +1051,14 @@ function AppointmentEditDrawer({
         assigned_to: appt.assigned_to ?? "",
         is_online: !!appt.is_online,
         meeting_url: appt.meeting_url ?? "",
+        ...deriveTiming(appt.starts_at ? localInput(new Date(appt.starts_at)) : "", appt.ends_at ? localInput(new Date(appt.ends_at)) : ""),
       });
     }
   }, [appt]);
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+      <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
         <SheetHeader>
           <SheetTitle>{t("appointments.edit")}</SheetTitle>
           <SheetDescription>{t("appointments.editDescription")}</SheetDescription>
@@ -1072,7 +1075,7 @@ function AppointmentEditDrawer({
           </>
         )}
         <div className="my-4">
-          <AppointmentForm form={form} setForm={setForm} clients={clients} properties={properties} employees={employees} />
+          <AppointmentForm form={form} setForm={setForm} clients={clients} properties={properties} employees={employees} appts={appts} currentUserId={currentUserId} selfId={appt?.id} />
         </div>
         <SheetFooter className="flex-row justify-between gap-2">
           <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("appointments.actions.delete")}</Button>
