@@ -108,12 +108,20 @@ export function useChecklistAutofill(dossierId: string, options?: { sync?: boole
 
   const auto: AutoMap = useMemo(() => {
     if (!dossier) return {};
-    return detectChecklist({
+    const map = detectChecklist({
       dossier,
       clients: clientsQuery.data ?? [],
       disclosures: disclosuresQuery.data ?? [],
       documents: (docsQuery.data ?? []) as any,
     });
+    // Sammelpunkt: gilt erst, wenn alle anderen Pflichtpunkte erfüllt sind.
+    const req = requiredKeys(CHECKLIST_TEMPLATE as any);
+    const others = Array.from(req).filter((k) => k !== "submission_quality:all_docs_complete");
+    const open = others.filter((k) => map[k]?.status !== "present");
+    map["submission_quality:all_docs_complete"] = open.length === 0
+      ? { status: "present", reason: "Alle Pflichtpunkte erfüllt" }
+      : { status: "missing", reason: `${open.length} Pflichtpunkt(e) noch offen` };
+    return map;
   }, [dossier, clientsQuery.data, disclosuresQuery.data, docsQuery.data]);
 
   // Erkannte Punkte in die Checkliste schreiben (nie manuell gesetzte überschreiben).
