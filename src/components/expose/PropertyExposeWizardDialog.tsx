@@ -1028,6 +1028,10 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                           </button>
                         );
                       })}
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Funktion (optional)</Label>
+                        <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
+                      </div>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
