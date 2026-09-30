@@ -45,7 +45,17 @@ import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 
 
-export const Route = createFileRoute("/_app/properties/$id")({ component: PropertyDetail });
+export const Route = createFileRoute("/_app/properties/$id")({
+  head: () => ({ meta: [
+    { title: "Immobiliendetails – Immolia" },
+    { name: "description", content: "Immobilienangaben, Fotos und Dokumente im Immolia CRM ansehen." },
+    { property: "og:title", content: "Immobiliendetails – Immolia" },
+    { property: "og:description", content: "Immobilienangaben, Fotos und Dokumente im Immolia CRM ansehen." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+  component: PropertyDetail,
+});
 
 const STATUSES = ["draft","preparation","available","reserved","sold","rented","archived"] as const;
 

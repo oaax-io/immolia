@@ -31,7 +31,17 @@ import { PropertyPinButton, usePropertyPins, propertyPinRowClass } from "@/compo
 import { deleteToTrash } from "@/lib/trash";
 import { DealDialog } from "@/components/commission/DealDialog";
 
-export const Route = createFileRoute("/_app/properties/")({ component: PropertiesPage });
+export const Route = createFileRoute("/_app/properties/")({
+  head: () => ({ meta: [
+    { title: "Immobilien – Immolia" },
+    { name: "description", content: "Immobilien im Immolia CRM verwalten und ansehen." },
+    { property: "og:title", content: "Immobilien – Immolia" },
+    { property: "og:description", content: "Immobilien im Immolia CRM verwalten und ansehen." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
+  component: PropertiesPage,
+});
 
 const PROP_TYPES = ["apartment","house","commercial","land","parking","mixed_use","other"] as const;
 const STATUSES = ["draft","preparation","available","reserved","sold","rented","archived"] as const;

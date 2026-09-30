@@ -1200,12 +1200,6 @@ function detectKindFromFile(file: File): string {
   return "other";
 }
 
-function getMediaPublicUrl(path: string) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
-}
-
 function Step8Media({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<"upload" | "library">("upload");
