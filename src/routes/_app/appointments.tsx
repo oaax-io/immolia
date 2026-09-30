@@ -492,12 +492,12 @@ function AppointmentDetailDialog({ appt, employees, open, onClose, onEdit, onCan
               <div className="flex gap-2"><Button onClick={move} disabled={!moveStart || saving}>Verschiebung speichern</Button><Button variant="ghost" onClick={() => setMoving(false)}>Zurück</Button></div>
             </div>}
           </div>}
-          <DialogFooter className="flex-wrap gap-2 border-t pt-4 sm:justify-between">
+          {!moving && <DialogFooter className="flex-wrap gap-2 border-t pt-4 sm:justify-between">
             <Button variant="outline" onClick={onEdit}>Bearbeiten</Button>
             <div className="flex flex-wrap gap-2">
               {appt?.status !== "cancelled" && <><Button variant="outline" onClick={() => setMoving(true)} disabled={saving}>Verschieben</Button><Button variant="destructive" onClick={() => setConfirmCancel(true)} disabled={saving}>Absagen</Button></>}
             </div>
-          </DialogFooter>
+          </DialogFooter>}
         </DialogContent>
       </Dialog>
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>

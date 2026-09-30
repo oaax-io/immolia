@@ -1,7 +1,7 @@
 # Immolia Roadmap (intern)
 
 ## Aktueller Kalenderwunsch
-- [ ] Klick auf Immolia-Termin zeigt Details; Absagen, Verschieben und Bearbeiten sind getrennte Aktionen.
+- [x] Klick auf Immolia-Termin zeigt Details; Absagen, Verschieben und Bearbeiten sind getrennte Aktionen.
 
 Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App ist die Kunden-Roadmap und enthält keine Architekturthemen.
 
