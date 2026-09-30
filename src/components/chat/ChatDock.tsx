@@ -710,12 +710,14 @@ function ChatWindow({
   setMode,
   onClose,
   autoCall,
+  shifted,
 }: {
   memberId: string;
   mode: "normal" | "minimized" | "maximized";
   setMode: (m: "normal" | "minimized" | "maximized") => void;
   onClose: () => void;
   autoCall?: { callId?: string; room?: string; key: number } | null;
+  shifted?: boolean;
 }) {
   const { user } = useAuth();
   const { data: member } = useQuery({
@@ -821,14 +823,15 @@ function ChatWindow({
     };
   }, [callOpen, callRoom, title]);
 
+  const side = shifted ? "right-4 sm:right-24" : "right-4";
   const shell =
     mode === "maximized"
       ? "inset-4 md:inset-10"
       : mode === "minimized"
-        ? "bottom-4 right-4 w-[300px]"
+        ? "hidden"
         : callOpen
-          ? "bottom-4 right-4 w-[380px] h-[560px] max-h-[85dvh] md:w-[860px]"
-          : "bottom-4 right-4 w-[380px] h-[540px] max-h-[80dvh]";
+          ? `bottom-4 ${side} w-[min(380px,calc(100vw-2rem))] h-[560px] max-h-[85dvh] md:w-[860px]`
+          : `bottom-4 ${side} w-[min(380px,calc(100vw-2rem))] h-[540px] max-h-[80dvh]`;
 
   return (
     <div className={cn("fixed z-50 flex flex-col overflow-hidden rounded-xl border bg-background shadow-2xl", shell)}>
@@ -871,8 +874,8 @@ function ChatWindow({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          title={mode === "minimized" ? "Öffnen" : "Minimieren"}
-          onClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
+          title="Minimieren"
+          onClick={() => setMode("minimized")}
         >
           <Minus className="h-4 w-4" />
         </Button>
