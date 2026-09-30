@@ -136,9 +136,11 @@ export function buildRadar(input: RadarInput): RadarItem[] {
     push({
       id: `close-res-${r.id}`, group: "closing", severity: age >= 7 ? "warn" : "info",
       title: `Reservation ${r.status === "draft" ? "noch nicht versendet" : "wartet auf Unterschrift"}`,
-      subtitle: `${r.client_id ? clientName.get(r.client_id) ?? "Kundschaft" : "Kundschaft"}${
-        r.property_id ? ` · ${propTitle.get(r.property_id) ?? ""}` : ""
-      } · seit ${age} Tagen`,
+      subtitle: [
+        r.client_id ? clientName.get(r.client_id) : null,
+        r.property_id ? propTitle.get(r.property_id) : null,
+        `seit ${age} Tag${age === 1 ? "" : "en"}`,
+      ].filter(Boolean).join(" · "),
       to: "/reservations", actionLabel: "Reservation öffnen", weight: Math.min(age, 20),
     });
   }
