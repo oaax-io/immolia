@@ -935,10 +935,12 @@ function AssigneeMultiPicker({
               {employees.map((e: any) => {
                 const sel = selected.includes(e.id);
                 return (
-                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)}>
-                    <Check className={`mr-2 h-3.5 w-3.5 ${sel ? "opacity-100" : "opacity-0"}`} />
+                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)} className={sel ? "bg-primary/15" : ""}>
+                    <span className={`mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 bg-background"}`}>
+                      {sel && <Check className="h-3 w-3" />}
+                    </span>
                     <Avatar className="mr-2 h-5 w-5"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[9px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
-                    <span className="truncate">{e.full_name || e.email}</span>
+                    <span className={`truncate ${sel ? "font-medium" : ""}`}>{e.full_name || e.email}</span>
                   </CommandItem>
                 );
               })}
