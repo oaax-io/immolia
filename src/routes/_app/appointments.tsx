@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ const emptyForm = {
   location: "", notes: "",
   client_id: "", property_id: "", assigned_to: "",
   extra_assignee_ids: [] as string[], external_invitees: [] as string[],
+  repeat: "none", repeat_until: "",
   is_online: false, meeting_url: "",
 };
 
@@ -131,15 +132,32 @@ function AppointmentsPage() {
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error(t("appointments.toasts.titleRequired"));
       if (!form.starts_at) throw new Error(t("appointments.toasts.startRequired"));
-      const startIso = new Date(form.starts_at).toISOString();
-      const endIso = form.ends_at ? new Date(form.ends_at).toISOString() : new Date(new Date(form.starts_at).getTime() + 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from("appointments").insert({
+      const start0 = new Date(form.starts_at);
+      const end0 = form.ends_at ? new Date(form.ends_at) : new Date(start0.getTime() + 60 * 60 * 1000);
+      const step = (d: Date): Date => {
+        const n = new Date(d);
+        if (form.repeat === "daily") n.setDate(n.getDate() + 1);
+        else if (form.repeat === "weekly") n.setDate(n.getDate() + 7);
+        else if (form.repeat === "biweekly") n.setDate(n.getDate() + 14);
+        else if (form.repeat === "monthly") n.setMonth(n.getMonth() + 1);
+        return n;
+      };
+      const until = form.repeat !== "none" && form.repeat_until ? new Date(`${form.repeat_until}T23:59:59`) : null;
+      const occurrences: { s: Date; e: Date }[] = [{ s: start0, e: end0 }];
+      if (until) {
+        let s = step(start0), e = step(end0);
+        while (s <= until && occurrences.length < 52) {
+          occurrences.push({ s, e });
+          s = step(s); e = step(e);
+        }
+      }
+      const rows = occurrences.map(({ s, e }) => ({
         owner_id: user!.id,
         title: form.title.trim(),
         appointment_type: form.appointment_type as any,
         status: form.status as any,
-        starts_at: startIso,
-        ends_at: endIso,
+        starts_at: s.toISOString(),
+        ends_at: e.toISOString(),
         location: form.location || null,
         notes: form.notes || null,
         client_id: form.client_id || null,
@@ -149,7 +167,8 @@ function AppointmentsPage() {
         external_invitees: form.external_invitees?.length ? form.external_invitees : null,
         is_online: form.is_online,
         meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
-      });
+      }));
+      const { error } = await supabase.from("appointments").insert(rows);
       if (error) throw error;
     },
     onSuccess: () => { toast.success(t("appointments.toasts.created")); qc.invalidateQueries({ queryKey: ["appointments"] }); setForm({ ...emptyForm }); setOpen(false); },
@@ -785,13 +804,13 @@ function addMin(local: string, min: number) {
 }
 
 function deriveTiming(starts: string, ends: string) {
-  if (!starts) return { mode: "time", duration: 60 };
+  if (!starts) return { mode: "time", duration: 60, repeat: "none", repeat_until: "" };
   const s = new Date(starts), e = ends ? new Date(ends) : null;
   const diff = e ? Math.round((e.getTime() - s.getTime()) / 60000) : 60;
   const midnight = s.getHours() === 0 && s.getMinutes() === 0 && e && e.getHours() === 0 && e.getMinutes() === 0;
-  if (midnight && diff === 1440) return { mode: "1d", duration: diff };
-  if (midnight && diff === 2880) return { mode: "2d", duration: diff };
-  return { mode: "time", duration: DURATIONS.some((d) => d.m === diff) ? diff : -1 };
+  if (midnight && diff === 1440) return { mode: "time", duration: -1, repeat: "none", repeat_until: "" };
+  if (midnight && diff === 2880) return { mode: "time", duration: -1, repeat: "none", repeat_until: "" };
+  return { mode: "time", duration: DURATIONS.some((d) => d.m === diff) ? diff : -1, repeat: "none", repeat_until: "" };
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -860,20 +879,30 @@ function initialsOf(name?: string, email?: string) {
   return src.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 }
 
+function useTriggerWidth(open: boolean) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+  const [w, setW] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (open && ref.current) setW(ref.current.offsetWidth);
+  }, [open]);
+  return { ref, style: w ? { width: w } : undefined };
+}
+
 function SearchPicker({
   value, onChange, options, placeholder, emptyLabel,
 }: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder: string; emptyLabel: string }) {
   const [open, setOpen] = useState(false);
+  const { ref: triggerRef, style: popStyle } = useTriggerWidth(open);
   const current = options.find((o) => o.id === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
+        <Button ref={triggerRef} type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
           <span className={`truncate ${current ? "" : "text-muted-foreground"}`}>{current?.label ?? placeholder}</span>
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+      <PopoverContent className="p-0" align="start" style={popStyle}>
         <Command>
           <CommandInput placeholder="Suchen…" />
           <CommandList className="max-h-64">
@@ -900,6 +929,7 @@ function AssigneeMultiPicker({
   employees, primary, extraIds, onChange,
 }: { employees: any[]; primary: string; extraIds: string[]; onChange: (primary: string, extra: string[]) => void }) {
   const [open, setOpen] = useState(false);
+  const { ref: triggerRef, style: popStyle } = useTriggerWidth(open);
   const selected = [primary, ...extraIds].filter(Boolean);
   const toggle = (id: string) => {
     let next = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
@@ -909,7 +939,7 @@ function AssigneeMultiPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
+        <Button ref={triggerRef} type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
           {selectedEmps.length ? (
             <span className="flex flex-wrap items-center gap-1.5">
               {selectedEmps.map((e: any) => (
@@ -925,7 +955,7 @@ function AssigneeMultiPicker({
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+      <PopoverContent className="p-0" align="start" style={popStyle}>
         <Command>
           <CommandInput placeholder="Suchen…" />
           <CommandList className="max-h-64">
@@ -934,10 +964,12 @@ function AssigneeMultiPicker({
               {employees.map((e: any) => {
                 const sel = selected.includes(e.id);
                 return (
-                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)}>
-                    <Check className={`mr-2 h-3.5 w-3.5 ${sel ? "opacity-100" : "opacity-0"}`} />
+                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)} className={sel ? "bg-primary/15" : ""}>
+                    <span className={`mr-2 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${sel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40 bg-background"}`}>
+                      {sel && <Check className="h-3 w-3" />}
+                    </span>
                     <Avatar className="mr-2 h-5 w-5"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[9px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
-                    <span className="truncate">{e.full_name || e.email}</span>
+                    <span className={`truncate ${sel ? "font-medium" : ""}`}>{e.full_name || e.email}</span>
                   </CommandItem>
                 );
               })}
@@ -996,7 +1028,6 @@ function AppointmentForm({
 }: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
   const { t } = useTranslation();
   const labels = useApptLabels();
-  const mode: string = form.mode ?? "time";
   const duration: number = form.duration ?? 60;
 
   const setStartDate = (date: string) => {
@@ -1021,22 +1052,13 @@ function AppointmentForm({
   const setDuration = (m: number) => {
     setForm({ ...form, duration: m, ends_at: form.starts_at && m > 0 ? addMin(form.starts_at, m) : form.ends_at });
   };
-  const setMode = (m: string) => {
-    if (m === "time") {
-      const base = form.starts_at ? form.starts_at.slice(0, 10) + "T09:00" : "";
-      setForm({ ...form, mode: m, duration: 60, starts_at: base, ends_at: base ? addMin(base, 60) : "" });
-    } else {
-      const days = m === "1d" ? 1 : 2;
-      const date = (form.starts_at || localInput(new Date())).slice(0, 10);
-      const s = `${date}T00:00`;
-      setForm({ ...form, mode: m, duration: days * 1440, starts_at: s, ends_at: addMin(s, days * 1440) });
-    }
-  };
-  const setDay = (date: string) => {
-    if (!date) return;
-    const s = `${date}T00:00`;
-    setForm({ ...form, starts_at: s, ends_at: addMin(s, duration) });
-  };
+  const REPEATS = [
+    { v: "none", l: "Keine" },
+    { v: "daily", l: "Täglich" },
+    { v: "weekly", l: "Wöchentlich" },
+    { v: "biweekly", l: "2-wöchentlich" },
+    { v: "monthly", l: "Monatlich" },
+  ];
 
   const conflicts = useMemo(() => {
     if (!form.starts_at) return [];
@@ -1082,13 +1104,7 @@ function AppointmentForm({
         </div>
 
         <Section title="Zeitpunkt">
-          <div className="mb-3 grid grid-cols-3 gap-1.5">
-            <Chip active={mode === "time"} onClick={() => setMode("time")}>Uhrzeit</Chip>
-            <Chip active={mode === "1d"} onClick={() => setMode("1d")}>1 Tag</Chip>
-            <Chip active={mode === "2d"} onClick={() => setMode("2d")}>2 Tage</Chip>
-          </div>
-          {mode === "time" ? (
-            <div className="space-y-3">
+          <div className="space-y-3">
               <div className="grid grid-cols-5 gap-2">
                 <div className="col-span-3">
                   <Label>{t("appointments.form.start")} *</Label>
@@ -1133,20 +1149,24 @@ function AppointmentForm({
                 {endInvalid && <p className="mt-1 text-xs text-destructive">Ende muss nach dem Beginn liegen.</p>}
               </div>
             </div>
-          ) : (
             <div>
-              <Label>{mode === "1d" ? "Datum" : "Erster Tag"} *</Label>
-              <DatePickerField
-                value={form.starts_at ? form.starts_at.slice(0, 10) : ""}
-                onChange={(d) => d && setDay(d)}
-              />
-              {form.starts_at && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Ganztägig {mode === "2d" ? `bis ${new Date(new Date(form.ends_at).getTime() - 1).toLocaleDateString("de-CH")}` : ""}
-                </p>
+              <Label>Serientermin</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {REPEATS.map((r) => (
+                  <Chip key={r.v} active={(form.repeat ?? "none") === r.v} onClick={() => setForm({ ...form, repeat: r.v, repeat_until: r.v === "none" ? "" : form.repeat_until })}>{r.l}</Chip>
+                ))}
+              </div>
+              {form.repeat && form.repeat !== "none" && (
+                <div className="mt-2">
+                  <Label>Wiederholen bis</Label>
+                  <DatePickerField
+                    value={form.repeat_until || ""}
+                    onChange={(d) => setForm({ ...form, repeat_until: d })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Es werden alle Termine der Serie bis zu diesem Datum erstellt (max. 52).</p>
+                </div>
               )}
             </div>
-          )}
           {conflicts.length > 0 && (
             <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs">
               <p className="flex items-center gap-1.5 font-semibold text-destructive">
