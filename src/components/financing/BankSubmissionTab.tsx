@@ -26,7 +26,6 @@ import {
 import { generateBankCoverLetter } from "@/lib/bank-letter.functions";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useIsMasterDataAdmin } from "@/hooks/useIsMasterDataAdmin";
-import { cn } from "@/lib/utils";
 
 const SUBMISSION_STATUSES: DossierStatus[] = [
   "ready_for_bank", "submitted_to_bank", "documents_missing", "approved", "rejected",
