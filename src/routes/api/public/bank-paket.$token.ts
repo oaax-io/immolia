@@ -23,12 +23,13 @@ export const Route = createFileRoute("/api/public/bank-paket/$token")({
           return new Response("Link expired", { status: 410 });
         }
 
-        const { data: file, error: dErr } = await supabaseAdmin.storage
+        // Datei direkt durchreichen (Stream), nie komplett in den Server-Speicher laden.
+        const { data: signed } = await supabaseAdmin.storage
           .from("bank-packages")
-          .download(share.storage_path);
-        if (dErr || !file) return new Response("File not found", { status: 404 });
-
-        const bytes = await file.arrayBuffer();
+          .createSignedUrl(share.storage_path, 60);
+        if (!signed?.signedUrl) return new Response("File not found", { status: 404 });
+        const upstream = await fetch(signed.signedUrl);
+        if (!upstream.ok || !upstream.body) return new Response("File not found", { status: 404 });
         const safeName =
           (share.client_name ?? "Dossier")
             .normalize("NFD")
@@ -37,9 +38,11 @@ export const Route = createFileRoute("/api/public/bank-paket/$token")({
             .slice(0, 80) || "Dossier";
         const filename = `Bank-Paket_${safeName}.zip`;
 
-        return new Response(bytes, {
+        const len = upstream.headers.get("content-length");
+        return new Response(upstream.body, {
           status: 200,
           headers: {
+            ...(len ? { "Content-Length": len } : {}),
             "Content-Type": "application/zip",
             "Content-Disposition": `attachment; filename="${filename}"`,
             "Cache-Control": "private, no-store",

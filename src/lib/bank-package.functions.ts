@@ -751,16 +751,22 @@ export const fetchBankPackageBytes = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertPackagePathAccess(context.supabase, data.path);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: file, error } = await supabaseAdmin.storage
+    // Grösse zuerst per HEAD prüfen – grosse Pakete nie in den Server-Speicher laden.
+    const { data: signed, error } = await supabaseAdmin.storage
       .from(BANK_PACKAGES_BUCKET)
-      .download(data.path);
-    if (error || !file) {
+      .createSignedUrl(data.path, 60);
+    if (error || !signed?.signedUrl) {
       return { ok: false as const, base64: null as string | null, message: error?.message ?? "not_found" };
     }
-    if (file.size > MAX_PROXY_DOWNLOAD_BYTES) {
+    const head = await fetch(signed.signedUrl, { method: "HEAD" });
+    const len = Number(head.headers.get("content-length"));
+    if (!head.ok) return { ok: false as const, base64: null as string | null, message: "not_found" };
+    if (!Number.isFinite(len) || len > MAX_PROXY_DOWNLOAD_BYTES) {
       return { ok: false as const, base64: null as string | null, message: "too_large_use_signed_url" };
     }
-    const buf = new Uint8Array(await file.arrayBuffer());
+    const res = await fetch(signed.signedUrl);
+    if (!res.ok) return { ok: false as const, base64: null as string | null, message: "not_found" };
+    const buf = new Uint8Array(await res.arrayBuffer());
     let binary = "";
     const chunkSize = 0x8000;
     for (let i = 0; i < buf.length; i += chunkSize) {
