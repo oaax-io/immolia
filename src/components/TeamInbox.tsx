@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useChatDock } from "@/components/chat/ChatDock";
+import { ChatPanel, useChatDock } from "@/components/chat/ChatDock";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +49,7 @@ export function TeamInbox() {
   const { openChat } = useChatDock();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [inlineId, setInlineId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const agencyId = useTenantConfig().data?.agency_id ?? null;
@@ -183,13 +184,17 @@ export function TeamInbox() {
     (m.full_name || m.email || "").toLowerCase().includes(search.toLowerCase()),
   );
 
-  const select = (id: string) => {
+  const selectDock = (id: string) => {
     openChat(id);
     setOpen(false);
     setExpanded(false);
   };
 
-  const ThreadList = ({ dense }: { dense?: boolean }) => (
+  const selectInline = (id: string) => {
+    setInlineId(id);
+  };
+
+  const ThreadList = ({ dense, onSelect }: { dense?: boolean; onSelect: (id: string) => void }) => (
     <div className="p-2">
       {!search && threads.length > 0 && (
         <div className="mb-2">
@@ -199,7 +204,7 @@ export function TeamInbox() {
           {threads.map((t) => (
             <div key={t.id} className="group relative">
             <button
-              onClick={() => select(t.id)}
+              onClick={() => onSelect(t.id)}
               className={cn(
                 "flex w-full items-center gap-3 rounded-md px-2 py-2 pr-9 text-left transition hover:bg-muted",
                 t.pinned && "bg-primary/5",
@@ -265,7 +270,7 @@ export function TeamInbox() {
       {filteredMembers.map((m) => (
         <button
           key={m.id}
-          onClick={() => select(m.id)}
+          onClick={() => onSelect(m.id)}
           className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted"
         >
           <span className="relative">
@@ -324,6 +329,7 @@ export function TeamInbox() {
                     className="h-7 w-7"
                     title="Vergrössern"
                     onClick={() => {
+                      setInlineId((cur) => cur ?? threads[0]?.id ?? null);
                       setOpen(false);
                       setExpanded(true);
                     }}
@@ -335,24 +341,42 @@ export function TeamInbox() {
               {SearchBox}
             </div>
             <ScrollArea className="flex-1">
-              <ThreadList dense />
+              <ThreadList dense onSelect={selectDock} />
             </ScrollArea>
           </div>
         </PopoverContent>
       </Popover>
 
-      <Dialog open={expanded} onOpenChange={setExpanded}>
-        <DialogContent className="flex h-[80dvh] max-w-2xl flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b px-5 py-3">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Inbox className="h-4 w-4" /> Postfach
+      <Dialog
+        open={expanded}
+        onOpenChange={(o) => {
+          setExpanded(o);
+          if (!o) setInlineId(null);
+        }}
+      >
+        <DialogContent className="flex h-[85dvh] w-[min(1100px,95vw)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0 md:flex-row">
+          <div className="flex min-h-0 w-full flex-col border-b md:w-[320px] md:shrink-0 md:border-b-0 md:border-r">
+            <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Inbox className="h-4 w-4" /> Postfach
+              </DialogTitle>
               {unreadTotal > 0 && <Badge variant="secondary">{unreadTotal} neu</Badge>}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="shrink-0 border-b p-3">{SearchBox}</div>
-          <ScrollArea className="min-h-0 flex-1">
-            <ThreadList />
-          </ScrollArea>
+            </div>
+            <div className="shrink-0 border-b p-3">{SearchBox}</div>
+            <ScrollArea className="min-h-0 flex-1">
+              <ThreadList onSelect={selectInline} />
+            </ScrollArea>
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {inlineId ? (
+              <ChatPanel key={inlineId} memberId={inlineId} />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-muted-foreground">
+                <Inbox className="h-8 w-8 opacity-50" />
+                <p className="text-sm">Wähle links eine Unterhaltung aus</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

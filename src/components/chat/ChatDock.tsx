@@ -161,20 +161,13 @@ function AttachmentView({ att }: { att: ChatAttachment }) {
   );
 }
 
-function ChatWindow({
+export function ChatPanel({
   memberId,
-  mode,
-  setMode,
-  onClose,
-  autoCall,
+  paused = false,
 }: {
   memberId: string;
-  mode: "normal" | "minimized" | "maximized";
-  setMode: (m: "normal" | "minimized" | "maximized") => void;
-  onClose: () => void;
-  autoCall?: { callId?: string; key: number } | null;
+  paused?: boolean;
 }) {
-
   const { user } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"chat" | "media">("chat");
@@ -234,7 +227,7 @@ function ChatWindow({
 
   // Mark read
   useEffect(() => {
-    if (mode === "minimized" || !user?.id) return;
+    if (paused || !user?.id) return;
     const ids = messages.filter((m) => m.sender_id === memberId && !m.read_at).map((m) => m.id);
     if (!ids.length) return;
     supabase
@@ -246,11 +239,11 @@ function ChatWindow({
         qc.invalidateQueries({ queryKey: ["chat-thread", user.id, memberId] });
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length, mode, memberId]);
+  }, [messages.length, paused, memberId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, tab, mode]);
+  }, [messages.length, tab]);
 
   // Mention suggestions
   const { data: suggestions = [] } = useQuery({
@@ -358,180 +351,12 @@ function ChatWindow({
   );
 
   const title = member?.full_name ?? member?.email ?? "Chat";
-  const [callOpen, setCallOpen] = useState(false);
-  const [calling, setCalling] = useState(false);
-  const callIdRef = useRef<string | null>(null);
-  const callRoom = user?.id ? chatRoomName(user.id, memberId) : `chat-${memberId}`;
-
-  const callState = useLivekitToken(callRoom, callOpen);
-
-  const endCall = useCallback(async () => {
-    setCallOpen(false);
-    setCalling(false);
-    const id = callIdRef.current;
-    callIdRef.current = null;
-    if (id) await setCallStatus(id, "ended").catch(() => {});
-  }, []);
-
-  const beginCall = useCallback(async () => {
-    if (!user?.id) return;
-    setCallOpen(true);
-    setCalling(true);
-    try {
-      const row = await startCall({
-        room: callRoom,
-        callerId: user.id,
-        calleeId: memberId,
-        title: member?.full_name ?? member?.email ?? null,
-      });
-      callIdRef.current = row?.id ?? null;
-      toast.message(`${title} wird angerufen…`);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  }, [user?.id, callRoom, memberId, member?.full_name, member?.email, title]);
-
-  // Anrufer-seitiger Klingel-Timeout: auch wenn die Gegenseite die App geschlossen hat,
-  // klingelt ein Anruf nie länger als CALL_RING_MS. Danach verpasst + Video-Stage schliessen.
-  useEffect(() => {
-    if (!callOpen || !calling) return;
-    const t = setTimeout(() => {
-      const id = callIdRef.current;
-      callIdRef.current = null;
-      setCallOpen(false);
-      setCalling(false);
-      if (id) void setCallStatus(id, "missed").catch(() => {});
-      toast.error(`${title} hat nicht geantwortet`);
-    }, CALL_RING_MS);
-    return () => clearTimeout(t);
-  }, [callOpen, calling, title]);
-
-  // Angenommener eingehender Anruf: direkt verbinden
-  useEffect(() => {
-    if (!autoCall) return;
-    callIdRef.current = autoCall.callId ?? null;
-    setCallOpen(true);
-    setCalling(false);
-  }, [autoCall]);
-
-  // Antwort der Gegenseite verfolgen (angenommen / abgelehnt / beendet)
-  useEffect(() => {
-    if (!callOpen) return;
-    const ch = supabase
-      .channel(`call-watch-${callRoom}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "video_calls" },
-        (payload) => {
-          const row = payload.new as CallRow;
-          if (row.id !== callIdRef.current) return;
-          if (row.status === "accepted") setCalling(false);
-          if (row.status === "declined") {
-            toast.error(`${title} hat den Anruf abgelehnt`);
-            callIdRef.current = null;
-            setCallOpen(false);
-            setCalling(false);
-          }
-          if (row.status === "missed" || row.status === "ended") {
-            if (row.status === "missed") toast.error(`${title} hat nicht geantwortet`);
-            callIdRef.current = null;
-            setCallOpen(false);
-            setCalling(false);
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [callOpen, callRoom, title]);
 
 
 
-  const shell =
-    mode === "maximized"
-      ? "inset-4 md:inset-10"
-      : mode === "minimized"
-        ? "bottom-4 right-4 w-[300px]"
-        : callOpen
-          ? "bottom-4 right-4 w-[380px] h-[560px] max-h-[85dvh] md:w-[860px]"
-          : "bottom-4 right-4 w-[380px] h-[540px] max-h-[80dvh]";
 
   return (
-    <div className={cn("fixed z-50 flex flex-col overflow-hidden rounded-xl border bg-background shadow-2xl", shell)}>
-      {/* Header */}
-      <div
-        className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-2"
-        onDoubleClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
-      >
-        <span className="relative">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src={member?.avatar_url ?? undefined} />
-            <AvatarFallback className="text-[10px]">{initials(member?.full_name, member?.email)}</AvatarFallback>
-          </Avatar>
-          <PresenceDot status={member?.presence_status} updatedAt={member?.presence_updated_at} className="absolute -bottom-0.5 -right-0.5" />
-        </span>
-        <span className="min-w-0 flex flex-1 flex-col overflow-hidden">
-          <span className="truncate text-sm font-semibold leading-tight">{title}</span>
-          <PresenceLabel status={member?.presence_status} updatedAt={member?.presence_updated_at} className="text-[10px]" />
-        </span>
-        {callOpen && calling && (
-          <span className="mr-1 animate-pulse text-[10px] font-medium text-primary">klingelt…</span>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          title={callOpen ? "Anruf beenden" : "Videoanruf starten"}
-          onClick={() => {
-            if (callOpen) void endCall();
-            else void beginCall();
-          }}
-        >
-          {callOpen ? <PhoneOff className="h-4 w-4 text-destructive" /> : <Video className="h-4 w-4" />}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          title={mode === "minimized" ? "Öffnen" : "Minimieren"}
-          onClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
-        >
-          <Minus className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          title={mode === "maximized" ? "Verkleinern" : "Vergrössern"}
-          onClick={() => setMode(mode === "maximized" ? "normal" : "maximized")}
-        >
-          {mode === "maximized" ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" title="Schliessen" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col md:flex-row",
-          mode === "minimized" && "hidden",
-        )}
-      >
-
-          {callOpen && (
-            <div className="relative min-h-[220px] flex-1 border-b bg-muted/40 md:min-h-0 md:border-b-0 md:border-r">
-              <VideoStage state={callState} onLeave={() => void endCall()} />
-            </div>
-          )}
-          <div
-            className={cn(
-              "flex min-h-0 flex-col",
-              callOpen ? "flex-1 md:w-[360px] md:flex-none" : "min-h-0 flex-1",
-            )}
-          >
+    <div className="flex min-h-0 flex-1 flex-col">
           {/* Tabs */}
           <div className="flex shrink-0 gap-4 border-b px-3">
             {(
@@ -744,9 +569,211 @@ function ChatWindow({
               </div>
             </ScrollArea>
           )}
-          </div>
-        </div>
+    </div>
+  );
+}
 
+function ChatWindow({
+  memberId,
+  mode,
+  setMode,
+  onClose,
+  autoCall,
+}: {
+  memberId: string;
+  mode: "normal" | "minimized" | "maximized";
+  setMode: (m: "normal" | "minimized" | "maximized") => void;
+  onClose: () => void;
+  autoCall?: { callId?: string; key: number } | null;
+}) {
+  const { user } = useAuth();
+  const { data: member } = useQuery({
+    queryKey: ["chat-member", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url, presence_status, presence_updated_at")
+        .eq("id", memberId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Member | null;
+    },
+  });
+  const title = member?.full_name ?? member?.email ?? "Chat";
+  const [callOpen, setCallOpen] = useState(false);
+  const [calling, setCalling] = useState(false);
+  const callIdRef = useRef<string | null>(null);
+  const callRoom = user?.id ? chatRoomName(user.id, memberId) : `chat-${memberId}`;
+
+  const callState = useLivekitToken(callRoom, callOpen);
+
+  const endCall = useCallback(async () => {
+    setCallOpen(false);
+    setCalling(false);
+    const id = callIdRef.current;
+    callIdRef.current = null;
+    if (id) await setCallStatus(id, "ended").catch(() => {});
+  }, []);
+
+  const beginCall = useCallback(async () => {
+    if (!user?.id) return;
+    setCallOpen(true);
+    setCalling(true);
+    try {
+      const row = await startCall({
+        room: callRoom,
+        callerId: user.id,
+        calleeId: memberId,
+        title: member?.full_name ?? member?.email ?? null,
+      });
+      callIdRef.current = row?.id ?? null;
+      toast.message(`${title} wird angerufen…`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }, [user?.id, callRoom, memberId, member?.full_name, member?.email, title]);
+
+  // Anrufer-seitiger Klingel-Timeout: auch wenn die Gegenseite die App geschlossen hat,
+  // klingelt ein Anruf nie länger als CALL_RING_MS. Danach verpasst + Video-Stage schliessen.
+  useEffect(() => {
+    if (!callOpen || !calling) return;
+    const t = setTimeout(() => {
+      const id = callIdRef.current;
+      callIdRef.current = null;
+      setCallOpen(false);
+      setCalling(false);
+      if (id) void setCallStatus(id, "missed").catch(() => {});
+      toast.error(`${title} hat nicht geantwortet`);
+    }, CALL_RING_MS);
+    return () => clearTimeout(t);
+  }, [callOpen, calling, title]);
+
+  // Angenommener eingehender Anruf: direkt verbinden
+  useEffect(() => {
+    if (!autoCall) return;
+    callIdRef.current = autoCall.callId ?? null;
+    setCallOpen(true);
+    setCalling(false);
+  }, [autoCall]);
+
+  // Antwort der Gegenseite verfolgen (angenommen / abgelehnt / beendet)
+  useEffect(() => {
+    if (!callOpen) return;
+    const ch = supabase
+      .channel(`call-watch-${callRoom}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "video_calls" },
+        (payload) => {
+          const row = payload.new as CallRow;
+          if (row.id !== callIdRef.current) return;
+          if (row.status === "accepted") setCalling(false);
+          if (row.status === "declined") {
+            toast.error(`${title} hat den Anruf abgelehnt`);
+            callIdRef.current = null;
+            setCallOpen(false);
+            setCalling(false);
+          }
+          if (row.status === "missed" || row.status === "ended") {
+            if (row.status === "missed") toast.error(`${title} hat nicht geantwortet`);
+            callIdRef.current = null;
+            setCallOpen(false);
+            setCalling(false);
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [callOpen, callRoom, title]);
+
+  const shell =
+    mode === "maximized"
+      ? "inset-4 md:inset-10"
+      : mode === "minimized"
+        ? "bottom-4 right-4 w-[300px]"
+        : callOpen
+          ? "bottom-4 right-4 w-[380px] h-[560px] max-h-[85dvh] md:w-[860px]"
+          : "bottom-4 right-4 w-[380px] h-[540px] max-h-[80dvh]";
+
+  return (
+    <div className={cn("fixed z-50 flex flex-col overflow-hidden rounded-xl border bg-background shadow-2xl", shell)}>
+      {/* Header */}
+      <div
+        className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-2"
+        onDoubleClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
+      >
+        <span className="relative">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={member?.avatar_url ?? undefined} />
+            <AvatarFallback className="text-[10px]">{initials(member?.full_name, member?.email)}</AvatarFallback>
+          </Avatar>
+          <PresenceDot status={member?.presence_status} updatedAt={member?.presence_updated_at} className="absolute -bottom-0.5 -right-0.5" />
+        </span>
+        <span className="min-w-0 flex flex-1 flex-col overflow-hidden">
+          <span className="truncate text-sm font-semibold leading-tight">{title}</span>
+          <PresenceLabel status={member?.presence_status} updatedAt={member?.presence_updated_at} className="text-[10px]" />
+        </span>
+        {callOpen && calling && (
+          <span className="mr-1 animate-pulse text-[10px] font-medium text-primary">klingelt…</span>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          title={callOpen ? "Anruf beenden" : "Videoanruf starten"}
+          onClick={() => {
+            if (callOpen) void endCall();
+            else void beginCall();
+          }}
+        >
+          {callOpen ? <PhoneOff className="h-4 w-4 text-destructive" /> : <Video className="h-4 w-4" />}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          title={mode === "minimized" ? "Öffnen" : "Minimieren"}
+          onClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
+        >
+          <Minus className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          title={mode === "maximized" ? "Verkleinern" : "Vergrössern"}
+          onClick={() => setMode(mode === "maximized" ? "normal" : "maximized")}
+        >
+          {mode === "maximized" ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" title="Schliessen" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col md:flex-row",
+          mode === "minimized" && "hidden",
+        )}
+      >
+        {callOpen && (
+          <div className="relative min-h-[220px] flex-1 border-b bg-muted/40 md:min-h-0 md:border-b-0 md:border-r">
+            <VideoStage state={callState} onLeave={() => void endCall()} />
+          </div>
+        )}
+        <div
+          className={cn(
+            "flex min-h-0 flex-col",
+            callOpen ? "flex-1 md:w-[360px] md:flex-none" : "min-h-0 flex-1",
+          )}
+        >
+          <ChatPanel memberId={memberId} paused={mode === "minimized"} />
+        </div>
+      </div>
     </div>
   );
 }
