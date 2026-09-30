@@ -124,12 +124,14 @@ export function PartnerCenter() {
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
+            <TableHead className="w-14">Logo</TableHead>
             <TableHead>Name</TableHead><TableHead>Kategorie</TableHead><TableHead>Website</TableHead>
             <TableHead className="text-center">Firmenkontakte</TableHead><TableHead className="text-center">Aktiv</TableHead><TableHead />
           </TableRow></TableHeader>
           <TableBody>
             {filtered.map((p) => (
               <TableRow key={p.id}>
+                <TableCell><PartnerLogo name={p.name} url={p.logo_url} /></TableCell>
                 <TableCell className="font-medium">{p.name}{p.legal_name && <div className="text-xs text-muted-foreground">{p.legal_name}</div>}</TableCell>
                 <TableCell><Badge variant="secondary">{PARTNER_CATEGORY_LABEL[p.category] ?? p.category}</Badge></TableCell>
                 <TableCell className="text-sm">
@@ -149,7 +151,7 @@ export function PartnerCenter() {
               </TableRow>
             ))}
             {!q.isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Keine Partner gefunden.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Keine Partner gefunden.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
