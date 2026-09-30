@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare} from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,6 +114,14 @@ function TasksPage() {
   const [fAssignee, setFAssignee] = useState("all");
   const [fDue, setFDue] = useState("all");
   const [form, setForm] = useState({ ...emptyForm });
+  const [view, setView] = useState<"cards" | "kanban" | "list">(() => {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem("tasks-view") : null;
+    return v === "kanban" || v === "list" ? v : "cards";
+  });
+  const changeView = (v: "cards" | "kanban" | "list") => {
+    setView(v);
+    try { window.localStorage.setItem("tasks-view", v); } catch { /* ignore */ }
+  };
 
 
   const { data: tasks = [], isLoading } = useQuery({
