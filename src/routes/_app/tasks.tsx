@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -115,7 +116,7 @@ function TasksPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [view, setView] = useState<"cards" | "kanban" | "list">(() => {
     const v = typeof window !== "undefined" ? window.localStorage.getItem("tasks-view") : null;
-    return v === "kanban" || v === "list" ? v : "cards";
+    return v === "cards" || v === "kanban" ? v : "list";
   });
   const changeView = (v: "cards" | "kanban" | "list") => {
     setView(v);
@@ -286,7 +287,18 @@ function TasksPage() {
             {t("pages.tasks.title")}
           </span>
         }
-        action={<Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.new")}</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <Tabs value={view} onValueChange={(v) => changeView(v as "cards" | "kanban" | "list")}>
+              <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
+                <TabsTrigger value="cards" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><LayoutGrid className="h-4 w-4" />Karten</TabsTrigger>
+                <TabsTrigger value="kanban" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><Columns3 className="h-4 w-4" />Kanban</TabsTrigger>
+                <TabsTrigger value="list" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><List className="h-4 w-4" />Liste</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.new")}</Button>
+          </div>
+        }
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -343,26 +355,6 @@ function TasksPage() {
         </Select>
       </div>
 
-      <div className="mb-4 flex items-center justify-end gap-1">
-        {([
-          { v: "cards" as const, icon: LayoutGrid, label: "Karten" },
-          { v: "kanban" as const, icon: Columns3, label: "Kanban" },
-          { v: "list" as const, icon: List, label: "Liste" },
-        ]).map(({ v, icon: VIcon, label }) => (
-          <Button
-            key={v}
-            type="button"
-            variant={view === v ? "secondary" : "ghost"}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => changeView(v)}
-          >
-            <VIcon className="h-4 w-4" />
-            {label}
-          </Button>
-        ))}
-      </div>
-
       {isLoading ? (
         <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">{t("tasks.loading")}</div>
       ) : sorted.length === 0 ? (
@@ -374,12 +366,12 @@ function TasksPage() {
           action={tasks.length === 0 ? <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.createButton")}</Button> : undefined}
         />
       ) : view === "kanban" ? (
-        <div className="grid gap-3 overflow-x-auto pb-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 pb-2 lg:grid-cols-4">
           {(["open", "in_progress", "waiting", "done"] as const).map((status) => {
             const col = sorted.filter((tk: any) => tk.status === status);
             const sStyle = STATUS_STYLES[status];
             return (
-              <div key={status} className="flex min-w-[240px] flex-col rounded-md border bg-muted/30">
+              <div key={status} className="flex min-w-0 flex-col rounded-md border bg-muted/30">
                 <div className="flex items-center gap-2 border-b px-3 py-2">
                   <span className={`h-2 w-2 rounded-full ${sStyle.dot}`} />
                   <span className="text-sm font-semibold">{labels.status[status]}</span>
