@@ -651,6 +651,310 @@ export type Database = {
           },
         ]
       }
+      calendar_connection_tokens: {
+        Row: {
+          access_token_enc: string | null
+          access_token_expires_at: string | null
+          connection_id: string
+          key_version: number
+          refresh_token_enc: string | null
+          scopes: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_enc?: string | null
+          access_token_expires_at?: string | null
+          connection_id: string
+          key_version?: number
+          refresh_token_enc?: string | null
+          scopes?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_enc?: string | null
+          access_token_expires_at?: string | null
+          connection_id?: string
+          key_version?: number
+          refresh_token_enc?: string | null
+          scopes?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connection_tokens_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: true
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_connections: {
+        Row: {
+          account_display: string | null
+          agency_id: string
+          created_at: string
+          delta_link: string | null
+          id: string
+          last_error_at: string | null
+          last_error_code: string | null
+          last_synced_at: string | null
+          ms_tenant_id: string | null
+          ms_user_id: string | null
+          provider: string
+          selected_calendar_id: string | null
+          selected_calendar_name: string | null
+          status: string
+          subscription_expires_at: string | null
+          subscription_id: string | null
+          sync_direction: string
+          sync_enabled: boolean
+          sync_metadata: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_display?: string | null
+          agency_id: string
+          created_at?: string
+          delta_link?: string | null
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          last_synced_at?: string | null
+          ms_tenant_id?: string | null
+          ms_user_id?: string | null
+          provider?: string
+          selected_calendar_id?: string | null
+          selected_calendar_name?: string | null
+          status?: string
+          subscription_expires_at?: string | null
+          subscription_id?: string | null
+          sync_direction?: string
+          sync_enabled?: boolean
+          sync_metadata?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_display?: string | null
+          agency_id?: string
+          created_at?: string
+          delta_link?: string | null
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          last_synced_at?: string | null
+          ms_tenant_id?: string | null
+          ms_user_id?: string | null
+          provider?: string
+          selected_calendar_id?: string | null
+          selected_calendar_name?: string | null
+          status?: string
+          subscription_expires_at?: string | null
+          subscription_id?: string | null
+          sync_direction?: string
+          sync_enabled?: boolean
+          sync_metadata?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_links: {
+        Row: {
+          agency_id: string
+          appointment_id: string | null
+          change_key: string | null
+          connection_id: string
+          created_at: string
+          deleted_at: string | null
+          ical_uid: string | null
+          id: string
+          last_synced_at: string | null
+          origin: string
+          origin_agency_id: string | null
+          provider_event_id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          appointment_id?: string | null
+          change_key?: string | null
+          connection_id: string
+          created_at?: string
+          deleted_at?: string | null
+          ical_uid?: string | null
+          id?: string
+          last_synced_at?: string | null
+          origin: string
+          origin_agency_id?: string | null
+          provider_event_id: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          appointment_id?: string | null
+          change_key?: string | null
+          connection_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          ical_uid?: string | null
+          id?: string
+          last_synced_at?: string | null
+          origin?: string
+          origin_agency_id?: string | null
+          provider_event_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_links_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_links_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_links_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_oauth_attempts: {
+        Row: {
+          agency_id: string
+          code_verifier_enc: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          provider: string
+          return_host: string | null
+          state_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          code_verifier_enc?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider?: string
+          return_host?: string | null
+          state_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          code_verifier_enc?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider?: string
+          return_host?: string | null
+          state_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_oauth_attempts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_sync_jobs: {
+        Row: {
+          agency_id: string
+          appointment_id: string | null
+          attempts: number
+          connection_id: string
+          created_at: string
+          error_code: string | null
+          error_detail_sanitized: string | null
+          finished_at: string | null
+          id: string
+          idempotency_key: string | null
+          job_type: string
+          max_attempts: number
+          run_after: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          agency_id: string
+          appointment_id?: string | null
+          attempts?: number
+          connection_id: string
+          created_at?: string
+          error_code?: string | null
+          error_detail_sanitized?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          job_type: string
+          max_attempts?: number
+          run_after?: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          agency_id?: string
+          appointment_id?: string | null
+          attempts?: number
+          connection_id?: string
+          created_at?: string
+          error_code?: string | null
+          error_detail_sanitized?: string | null
+          finished_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          job_type?: string
+          max_attempts?: number
+          run_after?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_sync_jobs_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_jobs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_pins: {
         Row: {
           created_at: string

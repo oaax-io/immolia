@@ -86,3 +86,7 @@
 - Mandatserstellung nur über RPC create_mandate_atomic (SECURITY INVOKER): Validierung der Anteile (>0, ≤100, Person) vor jeder Schreiboperation, dann Mandat + Aufteilung + Dokument + Verknüpfung in einer Transaktion; why: früher Mandat zuerst gespeichert, Aufteilung scheiterte danach an der 0-%-Regel → halbes Mandat.
 
 - Bank-Paket-ZIP wird nur per Stream gebaut und hochgeladen (src/lib/bank-package-zip.server.ts: Grösse per HEAD planen, Dateien nacheinander stückweise ins ZIP, Grenzen 25 MB/Datei, 45 MB total, 150 Dateien; Downloads als Stream durchgereicht); why: gesammelte Buffers + zipSync ergaben ~4× Paketgrösse im Worker-Speicher → 502.
+
+## Microsoft-365-Kalender (V1 Fundament)
+- Persönliche Verbindung pro agency_id+user_id+provider in calendar_connections (Browser nur SELECT eigene Zeile in aktiver Firma, Modul appointments); Tokens/OAuth-States nur in service_role-Tabellen calendar_connection_tokens/calendar_oauth_attempts (pgp_sym_encrypt, Schlüssel als Server-Secret, bewusst ohne Policies); why: kein Token je im Browser, Admins inkl.
+- Herkunft pro Microsoft-Termin in calendar_event_links (origin + origin_agency_id); Import verwirft Termine mit fremder origin_agency_id; Membership-Ende stoppt Sync per Trigger; why: gleicher Microsoft-Kalender in mehreren Firmen darf nie Daten mischen.
