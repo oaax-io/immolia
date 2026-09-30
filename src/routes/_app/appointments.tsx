@@ -879,15 +879,25 @@ function initialsOf(name?: string, email?: string) {
   return src.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
 }
 
+function useTriggerWidth(open: boolean) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+  const [w, setW] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (open && ref.current) setW(ref.current.offsetWidth);
+  }, [open]);
+  return { ref, style: w ? { width: w } : undefined };
+}
+
 function SearchPicker({
   value, onChange, options, placeholder, emptyLabel,
 }: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder: string; emptyLabel: string }) {
   const [open, setOpen] = useState(false);
+  const { ref: triggerRef, style: popStyle } = useTriggerWidth(open);
   const current = options.find((o) => o.id === value);
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
+        <Button ref={triggerRef} type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
           <span className={`truncate ${current ? "" : "text-muted-foreground"}`}>{current?.label ?? placeholder}</span>
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
