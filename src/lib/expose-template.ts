@@ -471,13 +471,20 @@ function renderClassic(d: ExposeData, t: ExposeTheme): string {
       <header class="ph"><div class="ph-l">${esc(d.title)}</div><div class="ph-r">Kontakt</div></header>
       <h2 class="section-title">Kontakt</h2>
       <div class="contact-card">
-        ${d.agency_name ? `<div class="c-agency">${esc(d.agency_name)}</div>` : ""}
-        ${d.contact_name ? `<div class="c-name">${esc(d.contact_name)}</div>` : ""}
-        <div class="c-meta">
-          ${d.contact_email ? `<span>✉ ${esc(d.contact_email)}</span>` : ""}
-          ${d.contact_phone ? `<span>☎ ${esc(d.contact_phone)}</span>` : ""}
+        <div class="c-person">
+          ${portrait(d)}
+          <div>
+            ${d.agency_name ? `<div class="c-agency">${esc(d.agency_name)}</div>` : ""}
+            ${d.contact_name ? `<div class="c-name">${esc(d.contact_name)}</div>` : ""}
+            ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+            <div class="c-meta">
+              ${d.contact_email ? `<span>✉ ${esc(d.contact_email)}</span>` : ""}
+              ${d.contact_phone ? `<span>☎ ${esc(d.contact_phone)}</span>` : ""}
+            </div>
+          </div>
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }
