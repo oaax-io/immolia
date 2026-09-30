@@ -49,8 +49,22 @@ export const getMsCalendarStatus = createServerFn({ method: "GET" })
     const { msConfig } = await import("./ms-calendar.server");
     const agencyId = await activeAgency(context as Ctx);
     const { conn } = await ownConnection(agencyId, (context as Ctx).userId);
-    const state = mapState(conn, !!msConfig());
+    let state = mapState(conn, !!msConfig());
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ag } = await supabaseAdmin.from("agencies").select("name").eq("id", agencyId).maybeSingle();
+    let pendingJob = false;
+    if (conn) {
+      const { count } = await supabaseAdmin.from("calendar_sync_jobs").select("id", { count: "exact", head: true })
+        .eq("connection_id", conn.id).in("status", ["queued", "running"]);
+      pendingJob = (count ?? 0) > 0;
+      if (state === "connected" && pendingJob) state = "syncing";
+    }
+    const meta = (conn?.sync_metadata ?? {}) as Record<string, unknown>;
     return {
+      agencyName: (ag as any)?.name ?? null,
+      pendingJob,
+      pushToOutlook: meta.push_to_outlook !== false,
+      showBusy: meta.show_busy !== false,
       state,
       account: conn?.account_display ?? null,
       calendarId: conn?.selected_calendar_id ?? null,
@@ -72,7 +86,7 @@ async function allowedReturnHost(agencyId: string): Promise<string> {
 
 export const startMsConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ reconnect: z.boolean().optional() }).parse(d ?? {}))
+  .inputValidator((d: unknown) => z.object({ reconnect: z.boolean().optional(), returnTo: z.enum(["calendar", "settings"]).optional() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const s = await import("./ms-calendar.server");
     const cfg = s.msConfig();
@@ -89,7 +103,7 @@ export const startMsConnect = createServerFn({ method: "POST" })
     const { error } = await admin.from("calendar_oauth_attempts").insert({
       state_hash: s.sha256(state), agency_id: agencyId, user_id: ctx.userId, provider: "microsoft",
       code_verifier_ct: s.encrypt(verifier, cfg.encKey), nonce_hash: s.sha256(nonce),
-      return_host: returnHost, return_path: "/settings/calendar",
+      return_host: returnHost, return_path: data.returnTo === "calendar" ? "/appointments" : "/settings/calendar",
     } as never);
     if (error) throw new Error("Verbindung konnte nicht gestartet werden.");
     if (conn && conn.status !== "connected") {
@@ -112,7 +126,7 @@ export const listMsCalendars = createServerFn({ method: "GET" })
 
 export const saveMsCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ calendarId: z.string().min(1).max(512) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ calendarId: z.string().min(1).max(512), pushToOutlook: z.boolean().optional(), showBusy: z.boolean().optional() }).parse(d))
   .handler(async ({ context, data }) => {
     const s = await import("./ms-calendar.server");
     const agencyId = await activeAgency(context as Ctx);
@@ -124,8 +138,12 @@ export const saveMsCalendar = createServerFn({ method: "POST" })
     const { error } = await admin.from("calendar_connections").update({
       selected_calendar_id: cal.id, selected_calendar_name: cal.name, status: "connected",
       sync_enabled: true, delta_link: null, last_error_code: null, updated_at: new Date().toISOString(),
+      sync_direction: data.pushToOutlook === false ? "microsoft_to_immolia" : data.showBusy === false ? "immolia_to_microsoft" : "two_way",
+      sync_metadata: { ...(conn.sync_metadata ?? {}), push_to_outlook: data.pushToOutlook !== false, show_busy: data.showBusy !== false },
     } as never).eq("id", conn.id);
     if (error) throw new Error("Auswahl konnte nicht gespeichert werden.");
+    await admin.from("calendar_sync_jobs").upsert({ agency_id: agencyId, connection_id: conn.id, job_type: "initial",
+      idempotency_key: `initial:${cal.id}:${Date.now()}` } as never, { onConflict: "connection_id,idempotency_key" });
     return { ok: true };
   });
 
@@ -142,4 +160,18 @@ export const disconnectMs = createServerFn({ method: "POST" })
       status: "disconnected", sync_enabled: false, delta_link: null, subscription_id: null, updated_at: new Date().toISOString(),
     } as never).eq("id", conn.id);
     return { ok: true };
+  });
+
+export const syncMsNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn || conn.status !== "connected" || !conn.selected_calendar_id) throw new Error("Keine aktive Verbindung.");
+    const { count } = await admin.from("calendar_sync_jobs").select("id", { count: "exact", head: true })
+      .eq("connection_id", conn.id).in("status", ["queued", "running"]);
+    if ((count ?? 0) > 0) return { queued: false };
+    await admin.from("calendar_sync_jobs").insert({ agency_id: agencyId, connection_id: conn.id, job_type: "delta",
+      idempotency_key: `manual:${Date.now()}` } as never);
+    return { queued: true };
   });

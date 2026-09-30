@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { MicrosoftSyncButton } from "@/components/appointments/MicrosoftSyncDialog";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
@@ -349,6 +350,7 @@ function AppointmentsPage() {
                 <ListIcon className="h-4 w-4" />{t("appointments.tabs.list")}
               </TabsTrigger>
             </TabsList>
+            <MicrosoftSyncButton />
             <LayerPanel layers={layer.layers} toggle={layer.toggle} />
           </div>
         </div>
