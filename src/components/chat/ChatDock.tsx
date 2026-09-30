@@ -1,4 +1,5 @@
 import { tenantStoragePath } from "@/lib/tenant-storage";
+import chatBg from "@/assets/chat-bg.jpg";
 import {
   createContext,
   useCallback,
@@ -390,7 +391,14 @@ export function ChatPanel({
           {tab === "chat" ? (
             <>
               <ScrollArea className="min-h-0 flex-1">
-                <div className="space-y-2 p-3">
+                <div
+                  className="space-y-2 p-3"
+                  style={{
+                    backgroundImage: `url(${chatBg})`,
+                    backgroundSize: "420px",
+                    backgroundRepeat: "repeat",
+                  }}
+                >
                   {messages.length === 0 && (
                     <p className="py-8 text-center text-sm text-muted-foreground">
                       Noch keine Nachrichten — schreib die erste!
