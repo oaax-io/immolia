@@ -80,8 +80,10 @@ type DockCtx = {
   openChat: (memberId: string, opts?: OpenChatOptions) => void;
   /** Neue Nachricht: Chat als schwebende Blase anzeigen (ohne ihn zu öffnen). */
   notifyChat: (memberId: string) => void;
+  /** Schliesst das offene Einzel-Chatfenster und liefert dessen Person (für das grosse Postfach). */
+  takeOpenChat: () => string | null;
 };
-const Ctx = createContext<DockCtx>({ openChat: () => {}, notifyChat: () => {} });
+const Ctx = createContext<DockCtx>({ openChat: () => {}, notifyChat: () => {}, takeOpenChat: () => null });
 export const useChatDock = () => useContext(Ctx);
 
 type ChatMode = "normal" | "minimized" | "maximized";
@@ -149,6 +151,15 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
     setChats((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
+  const takeOpenChat = useCallback(() => {
+    const open = chatsRef.current.find((c) => c.mode !== "minimized");
+    if (!open) return null;
+    setChats((prev) => prev.filter((c) => c.id !== open.id));
+    return open.id;
+  }, []);
+
   const bubbles = chats.filter((c) => c.mode === "minimized");
   const hasOpenWindow = chats.some((c) => c.mode !== "minimized");
 
@@ -163,7 +174,7 @@ export function ChatDockProvider({ children }: { children: ReactNode }) {
   }, [hasOpenWindow, bubbles.length]);
 
   return (
-    <Ctx.Provider value={{ openChat, notifyChat }}>
+    <Ctx.Provider value={{ openChat, notifyChat, takeOpenChat }}>
       {children}
       <IncomingCallListener
         onAccept={(callerId, callId, room) => openChat(callerId, { call: true, callId, room })}
@@ -510,7 +521,7 @@ export function ChatPanel({
   useEffect(() => {
     if (!user?.id) return;
     const ch = supabase
-      .channel(`chat-dock-${memberId}`)
+      .channel(`chat-dock-${memberId}-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, () => {
         qc.invalidateQueries({ queryKey: ["chat-thread", user.id, memberId] });
         qc.invalidateQueries({ queryKey: ["direct-messages", user.id] });

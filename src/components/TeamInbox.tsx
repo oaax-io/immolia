@@ -46,7 +46,7 @@ function timeLabel(iso: string) {
 export function TeamInbox() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { openChat, notifyChat } = useChatDock();
+  const { openChat, notifyChat, takeOpenChat } = useChatDock();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [inlineId, setInlineId] = useState<string | null>(null);
@@ -330,7 +330,8 @@ export function TeamInbox() {
                     className="h-7 w-7"
                     title="Vergrössern"
                     onClick={() => {
-                      setInlineId((cur) => cur ?? threads[0]?.id ?? null);
+                      const docked = takeOpenChat();
+                      setInlineId((cur) => docked ?? cur ?? threads[0]?.id ?? null);
                       setOpen(false);
                       setExpanded(true);
                     }}
