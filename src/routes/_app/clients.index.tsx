@@ -559,7 +559,7 @@ function ClientsPage() {
       {filtered.length === 0 && !clientsQuery.error && !clientsQuery.isLoading ? (
         <EmptyState title={t("clients.emptyTitle")} description={t("clients.emptyDescription")} />
       ) : view === "kanban" ? (
-        <ClientKanban clients={filtered} onOpen={setDetailId} />
+        <ClientKanban clients={filtered} disclosureIds={new Set(disclosureMap.keys())} onOpen={setDetailId} />
       ) : view === "grid" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {paginated.map((c: any) => {
