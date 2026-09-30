@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon } from "lucide-react";
+import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon, ChevronsUpDown, Check, X, Mail, UserPlus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/_app/appointments")({ component: AppointmentsPage });
 
@@ -46,6 +48,7 @@ const emptyForm = {
   starts_at: "", ends_at: "",
   location: "", notes: "",
   client_id: "", property_id: "", assigned_to: "",
+  extra_assignee_ids: [] as string[], external_invitees: [] as string[],
   is_online: false, meeting_url: "",
 };
 
@@ -121,7 +124,7 @@ function AppointmentsPage() {
   });
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
-    queryFn: async () => (await supabase.from("profiles").select("id, full_name, email").eq("is_active", true)).data ?? [],
+    queryFn: async () => (await supabase.from("profiles").select("id, full_name, email, avatar_url").eq("is_active", true)).data ?? [],
   });
 
   const create = useMutation({
@@ -142,6 +145,8 @@ function AppointmentsPage() {
         client_id: form.client_id || null,
         property_id: form.property_id || null,
         assigned_to: form.assigned_to || user!.id,
+        extra_assignee_ids: form.extra_assignee_ids?.length ? form.extra_assignee_ids : null,
+        external_invitees: form.external_invitees?.length ? form.external_invitees : null,
         is_online: form.is_online,
         meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
       });
@@ -850,6 +855,142 @@ function TimeSelect({ value, onChange, disabled }: { value: string; onChange: (t
   );
 }
 
+function initialsOf(name?: string, email?: string) {
+  const src = (name || email || "?").trim();
+  return src.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
+}
+
+function SearchPicker({
+  value, onChange, options, placeholder, emptyLabel,
+}: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder: string; emptyLabel: string }) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="h-9 w-full justify-between px-3 font-normal">
+          <span className={`truncate ${current ? "" : "text-muted-foreground"}`}>{current?.label ?? placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Suchen…" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Keine Treffer</CommandEmpty>
+            <CommandGroup>
+              <CommandItem value="__none__" onSelect={() => { onChange(""); setOpen(false); }}>
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              </CommandItem>
+              {options.map((o) => (
+                <CommandItem key={o.id} value={`${o.label} ${o.id}`} onSelect={() => { onChange(o.id); setOpen(false); }}>
+                  <Check className={`mr-2 h-3.5 w-3.5 ${o.id === value ? "opacity-100" : "opacity-0"}`} />
+                  <span className="truncate">{o.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AssigneeMultiPicker({
+  employees, primary, extraIds, onChange,
+}: { employees: any[]; primary: string; extraIds: string[]; onChange: (primary: string, extra: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = [primary, ...extraIds].filter(Boolean);
+  const toggle = (id: string) => {
+    let next = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
+    onChange(next[0] ?? "", next.slice(1));
+  };
+  const selectedEmps = selected.map((id) => employees.find((e: any) => e.id === id)).filter(Boolean);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
+          {selectedEmps.length ? (
+            <span className="flex flex-wrap items-center gap-1.5">
+              {selectedEmps.map((e: any) => (
+                <span key={e.id} className="flex items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
+                  <Avatar className="h-4 w-4"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[8px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
+                  <span className="max-w-28 truncate">{e.full_name || e.email}</span>
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Personen wählen…</span>
+          )}
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Suchen…" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Keine Treffer</CommandEmpty>
+            <CommandGroup>
+              {employees.map((e: any) => {
+                const sel = selected.includes(e.id);
+                return (
+                  <CommandItem key={e.id} value={`${e.full_name || ""} ${e.email || ""} ${e.id}`} onSelect={() => toggle(e.id)}>
+                    <Check className={`mr-2 h-3.5 w-3.5 ${sel ? "opacity-100" : "opacity-0"}`} />
+                    <Avatar className="mr-2 h-5 w-5"><AvatarImage src={e.avatar_url ?? undefined} /><AvatarFallback className="text-[9px]">{initialsOf(e.full_name, e.email)}</AvatarFallback></Avatar>
+                    <span className="truncate">{e.full_name || e.email}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ExternalInvitees({ emails, onChange }: { emails: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim().toLowerCase();
+    if (!v) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast.error("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+    if (emails.includes(v)) { setDraft(""); return; }
+    onChange([...emails, v]);
+    setDraft("");
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          type="email"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="name@beispiel.ch"
+          className="h-9"
+        />
+        <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={add}>
+          <UserPlus className="mr-1 h-3.5 w-3.5" />Hinzufügen
+        </Button>
+      </div>
+      {emails.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {emails.map((m) => (
+            <span key={m} className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
+              <Mail className="h-3 w-3 text-muted-foreground" />
+              {m}
+              <button type="button" onClick={() => onChange(emails.filter((e) => e !== m))} className="text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppointmentForm({
   form, setForm, clients, properties, employees, appts = [], currentUserId, selfId,
 }: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
@@ -1028,8 +1169,8 @@ function AppointmentForm({
 
       {/* Right: location & assignment */}
       <div className="space-y-4 rounded-lg bg-muted/40 p-4">
-        <Section title="Ort">
-          <div className="mb-3 flex items-center justify-between rounded-md border bg-background px-3 py-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2">
             <div className="flex items-center gap-2">
               <Video className="h-4 w-4 text-primary" />
               <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
@@ -1052,39 +1193,45 @@ function AppointmentForm({
               />
             </div>
           )}
-        </Section>
+        </div>
 
         <Section title="Zuweisung">
           <div className="space-y-3">
             <div>
               <Label>{t("appointments.form.assignee")}</Label>
-              <Select value={form.assigned_to || "none"} onValueChange={(v) => setForm({ ...form, assigned_to: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.assignToMe")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.assignToMe")}</SelectItem>
-                  {employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <AssigneeMultiPicker
+                employees={employees}
+                primary={form.assigned_to}
+                extraIds={form.extra_assignee_ids ?? []}
+                onChange={(p, extra) => setForm({ ...form, assigned_to: p, extra_assignee_ids: extra })}
+              />
             </div>
             <div>
               <Label>{t("appointments.form.client")}</Label>
-              <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.clientPlaceholder")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.clientNone")}</SelectItem>
-                  {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchPicker
+                value={form.client_id}
+                onChange={(v) => setForm({ ...form, client_id: v })}
+                options={clients.map((c: any) => ({ id: c.id, label: c.full_name }))}
+                placeholder={t("appointments.form.clientPlaceholder")}
+                emptyLabel={t("appointments.form.clientNone")}
+              />
             </div>
             <div>
               <Label>{t("appointments.form.property")}</Label>
-              <Select value={form.property_id || "none"} onValueChange={(v) => setForm({ ...form, property_id: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.propertyPlaceholder")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.propertyNone")}</SelectItem>
-                  {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchPicker
+                value={form.property_id}
+                onChange={(v) => setForm({ ...form, property_id: v })}
+                options={properties.map((p: any) => ({ id: p.id, label: p.title }))}
+                placeholder={t("appointments.form.propertyPlaceholder")}
+                emptyLabel={t("appointments.form.propertyNone")}
+              />
+            </div>
+            <div>
+              <Label>Externe Gäste (E-Mail)</Label>
+              <ExternalInvitees
+                emails={form.external_invitees ?? []}
+                onChange={(v) => setForm({ ...form, external_invitees: v })}
+              />
             </div>
           </div>
         </Section>
@@ -1137,6 +1284,8 @@ function AppointmentEditDrawer({
         client_id: appt.client_id ?? "",
         property_id: appt.property_id ?? "",
         assigned_to: appt.assigned_to ?? "",
+        extra_assignee_ids: appt.extra_assignee_ids ?? [],
+        external_invitees: appt.external_invitees ?? [],
         is_online: !!appt.is_online,
         meeting_url: appt.meeting_url ?? "",
         ...deriveTiming(appt.starts_at ? localInput(new Date(appt.starts_at)) : "", appt.ends_at ? localInput(new Date(appt.ends_at)) : ""),
@@ -1180,6 +1329,8 @@ function AppointmentEditDrawer({
               client_id: form.client_id || null,
               property_id: form.property_id || null,
               assigned_to: form.assigned_to || null,
+              extra_assignee_ids: form.extra_assignee_ids?.length ? form.extra_assignee_ids : null,
+              external_invitees: form.external_invitees?.length ? form.external_invitees : null,
               is_online: form.is_online,
               meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
             })} disabled={!form.title.trim() || !form.starts_at}>{t("appointments.actions.save")}</Button>

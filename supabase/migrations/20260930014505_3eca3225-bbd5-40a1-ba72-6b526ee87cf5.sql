@@ -1,0 +1,1 @@
+ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS extra_assignee_ids uuid[] NULL; ALTER TABLE public.appointments ADD COLUMN IF NOT EXISTS external_invitees text[] NULL;
