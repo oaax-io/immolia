@@ -523,12 +523,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     setGenerating(true);
     try {
       const gallerySources = galleryUrls.filter((u) => u !== coverUrl);
+      const portraitSrc = contact.photo ? await urlToDataUri(contact.photo, 320, 0.85) : null;
+      const logoSrc = _tb.logoUrl ? await urlToDataUri(_tb.logoUrl, 480, 0.9) : null;
       const embed = async (maxSide: number, quality: number) => {
         const cover = coverUrl ? await urlToDataUri(coverUrl, maxSide, quality) : null;
         const gallery = (
           await Promise.all(gallerySources.map((u) => urlToDataUri(u, maxSide, quality)))
         ).filter((u): u is string => !!u);
-        return buildHtml(cover, gallery);
+        return buildHtml(cover, gallery, portraitSrc, logoSrc);
       };
 
       let html = await embed(1600, 0.82);
