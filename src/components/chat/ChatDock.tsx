@@ -631,6 +631,29 @@ export function ChatPanel({
     }
   };
 
+  /** Sprachnotiz sofort hochladen und senden. */
+  const sendVoice = async (file: File) => {
+    if (!user?.id) return;
+    try {
+      const path = await tenantStoragePath(`${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`);
+      const { error: upErr } = await supabase.storage.from("chat-attachments").upload(path, file);
+      if (upErr) throw upErr;
+      const att: ChatAttachment = { path, name: file.name, type: file.type, size: file.size };
+      const { error } = await supabase.from("direct_messages").insert({
+        sender_id: user.id,
+        recipient_id: memberId,
+        body: "Sprachnotiz",
+        attachments: [att] as unknown as never,
+        mentions: [] as unknown as never,
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["chat-thread", user.id, memberId] });
+      qc.invalidateQueries({ queryKey: ["direct-messages", user.id] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   const send = useMutation({
     mutationFn: async () => {
       const body = draft.trim();
