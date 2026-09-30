@@ -53,9 +53,12 @@ export type ZipEntry =
   | { path: string; bytes: Uint8Array }
   | { path: string; url: string; expectedSize: number | null; label: string };
 
+export type PackageBuildReason = "attachment_changed" | "attachment_failed" | "upload_failed";
 export class PackageBuildError extends Error {
-  constructor(public reason: "attachment_changed" | "attachment_failed" | "upload_failed", message: string) {
+  reason: PackageBuildReason;
+  constructor(reason: PackageBuildReason, message: string) {
     super(message);
+    this.reason = reason;
   }
 }
 
