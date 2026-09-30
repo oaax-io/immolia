@@ -658,6 +658,7 @@ export type Database = {
           connection_id: string
           created_at: string
           id: string
+          matched_on: string | null
           owner_user_id: string
           provider_event_id: string
           reason: string
@@ -669,6 +670,7 @@ export type Database = {
           connection_id: string
           created_at?: string
           id?: string
+          matched_on?: string | null
           owner_user_id: string
           provider_event_id: string
           reason?: string
@@ -680,6 +682,7 @@ export type Database = {
           connection_id?: string
           created_at?: string
           id?: string
+          matched_on?: string | null
           owner_user_id?: string
           provider_event_id?: string
           reason?: string
@@ -727,6 +730,7 @@ export type Database = {
           subject: string | null
           updated_at: string
           user_id: string
+          web_link: string | null
         }
         Insert: {
           agency_id: string
@@ -745,6 +749,7 @@ export type Database = {
           subject?: string | null
           updated_at?: string
           user_id: string
+          web_link?: string | null
         }
         Update: {
           agency_id?: string
@@ -763,6 +768,7 @@ export type Database = {
           subject?: string | null
           updated_at?: string
           user_id?: string
+          web_link?: string | null
         }
         Relationships: [
           {
@@ -971,6 +977,76 @@ export type Database = {
           },
           {
             foreignKeyName: "calendar_event_assignments_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_clients: {
+        Row: {
+          agency_id: string
+          client_id: string
+          connection_id: string
+          created_at: string
+          id: string
+          matched_on: string | null
+          owner_user_id: string
+          provider_event_id: string
+          reason: string
+          removed_at: string | null
+          removed_by: string | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          client_id: string
+          connection_id: string
+          created_at?: string
+          id?: string
+          matched_on?: string | null
+          owner_user_id: string
+          provider_event_id: string
+          reason: string
+          removed_at?: string | null
+          removed_by?: string | null
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          client_id?: string
+          connection_id?: string
+          created_at?: string
+          id?: string
+          matched_on?: string | null
+          owner_user_id?: string
+          provider_event_id?: string
+          reason?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_clients_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_clients_connection_id_fkey"
             columns: ["connection_id"]
             isOneToOne: false
             referencedRelation: "calendar_connections"
@@ -6586,10 +6662,27 @@ export type Database = {
         }
       }
       calendar_kick_worker: { Args: never; Returns: undefined }
+      calendar_link_client: {
+        Args: {
+          _client_id: string
+          _provider_event_id: string
+          _suggestion_id?: string
+        }
+        Returns: string
+      }
+      calendar_match_event: {
+        Args: {
+          _connection_id: string
+          _phones?: string[]
+          _provider_event_id: string
+        }
+        Returns: undefined
+      }
       calendar_membership_active: {
         Args: { _agency_id: string; _user_id: string }
         Returns: boolean
       }
+      calendar_norm_phone: { Args: { _p: string }; Returns: string }
       calendar_oauth_consume: {
         Args: { _state_hash: string }
         Returns: {
@@ -6637,11 +6730,31 @@ export type Database = {
         Args: { _connection_id: string; _seconds?: number }
         Returns: boolean
       }
+      calendar_unlink_client: { Args: { _link_id: string }; Returns: undefined }
       can_access_client: { Args: { _client_id: string }; Returns: boolean }
       can_access_property: { Args: { _property_id: string }; Returns: boolean }
       can_see_profile: {
         Args: { _profile_agency: string; _profile_id: string }
         Returns: boolean
+      }
+      client_calendar_items: {
+        Args: { _client_id: string }
+        Returns: {
+          ends_at: string
+          is_own: boolean
+          item_id: string
+          kind: string
+          link_id: string
+          origin: string
+          provider_event_id: string
+          reason: string
+          responsible: string[]
+          source: string
+          starts_at: string
+          status: string
+          title: string
+          web_link: string
+        }[]
       }
       commercial_advance_due_periods: { Args: never; Returns: Json }
       commercial_advance_period: {

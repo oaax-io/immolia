@@ -231,17 +231,32 @@ async function applyRemote(admin: Admin, conn: any, token: string, ev: any, show
     location: ev.location?.displayName ? String(ev.location.displayName).slice(0, 500) : null,
     attendee_emails: attendeeEmails.slice(0, 100), is_private: isPrivate, is_cancelled: !!ev.isCancelled,
     is_organizer: ev.isOrganizer ?? null,
+    web_link: typeof ev.webLink === "string" && ev.webLink.startsWith("https://") ? ev.webLink.slice(0, 2000) : null,
     updated_at: new Date().toISOString(),
   } as never, { onConflict: "connection_id,provider_event_id" });
-  // Automatische Kundenerkennung nur als Vorschlag, nie für private Termine, nur Kunden derselben Firma
-  if (!isPrivate && attendeeEmails.length) {
-    const { data: clients } = await admin.from("clients").select("id, email").eq("agency_id", conn.agency_id)
-      .in("email", attendeeEmails).limit(20);
-    const rows = (clients ?? []).map((c: any) => ({ agency_id: conn.agency_id, owner_user_id: conn.user_id,
-      connection_id: conn.id, provider_event_id: ev.id, client_id: c.id, reason: "attendee_email" }));
-    if (rows.length) await admin.from("calendar_assignment_suggestions" as never)
-      .upsert(rows as never, { onConflict: "connection_id,provider_event_id,client_id", ignoreDuplicates: true });
+  // Kundenerkennung (serverseitig, nur eigene Firma). Beschreibung wird nur hier flüchtig nach Telefonnummern
+  // durchsucht, nie gespeichert oder geloggt. Private Termine: keine Auswertung (Funktion räumt Automatik auf).
+  const phones = isPrivate ? [] : extractIntlPhones(`${ev.subject ?? ""}\n${bodyText(ev)}`);
+  const { error: mErr } = await admin.rpc("calendar_match_event" as never, {
+    _connection_id: conn.id, _provider_event_id: ev.id, _phones: phones,
+  } as never);
+  if (mErr) console.warn("calendar_match_event failed", mErr.code);
+}
+
+function bodyText(ev: any): string {
+  const raw = String(ev.body?.content ?? ev.bodyPreview ?? "");
+  return (ev.body?.contentType === "html" ? raw.replace(/<[^>]+>/g, " ") : raw).slice(0, 20000);
+}
+
+// Nur Nummern mit eindeutiger Landesvorwahl (+.. oder 00..) → E.164; lokale Nummern werden ignoriert
+function extractIntlPhones(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(/(?:\+|\b00)\d[\d\s\-/().]{6,20}\d/g)) {
+    const s = m[0]; const digits = s.replace(/\D/g, "");
+    const e164 = s.startsWith("+") ? digits : digits.startsWith("00") ? digits.slice(2) : "";
+    if (e164.length >= 8 && e164.length <= 15) out.add(`+${e164}`);
   }
+  return Array.from(out).slice(0, 20);
 }
 
 async function resolveConflict(admin: Admin, conn: any, token: string, linkId: string, keep: "local" | "remote") {
