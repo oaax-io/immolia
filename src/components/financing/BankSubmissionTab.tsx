@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePartnerCatalog, usePartnerContacts, partnerDisplayName } from "@/lib/partners";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2 } from "lucide-react";
@@ -83,6 +84,9 @@ const SUBMISSION_STATUSES: DossierStatus[] = [
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
+  const bankCatalog = usePartnerCatalog("bank");
+  const bankContacts = usePartnerContacts("bank");
+
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier_bank", dossierId],
@@ -126,7 +130,57 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-4 w-4" />Bankangaben</h3>
+          <div>
+            <Label className="text-xs">Bank auswählen</Label>
+            <Select
+              value=""
+              onValueChange={(v) => {
+                const [kind, id] = v.split(":");
+                if (kind === "contact") {
+                  const c = (bankContacts.data ?? []).find((x) => x.id === id);
+                  if (!c) return;
+                  setForm({
+                    ...form,
+                    bank_name: partnerDisplayName(c, bankCatalog.data ?? []),
+                    bank_contact: c.contact_name ?? "",
+                    bank_email: c.email ?? "",
+                    bank_phone: c.phone ?? "",
+                  });
+                } else {
+                  const p = (bankCatalog.data ?? []).find((x) => x.id === id);
+                  if (!p) return;
+                  setForm({ ...form, bank_name: p.name });
+                }
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Eigener Ansprechpartner oder zentrale Bank" /></SelectTrigger>
+              <SelectContent>
+                {(bankContacts.data ?? []).length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Eigene Ansprechpartner</SelectLabel>
+                    {(bankContacts.data ?? []).map((c) => (
+                      <SelectItem key={c.id} value={`contact:${c.id}`}>
+                        {partnerDisplayName(c, bankCatalog.data ?? [])}
+                        {c.contact_name ? ` · ${c.contact_name}` : ""}
+                        {c.branch_name ? ` (${c.branch_name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                <SelectGroup>
+                  <SelectLabel>Zentrale Banken</SelectLabel>
+                  {(bankCatalog.data ?? []).map((p) => (
+                    <SelectItem key={p.id} value={`partner:${p.id}`}>{p.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Die Felder werden vorbefüllt und bleiben frei änderbar.
+            </p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
+
             <div>
               <Label className="text-xs">Banktyp</Label>
               <Select value={merged.bank_type ?? ""} onValueChange={(v) => setForm({ ...form, bank_type: v })}>

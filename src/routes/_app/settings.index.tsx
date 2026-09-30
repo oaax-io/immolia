@@ -2,7 +2,7 @@ import { useModuleAccess, moduleForPath } from "@/hooks/useModuleAccess";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
-  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid, CalendarDays } from "lucide-react";
+  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid, CalendarDays, Handshake } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -16,6 +16,7 @@ const TILES = [
   { to: "/settings/modules", icon: LayoutGrid, labelKey: "", label: "Module", desc: "Verfügbare Bereiche ein- und ausschalten" },
   { to: "/settings/billing", icon: Banknote, labelKey: "", label: "Abo & Credits", desc: "Abo, Credits kaufen, Rechnungen" },
   { to: "/settings/banks", icon: Banknote, labelKey: "settings.tabs.banks", desc: "Bankkonten und Zahlungsangaben" },
+  { to: "/settings/partners", icon: Handshake, labelKey: "", label: "Partner", desc: "Banken, Versicherungen, Handwerker und eigene Ansprechpartner" },
   { to: "/settings/categories", icon: Tags, labelKey: "settings.tabs.categories", desc: "Kategorien im Dokumentencenter" },
   { to: "/settings/video", icon: Video, labelKey: "", label: "Video", desc: "LiveKit für Video-Meetings" },
   { to: "/settings/calendar", icon: CalendarDays, labelKey: "", label: "Microsoft-Kalender", desc: "Persönlichen Microsoft-365-Kalender verbinden" },

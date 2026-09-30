@@ -21,6 +21,7 @@ import { Route as SelbstauskunftTokenRouteImport } from './routes/selbstauskunft
 import { Route as PlatformUsersRouteImport } from './routes/platform.users'
 import { Route as PlatformSettingsRouteImport } from './routes/platform.settings'
 import { Route as PlatformSecurityRouteImport } from './routes/platform.security'
+import { Route as PlatformPartnersRouteImport } from './routes/platform.partners'
 import { Route as PlatformModulesRouteImport } from './routes/platform.modules'
 import { Route as PlatformFeedbackRouteImport } from './routes/platform.feedback'
 import { Route as PlatformDomainsRouteImport } from './routes/platform.domains'
@@ -64,6 +65,7 @@ import { Route as AppSettingsWhiteLabelRouteImport } from './routes/_app/setting
 import { Route as AppSettingsVideoRouteImport } from './routes/_app/settings.video'
 import { Route as AppSettingsTrashRouteImport } from './routes/_app/settings.trash'
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings.profile'
+import { Route as AppSettingsPartnersRouteImport } from './routes/_app/settings.partners'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings.notifications'
 import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.modules'
 import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
@@ -143,6 +145,11 @@ const PlatformSettingsRoute = PlatformSettingsRouteImport.update({
 const PlatformSecurityRoute = PlatformSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformPartnersRoute = PlatformPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => PlatformRoute,
 } as any)
 const PlatformModulesRoute = PlatformModulesRouteImport.update({
@@ -360,6 +367,11 @@ const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsPartnersRoute = AppSettingsPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -509,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -529,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/settings/esign': typeof AppSettingsEsignRoute
   '/settings/modules': typeof AppSettingsModulesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/partners': typeof AppSettingsPartnersRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/trash': typeof AppSettingsTrashRoute
   '/settings/video': typeof AppSettingsVideoRoute
@@ -582,6 +596,7 @@ export interface FileRoutesByTo {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -602,6 +617,7 @@ export interface FileRoutesByTo {
   '/settings/esign': typeof AppSettingsEsignRoute
   '/settings/modules': typeof AppSettingsModulesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/partners': typeof AppSettingsPartnersRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/trash': typeof AppSettingsTrashRoute
   '/settings/video': typeof AppSettingsVideoRoute
@@ -661,6 +677,7 @@ export interface FileRoutesById {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -681,6 +698,7 @@ export interface FileRoutesById {
   '/_app/settings/esign': typeof AppSettingsEsignRoute
   '/_app/settings/modules': typeof AppSettingsModulesRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/partners': typeof AppSettingsPartnersRoute
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/trash': typeof AppSettingsTrashRoute
   '/_app/settings/video': typeof AppSettingsVideoRoute
@@ -740,6 +758,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -760,6 +779,7 @@ export interface FileRouteTypes {
     | '/settings/esign'
     | '/settings/modules'
     | '/settings/notifications'
+    | '/settings/partners'
     | '/settings/profile'
     | '/settings/trash'
     | '/settings/video'
@@ -813,6 +833,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -833,6 +854,7 @@ export interface FileRouteTypes {
     | '/settings/esign'
     | '/settings/modules'
     | '/settings/notifications'
+    | '/settings/partners'
     | '/settings/profile'
     | '/settings/trash'
     | '/settings/video'
@@ -891,6 +913,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -911,6 +934,7 @@ export interface FileRouteTypes {
     | '/_app/settings/esign'
     | '/_app/settings/modules'
     | '/_app/settings/notifications'
+    | '/_app/settings/partners'
     | '/_app/settings/profile'
     | '/_app/settings/trash'
     | '/_app/settings/video'
@@ -1037,6 +1061,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/platform/security'
       preLoaderRoute: typeof PlatformSecurityRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/partners': {
+      id: '/platform/partners'
+      path: '/partners'
+      fullPath: '/platform/partners'
+      preLoaderRoute: typeof PlatformPartnersRouteImport
       parentRoute: typeof PlatformRoute
     }
     '/platform/modules': {
@@ -1340,6 +1371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsProfileRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/partners': {
+      id: '/_app/settings/partners'
+      path: '/partners'
+      fullPath: '/settings/partners'
+      preLoaderRoute: typeof AppSettingsPartnersRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/notifications': {
       id: '/_app/settings/notifications'
       path: '/notifications'
@@ -1528,6 +1566,7 @@ interface AppSettingsRouteChildren {
   AppSettingsEsignRoute: typeof AppSettingsEsignRoute
   AppSettingsModulesRoute: typeof AppSettingsModulesRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsPartnersRoute: typeof AppSettingsPartnersRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsTrashRoute: typeof AppSettingsTrashRoute
   AppSettingsVideoRoute: typeof AppSettingsVideoRoute
@@ -1545,6 +1584,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsEsignRoute: AppSettingsEsignRoute,
   AppSettingsModulesRoute: AppSettingsModulesRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsPartnersRoute: AppSettingsPartnersRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsTrashRoute: AppSettingsTrashRoute,
   AppSettingsVideoRoute: AppSettingsVideoRoute,
@@ -1648,6 +1688,7 @@ interface PlatformRouteChildren {
   PlatformDomainsRoute: typeof PlatformDomainsRoute
   PlatformFeedbackRoute: typeof PlatformFeedbackRoute
   PlatformModulesRoute: typeof PlatformModulesRoute
+  PlatformPartnersRoute: typeof PlatformPartnersRoute
   PlatformSecurityRoute: typeof PlatformSecurityRoute
   PlatformSettingsRoute: typeof PlatformSettingsRoute
   PlatformUsersRoute: typeof PlatformUsersRoute
@@ -1662,6 +1703,7 @@ const PlatformRouteChildren: PlatformRouteChildren = {
   PlatformDomainsRoute: PlatformDomainsRoute,
   PlatformFeedbackRoute: PlatformFeedbackRoute,
   PlatformModulesRoute: PlatformModulesRoute,
+  PlatformPartnersRoute: PlatformPartnersRoute,
   PlatformSecurityRoute: PlatformSecurityRoute,
   PlatformSettingsRoute: PlatformSettingsRoute,
   PlatformUsersRoute: PlatformUsersRoute,
