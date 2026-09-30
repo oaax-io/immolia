@@ -138,8 +138,55 @@ function pageWrapStart(t: ExposeTheme): string {
   .footer { position: absolute; left: 16mm; right: 16mm; bottom: 8mm;
             display: flex; justify-content: space-between; font-size: 9px;
             opacity: 0.55; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* --- Ausstattungs-Highlights mit Icons (alle Vorlagen) --- */
+  .hl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm 4mm; margin-top: 4mm; }
+  .hl-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2mm;
+             break-inside: avoid; }
+  .hl-ico { width: 13mm; height: 13mm; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid ${t.accent}; background: ${t.accent}14; }
+  .hl-ico svg { width: 7mm; height: 7mm; }
+  .hl-label { font-size: 8.5pt; line-height: 1.25; font-weight: 600; letter-spacing: 0.01em; }
+
+  /* --- Ansprechperson mit Portrait (alle Vorlagen) --- */
+  .c-person { display: flex; align-items: center; gap: 7mm; }
+  .c-portrait { width: 34mm; height: 34mm; border-radius: 999px; overflow: hidden; flex: 0 0 auto;
+                border: 2px solid ${t.accent}; background: ${t.accent}22; }
+  .c-portrait img { width: 100%; height: 100%; object-fit: cover; }
+  .c-initials { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+                font-family: ${t.titleFont}; font-size: 20pt; font-weight: 700; }
+  .c-role { font-size: 10pt; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1mm; }
+  .c-logo { max-height: 14mm; max-width: 48mm; object-fit: contain; margin-top: 6mm; }
   `;
 
+}
+
+/** Initialen als Fallback, wenn kein Portrait hinterlegt ist. */
+function initials(name?: string | null): string {
+  return (name ?? "")
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "").join("") || "–";
+}
+
+/** Rundes Portrait der Ansprechperson – nie ein kaputtes Bild. */
+function portrait(d: ExposeData): string {
+  const inner = isPh(d.contact_photo_url)
+    ? `<div class="c-initials">${esc(initials(d.contact_name))}</div>`
+    : `<img src="${esc(d.contact_photo_url!)}" alt="${esc(d.contact_name ?? "")}"/>`;
+  return `<div class="c-portrait">${inner}</div>`;
+}
+
+/** Icon-Leiste der wichtigsten Ausstattungsmerkmale. */
+function highlightsBlock(d: ExposeData, t: ExposeTheme): string {
+  const list = (d.highlights ?? []).filter(Boolean).slice(0, 8);
+  if (!list.length) return "";
+  return `<div class="hl-grid">${list
+    .map(
+      (h) =>
+        `<div class="hl-item"><div class="hl-ico">${exposeIconSvg(matchExposeIcon(h), t.primary, 26)}</div>` +
+        `<div class="hl-label">${esc(h)}</div></div>`,
+    )
+    .join("")}</div>`;
 }
 
 function footer(d: ExposeData, t: ExposeTheme, _page?: number, _total?: number): string {
