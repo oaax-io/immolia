@@ -130,55 +130,28 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-4 w-4" />Bankangaben</h3>
-          <div>
-            <Label className="text-xs">Bank auswählen</Label>
-            <Select
-              value=""
-              onValueChange={(v) => {
-                const [kind, id] = v.split(":");
-                if (kind === "contact") {
-                  const c = (bankContacts.data ?? []).find((x) => x.id === id);
-                  if (!c) return;
-                  setForm({
-                    ...form,
-                    bank_name: partnerDisplayName(c, bankCatalog.data ?? []),
-                    bank_contact: c.contact_name ?? "",
-                    bank_email: c.email ?? "",
-                    bank_phone: c.phone ?? "",
-                  });
-                } else {
-                  const p = (bankCatalog.data ?? []).find((x) => x.id === id);
-                  if (!p) return;
-                  setForm({ ...form, bank_name: p.name });
-                }
-              }}
-            >
-              <SelectTrigger><SelectValue placeholder="Eigener Ansprechpartner oder zentrale Bank" /></SelectTrigger>
-              <SelectContent>
-                {(bankContacts.data ?? []).length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Eigene Ansprechpartner</SelectLabel>
-                    {(bankContacts.data ?? []).map((c) => (
-                      <SelectItem key={c.id} value={`contact:${c.id}`}>
-                        {partnerDisplayName(c, bankCatalog.data ?? [])}
-                        {c.contact_name ? ` · ${c.contact_name}` : ""}
-                        {c.branch_name ? ` (${c.branch_name})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
-                <SelectGroup>
-                  <SelectLabel>Zentrale Banken</SelectLabel>
-                  {(bankCatalog.data ?? []).map((p) => (
-                    <SelectItem key={p.id} value={`partner:${p.id}`}>{p.name}</SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Die Felder werden vorbefüllt und bleiben frei änderbar.
-            </p>
-          </div>
+          <BankPicker
+            currentName={merged.bank_name ?? ""}
+            currentContact={merged.bank_contact ?? ""}
+            currentEmail={merged.bank_email ?? ""}
+            currentPhone={merged.bank_phone ?? ""}
+            onSelect={(sel) => setForm({
+              ...form,
+              bank_name: sel.bank_name,
+              bank_contact: sel.bank_contact,
+              bank_email: sel.bank_email,
+              bank_phone: sel.bank_phone,
+            })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Die Felder werden vorbefüllt und bleiben frei änderbar.
+          </p>
+          <SubmissionTimeline
+            status={merged.dossier_status as DossierStatus | undefined}
+            submittedAt={merged.submitted_to_bank_at}
+            decisionAt={merged.bank_decision_at}
+          />
+
           <div className="grid gap-3 sm:grid-cols-2">
 
             <div>
