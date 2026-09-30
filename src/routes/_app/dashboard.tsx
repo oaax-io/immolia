@@ -19,6 +19,7 @@ import {
   formatCurrency, formatDateTime, formatDate,
 } from "@/lib/format";
 import { isBackendUnavailableError } from "@/lib/backend-errors";
+import { UpcomingCalendarList } from "@/components/dashboard/UpcomingCalendarList";
 
 import { useTranslation } from "react-i18next";
 
@@ -361,22 +362,7 @@ function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent className="pt-0">
-            {focus.isLoading ? (
-              <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-            ) : (focus.data?.upcoming ?? []).length === 0 ? (
-              <EmptyState icon={CalendarDays} text={t("dashboard.lists.noAppts")} />
-            ) : (
-              <div className="divide-y">
-                {(focus.data?.upcoming ?? []).slice(0, 6).map((a: any) => (
-                  <Link key={a.id} to="/appointments" className="block rounded px-1 py-2 first:pt-0 hover:bg-accent/40">
-                    <p className="truncate text-sm font-medium">{a.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {formatDateTime(a.starts_at)}{a.location ? ` · ${a.location}` : ""}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
+            <UpcomingCalendarList emptyText={t("dashboard.lists.noAppts")} />
           </CardContent>
         </Card>
       </div>
