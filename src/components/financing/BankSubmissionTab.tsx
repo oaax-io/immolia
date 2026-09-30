@@ -284,7 +284,9 @@ function formatBytes(n: number | null | undefined) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function BankPackageCard({ dossierId }: { dossierId: string }) {
+function BankPackageCard({
+  dossierId, bankEmail, bankName, letter,
+}: { dossierId: string; bankEmail: string; bankName: string; letter: string }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const build = useServerFn(buildBankPackage);
@@ -368,6 +370,20 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
     }
   }
 
+  /** Öffnet das eigene Mailprogramm mit Begleittext + Download-Link. */
+  async function sendByEmail(generatedDocumentId: string) {
+    const res = await createShare({ data: { generatedDocumentId } });
+    if (!res.ok || !res.token) {
+      toast.error(res.message ?? "Link konnte nicht erstellt werden.");
+      return;
+    }
+    const url = `${window.location.origin}/bank-paket/${res.token}`;
+    const body = `${letter.trim() || "Guten Tag\n\nAnbei erhalten Sie die Unterlagen zum Finanzierungsdossier."}\n\nDownload der Unterlagen (7 Tage gültig):\n${url}`;
+    const subject = `Finanzierungsanfrage${bankName ? ` – ${bankName}` : ""}`;
+    window.location.href = `mailto:${encodeURIComponent(bankEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    await markSubmitted();
+  }
+
   /** Beim Teilen gilt das Dossier als eingereicht – nur setzen, wenn noch offen. */
   async function markSubmitted() {
     const { data } = await supabase
@@ -420,6 +436,14 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
           </Button>
         </div>
 
+        <div className="flex gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p>
+            Viele Banken öffnen keine Links von unbekannten Absendern. Falls der Link blockiert wird: ZIP herunterladen
+            und im Partnerportal der Bank hochladen oder über einen sicheren Mailkanal (z. B. IncaMail) senden.
+          </p>
+        </div>
+
         {items.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">Noch keine Pakete erstellt.</p>
         ) : (
@@ -438,6 +462,14 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
                     {p.attachments ?? 0} Anhänge
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => sendByEmail(p.id)}
+                  title="Per E-Mail an die Bank senden (öffnet dein Mailprogramm)"
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
