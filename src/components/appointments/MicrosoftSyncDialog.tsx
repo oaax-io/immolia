@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getMsCalendarStatus, startMsConnect, listMsCalendars, saveMsCalendar, disconnectMs, syncMsNow, listMsConflicts, resolveMsConflict } from "@/lib/ms-calendar.functions";
 
 const RETURN_MSG: Record<string, { tone: "ok" | "err"; text: string }> = {
@@ -29,6 +30,7 @@ function fmt(d: string | null) {
 export function MicrosoftSyncButton() {
   const statusFn = useServerFn(getMsCalendarStatus);
   const status = useQuery({ queryKey: ["ms-calendar-status"], queryFn: () => statusFn(), refetchInterval: (q) => (q.state.data?.state === "syncing" ? 5000 : false) });
+  const [confirmDisc, setConfirmDisc] = useState(false);
   const [open, setOpen] = useState(false);
   const [returnCode, setReturnCode] = useState<string | null>(null);
 
@@ -70,6 +72,7 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
   const discFn = useServerFn(disconnectMs);
   const syncFn = useServerFn(syncMsNow);
   const status = useQuery({ queryKey: ["ms-calendar-status"], queryFn: () => statusFn(), refetchInterval: (q) => (q.state.data?.state === "syncing" ? 5000 : false) });
+  const [confirmDisc, setConfirmDisc] = useState(false);
   const s = status.data;
   const st = s?.state;
   const [editing, setEditing] = useState(false);
@@ -124,7 +127,11 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
   const Row = ({ k, v }: { k: string; v: React.ReactNode }) => (
     <div className="flex justify-between gap-4 py-1.5 text-sm"><dt className="text-muted-foreground">{k}</dt><dd className="truncate text-right font-medium">{v}</dd></div>
   );
-  const syncLabel = st === "syncing" ? "Erste Synchronisierung läuft" : s?.lastSyncedAt ? "Kalender synchronisiert" : "Wartet auf Synchronisierung";
+  const ss = s?.syncState;
+  const syncLabel = ss === "running" || st === "syncing" ? "Synchronisierung läuft" : ss === "failed" ? "Letzter Abgleich fehlgeschlagen"
+    : ss === "retrying" ? "Wird erneut versucht" : ss === "ok" ? "Zuletzt erfolgreich abgeglichen" : "Wartet auf ersten Abgleich";
+  const syncTone = ss === "failed" ? "text-destructive" : ss === "retrying" || ss === "running" || ss === "never" || st === "syncing" ? "text-muted-foreground" : "text-success";
+  const calendarChange = editing && !!s?.calendarId && !!pick && pick !== s.calendarId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,6 +174,7 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
                 )}
             </div>
             <div className="space-y-3">
+              {calendarChange && <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">Kalenderwechsel: Bereits übertragene Termine bleiben im bisherigen Outlook-Kalender und werden dort nicht mehr aktualisiert. Künftige Termine werden in den neuen Kalender übertragen. Belegungen des alten Kalenders werden entfernt.</p>}
               <div className="flex items-center justify-between gap-3"><Label htmlFor="ms-push" className="font-normal">Immolia-Termine mit Outlook synchronisieren</Label><Switch id="ms-push" checked={push} onCheckedChange={setPush} /></div>
               <div className="flex items-center justify-between gap-3"><Label htmlFor="ms-busy" className="font-normal">Outlook-Belegungen in Immolia anzeigen</Label><Switch id="ms-busy" checked={busy} onCheckedChange={setBusy} /></div>
               <p className="text-xs text-muted-foreground">Externe Termine erscheinen als Beschäftigt. Private Inhalte werden nicht ins Team übernommen.</p>
@@ -179,9 +187,11 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
               <Row k="Konto" v={s.account} />
               <Row k="Kalender" v={s.calendarName} />
               <Row k="Firma" v={s.agencyName ?? "–"} />
-              <Row k="Status" v={<span className={cn("inline-flex items-center gap-1.5", st === "syncing" ? "text-muted-foreground" : "text-success")} aria-live="polite">
-                {st === "syncing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-2 w-2 rounded-full bg-success" />}{syncLabel}</span>} />
-              <Row k="Letzte Synchronisierung" v={fmt(s.lastSyncedAt)} />
+              <Row k="Verbindung" v={<span className="text-success">Verbunden</span>} />
+              <Row k="Synchronisierung" v={<span className={cn("inline-flex items-center gap-1.5", syncTone)} aria-live="polite">
+                {ss === "running" || st === "syncing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className={cn("h-2 w-2 rounded-full", ss === "failed" ? "bg-destructive" : ss === "ok" ? "bg-success" : "bg-muted-foreground")} />}{syncLabel}</span>} />
+              <Row k="Letzter erfolgreicher Abgleich" v={fmt(s.lastSyncedAt)} />
+              <Row k="Live-Aktualisierung" v={s.liveUpdates ? "Aktiv" : "Abgleich alle 15 Min"} />
             </dl>
             {(conflicts.data?.length ?? 0) > 0 && (
               <div className="space-y-2 rounded-lg border border-destructive/30 p-3" role="region" aria-label="Synchronisationskonflikte">
@@ -198,7 +208,8 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
                 ))}
               </div>
             )}
-            {s.lastErrorCode === "sync_failed" && <p className="text-xs text-muted-foreground">Vorübergehender Synchronisationsfehler – einzelne Änderungen werden erneut versucht.</p>}
+            {ss === "failed" && <p role="alert" className="text-xs text-destructive">Der letzte Abgleich ist fehlgeschlagen{s.lastFailedAt ? ` (${fmt(s.lastFailedAt)})` : ""}. Starte «Jetzt synchronisieren» oder verbinde dich erneut, falls es wieder auftritt.</p>}
+            {ss !== "failed" && s.lastErrorCode === "sync_failed" && <p className="text-xs text-muted-foreground">Vorübergehender Synchronisationsfehler – einzelne Änderungen werden erneut versucht.</p>}
             {s.lastErrorCode === "token_refresh_transient" && <p className="text-xs text-muted-foreground">Vorübergehender Synchronisationsfehler – Immolia versucht es automatisch erneut.</p>}
           </div>
         ) : st === "reconnect_required" || st === "error" ? (
@@ -226,13 +237,13 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
               <Button ref={primaryRef} disabled={!pick || save.isPending || cals.isLoading} onClick={() => save.mutate()}>
                 {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{editing ? "Speichern" : "Synchronisierung aktivieren"}</Button></>;
             if (connected) return <>
-              <Button variant="ghost" className="text-destructive" disabled={disc.isPending} onClick={() => disc.mutate()}>Verbindung trennen</Button>
+              <Button variant="ghost" className="text-destructive" disabled={disc.isPending} onClick={() => setConfirmDisc(true)}>Verbindung trennen</Button>
               <Button variant="outline" onClick={() => { setPick(""); setEditing(true); setJustSaved(false); }}>Einstellungen</Button>
               <Button variant="outline" disabled={sync.isPending || st === "syncing"} onClick={() => sync.mutate()}><RefreshCw className={cn("h-4 w-4", sync.isPending && "animate-spin")} />Jetzt synchronisieren</Button>
               {justSaved ? <Button ref={primaryRef} asChild onClick={() => onOpenChange(false)}><Link to="/appointments">Zum Kalender</Link></Button>
                 : <Button ref={primaryRef} onClick={() => onOpenChange(false)}>Schliessen</Button>}</>;
             if (st === "reconnect_required" || st === "error") return <>
-              {s.account && <Button variant="ghost" className="text-destructive" disabled={disc.isPending} onClick={() => disc.mutate()}>Verbindung trennen</Button>}
+              {s.account && <Button variant="ghost" className="text-destructive" disabled={disc.isPending} onClick={() => setConfirmDisc(true)}>Verbindung trennen</Button>}
               <Button ref={primaryRef} disabled={isConnecting} onClick={() => connect.mutate(true)}>{isConnecting && <Loader2 className="h-4 w-4 animate-spin" />}Erneut verbinden</Button></>;
             return <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
@@ -240,6 +251,19 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
           })()}
         </DialogFooter>
       </DialogContent>
+      <AlertDialog open={confirmDisc} onOpenChange={setConfirmDisc}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Verbindung trennen?</AlertDialogTitle>
+            <AlertDialogDescription>Die Synchronisierung wird beendet. Bestehende Termine bleiben erhalten.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <p className="text-xs text-muted-foreground">Das Trennen in Immolia widerruft nicht automatisch deine Zustimmung bei Microsoft. Diese kannst du unter myapps.microsoft.com bzw. account.microsoft.com → «Apps und Dienste» entfernen.</p>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => disc.mutate()}>Verbindung trennen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
