@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List, X, User, Home, UserPlus, FileSignature, Bookmark, ChevronsUpDown, Check, Sparkles, Loader2, SlidersHorizontal, Link2, Repeat } from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List, X, User, Home, UserPlus, FileSignature, Bookmark, ChevronsUpDown, Check, Sparkles, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
