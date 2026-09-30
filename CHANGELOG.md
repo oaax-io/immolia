@@ -13,6 +13,10 @@ Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 - **Abonnemente und Credits:** Pläne, Add-ons, Testphasen, monatliche Kontingente, Credit-Pakete, Verbrauchsvorschau und Buchungshistorie auf der Seite «Abo & Credits».
 - **Flexible Abrechnung:** Stripe, Rechnung, Banküberweisung, individuelle Verträge und kostenlose Abonnemente verwenden dieselbe Abrechnungslogik.
 - **Provisionsverwaltung:** Gebuchte Provisionen, Potenzial, Aufteilungen, persönliche Ziele, Abschlussbuchungen und Provisionsabrechnungen.
+- **Videoanrufe:** Mitarbeitende können Anrufe direkt aus Immolia starten, annehmen und ablehnen; Klingeldauer und Signalisierung wurden gegen endlose Anrufzustände abgesichert.
+- **Erweiterte Immobilien-Stammdaten:** Zusätzliche Haupt-, Flächen-, Finanz-, Rendite-, Energie- und Schweizer Katasterangaben sowie eine konfigurierbare Ausstattungs- und Eigenschaftenliste.
+- **Immobilien-Bearbeitung:** Kompaktere, gegliederte Erfassung mit Adressvorschlägen sowie präziseren Parzellen- und Stockwerkangaben.
+- **Exposé-Anhänge:** Zusätzliche Dateien und Bilder per Drag-and-drop aufnehmen, sortieren und kontrolliert in die Ausgabe übernehmen.
 - **Aufgabenansichten:** Kompakte Liste, Karten und Kanban, Anpinnen, Detailfenster, durchsuchbare Zuweisungen und Wiederholungen mit Enddatum.
 - **Kalenderausbau:** Kombinierbare Ebenen für Feiertage, Geburtstage, Aufgaben, Termine und Online-Meetings; Tagessprung, Serien, getrennte Datums-/Zeitwahl, Adressvorschläge und Kollisionshinweise.
 - **Microsoft-365-Kalender:** Persönliche Verbindung im bestehenden Kalender und in den Einstellungen mit Kalenderwahl, getrenntem Verbindungs-/Synchronisationsstatus, Fehlerzuständen und sicherem Trennen.
