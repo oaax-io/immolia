@@ -325,6 +325,61 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       .map((f) => ({ label: f.label, value: map[f.key] }));
   }, [property, visibleFacts]);
 
+  const allFeatures: string[] = useMemo(
+    () => (Array.isArray(property?.features) ? (property!.features as string[]).filter(Boolean) : []),
+    [property],
+  );
+
+  // Standard: die ersten acht Ausstattungen werden automatisch als Highlights vorgeschlagen.
+  const selectedHighlights = useMemo(
+    () => (highlights ?? allFeatures.slice(0, 8)).filter((f) => allFeatures.includes(f)),
+    [highlights, allFeatures],
+  );
+
+  const toggleHighlight = (f: string) =>
+    setHighlights((prev) => {
+      const base = prev ?? allFeatures.slice(0, 8);
+      if (base.includes(f)) return base.filter((x) => x !== f);
+      if (base.length >= 8) return base;
+      return [...base, f];
+    });
+
+  // Exposé-Check: Qualitätsprüfung vor dem Erstellen.
+  const checks = useMemo(() => {
+    const p: any = property ?? {};
+    return [
+      { key: "cover", label: "Titelbild", ok: !!coverUrl, hint: "Im Schritt «Galerie» ein Titelbild wählen.", step: 2 },
+      { key: "title", label: "Titel", ok: !!(title || p.title), hint: "Im Schritt «Inhalte» einen Titel erfassen.", step: 1 },
+      {
+        key: "price",
+        label: p.listing_type === "rent" ? "Mietzins" : "Kaufpreis",
+        ok: p.listing_type === "rent" ? !!p.rent : !!p.price,
+        hint: "Preis beim Objekt hinterlegen.",
+        step: 1,
+      },
+      { key: "address", label: "Adresse", ok: !!(p.address || p.city), hint: "Adresse beim Objekt ergänzen.", step: 1 },
+      {
+        key: "facts",
+        label: "Eckdaten",
+        ok: facts.length >= 3,
+        hint: "Mindestens drei Eckdaten auswählen.",
+        step: 1,
+      },
+      {
+        key: "description",
+        label: "Beschreibung",
+        ok: withDescription && (description ?? "").trim().length >= 80,
+        hint: "Aussagekräftige Beschreibung (min. 80 Zeichen) erfassen.",
+        step: 1,
+      },
+      { key: "gallery", label: "Bilderstrecke", ok: galleryUrls.filter((u) => u !== coverUrl).length >= 3, hint: "Mindestens drei Galeriebilder wählen.", step: 2 },
+      { key: "contact", label: "Ansprechperson", ok: !withContact || !!contact.name, hint: "Ansprechperson auswählen.", step: 4 },
+    ];
+  }, [property, coverUrl, title, facts, withDescription, description, galleryUrls, withContact, contact]);
+
+  const checkOk = checks.filter((c) => c.ok).length;
+  const checkMissing = checks.filter((c) => !c.ok);
+
   const macro = (property as any)?.macro_location as any | null;
   const marketSections = (marketAnalysis as any)?.sections as any | null;
 
