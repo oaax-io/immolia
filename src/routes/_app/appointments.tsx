@@ -902,7 +902,7 @@ function SearchPicker({
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent className="p-0" align="start" style={popStyle}>
         <Command>
           <CommandInput placeholder="Suchen…" />
           <CommandList className="max-h-64">
@@ -929,6 +929,7 @@ function AssigneeMultiPicker({
   employees, primary, extraIds, onChange,
 }: { employees: any[]; primary: string; extraIds: string[]; onChange: (primary: string, extra: string[]) => void }) {
   const [open, setOpen] = useState(false);
+  const { ref: triggerRef, style: popStyle } = useTriggerWidth(open);
   const selected = [primary, ...extraIds].filter(Boolean);
   const toggle = (id: string) => {
     let next = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
