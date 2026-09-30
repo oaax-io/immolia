@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePartnerCatalog, usePartnerContacts, partnerDisplayName } from "@/lib/partners";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankPicker } from "@/components/financing/BankPicker";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2 } from "lucide-react";
+import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { DOSSIER_STATUS_LABELS, type DossierStatus } from "@/lib/financing";
 import {
   buildBankPackage,
@@ -84,8 +84,7 @@ const SUBMISSION_STATUSES: DossierStatus[] = [
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
-  const bankCatalog = usePartnerCatalog("bank");
-  const bankContacts = usePartnerContacts("bank");
+
 
 
   const { data: dossier, isLoading } = useQuery({
@@ -130,55 +129,28 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-4 w-4" />Bankangaben</h3>
-          <div>
-            <Label className="text-xs">Bank auswählen</Label>
-            <Select
-              value=""
-              onValueChange={(v) => {
-                const [kind, id] = v.split(":");
-                if (kind === "contact") {
-                  const c = (bankContacts.data ?? []).find((x) => x.id === id);
-                  if (!c) return;
-                  setForm({
-                    ...form,
-                    bank_name: partnerDisplayName(c, bankCatalog.data ?? []),
-                    bank_contact: c.contact_name ?? "",
-                    bank_email: c.email ?? "",
-                    bank_phone: c.phone ?? "",
-                  });
-                } else {
-                  const p = (bankCatalog.data ?? []).find((x) => x.id === id);
-                  if (!p) return;
-                  setForm({ ...form, bank_name: p.name });
-                }
-              }}
-            >
-              <SelectTrigger><SelectValue placeholder="Eigener Ansprechpartner oder zentrale Bank" /></SelectTrigger>
-              <SelectContent>
-                {(bankContacts.data ?? []).length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Eigene Ansprechpartner</SelectLabel>
-                    {(bankContacts.data ?? []).map((c) => (
-                      <SelectItem key={c.id} value={`contact:${c.id}`}>
-                        {partnerDisplayName(c, bankCatalog.data ?? [])}
-                        {c.contact_name ? ` · ${c.contact_name}` : ""}
-                        {c.branch_name ? ` (${c.branch_name})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
-                <SelectGroup>
-                  <SelectLabel>Zentrale Banken</SelectLabel>
-                  {(bankCatalog.data ?? []).map((p) => (
-                    <SelectItem key={p.id} value={`partner:${p.id}`}>{p.name}</SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Die Felder werden vorbefüllt und bleiben frei änderbar.
-            </p>
-          </div>
+          <BankPicker
+            currentName={merged.bank_name ?? ""}
+            currentContact={merged.bank_contact ?? ""}
+            currentEmail={merged.bank_email ?? ""}
+            currentPhone={merged.bank_phone ?? ""}
+            onSelect={(sel) => setForm({
+              ...form,
+              bank_name: sel.bank_name,
+              bank_contact: sel.bank_contact,
+              bank_email: sel.bank_email,
+              bank_phone: sel.bank_phone,
+            })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Die Felder werden vorbefüllt und bleiben frei änderbar.
+          </p>
+          <SubmissionTimeline
+            status={merged.dossier_status as DossierStatus | undefined}
+            submittedAt={merged.submitted_to_bank_at}
+            decisionAt={merged.bank_decision_at}
+          />
+
           <div className="grid gap-3 sm:grid-cols-2">
 
             <div>
@@ -248,6 +220,39 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
           <Save className="mr-2 h-4 w-4" />Speichern
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** Kompakte Zeitachse: Bereit → Eingereicht → Entscheid. */
+function SubmissionTimeline({
+  status, submittedAt, decisionAt,
+}: { status?: DossierStatus; submittedAt?: string | null; decisionAt?: string | null }) {
+  const submitted = !!submittedAt || status === "submitted_to_bank" || status === "approved" || status === "rejected";
+  const decided = status === "approved" || status === "rejected";
+  const steps = [
+    { label: "Bereit für Bank", done: submitted || status === "ready_for_bank", note: "" },
+    { label: "Eingereicht", done: submitted, note: submittedAt ? formatZurich(submittedAt) : "" },
+    {
+      label: status === "rejected" ? "Abgelehnt" : status === "approved" ? "Bewilligt" : "Entscheid offen",
+      done: decided,
+      note: decisionAt ? formatZurich(decisionAt) : "",
+    },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-muted/20 p-3">
+      {steps.map((s, i) => (
+        <div key={s.label} className="flex items-center gap-2">
+          {s.done
+            ? <CheckCircle2 className="h-4 w-4 text-primary" />
+            : <Circle className="h-4 w-4 text-muted-foreground" />}
+          <div className="text-sm">
+            <span className={s.done ? "font-medium" : "text-muted-foreground"}>{s.label}</span>
+            {s.note && <span className="ml-1 text-xs text-muted-foreground">{s.note}</span>}
+          </div>
+          {i < steps.length - 1 && <span className="text-muted-foreground">→</span>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -337,10 +342,32 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
       const url = `${window.location.origin}/bank-paket/${res.token}`;
       await navigator.clipboard.writeText(url);
       toast.success("Öffentlicher Download-Link kopiert (7 Tage gültig)");
+      await markSubmitted();
     } else {
       toast.error(res.message ?? "Link konnte nicht erstellt werden.");
     }
   }
+
+  /** Beim Teilen gilt das Dossier als eingereicht – nur setzen, wenn noch offen. */
+  async function markSubmitted() {
+    const { data } = await supabase
+      .from("financing_dossiers")
+      .select("dossier_status, submitted_to_bank_at")
+      .eq("id", dossierId)
+      .maybeSingle();
+    if (!data || data.submitted_to_bank_at) return;
+    if (data.dossier_status === "approved" || data.dossier_status === "rejected") return;
+    const { error } = await supabase
+      .from("financing_dossiers")
+      .update({ dossier_status: "submitted_to_bank", submitted_to_bank_at: new Date().toISOString() })
+      .eq("id", dossierId);
+    if (error) return;
+    qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
+    qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
+    toast.info("Status auf «Bei Bank eingereicht» gesetzt");
+  }
+
 
   async function downloadPackage(path: string) {
     const res = await getUrl({ data: { path } });

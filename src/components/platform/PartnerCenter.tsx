@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Loader2, X } from "lucide-react";
 import { QueryState } from "@/components/platform/PlatformLayout";
+import { PartnerLogo } from "@/components/partners/PartnerLogo";
 import {
   PARTNER_CATEGORIES, PARTNER_CATEGORY_LABEL, usePlatformPartners, savePlatformPartner,
-  setPlatformPartnerActive, removePlatformPartner, type PlatformPartner, type SavePartnerInput,
+  setPlatformPartnerActive, removePlatformPartner, uploadPartnerLogo, type PlatformPartner, type SavePartnerInput,
 } from "@/lib/partners";
 
 const EMPTY: SavePartnerInput = { category: "bank", name: "", website: "", description: "", country: "CH", sort_order: 0, is_active: true };
@@ -30,6 +31,21 @@ export function PartnerCenter() {
   const [edit, setEdit] = useState<SavePartnerInput | null>(null);
   const [remove, setRemove] = useState<PlatformPartner | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const pickLogo = async (file: File | null | undefined) => {
+    if (!file || !edit) return;
+    if (!file.type.startsWith("image/")) { toast.error("Bitte eine Bilddatei wählen (PNG, JPG oder SVG)."); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Das Logo darf höchstens 2 MB gross sein."); return; }
+    setUploading(true);
+    try {
+      const url = await uploadPartnerLogo(file);
+      setEdit((cur) => (cur ? { ...cur, logo_url: url } : cur));
+      toast.success("Logo hochgeladen");
+    } catch (e) {
+      toast.error((e as Error).message ?? "Upload fehlgeschlagen");
+    } finally { setUploading(false); }
+  };
 
   const rows = q.data ?? [];
   const filtered = useMemo(() => {
@@ -108,12 +124,14 @@ export function PartnerCenter() {
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
+            <TableHead className="w-14">Logo</TableHead>
             <TableHead>Name</TableHead><TableHead>Kategorie</TableHead><TableHead>Website</TableHead>
             <TableHead className="text-center">Firmenkontakte</TableHead><TableHead className="text-center">Aktiv</TableHead><TableHead />
           </TableRow></TableHeader>
           <TableBody>
             {filtered.map((p) => (
               <TableRow key={p.id}>
+                <TableCell><PartnerLogo name={p.name} url={p.logo_url} /></TableCell>
                 <TableCell className="font-medium">{p.name}{p.legal_name && <div className="text-xs text-muted-foreground">{p.legal_name}</div>}</TableCell>
                 <TableCell><Badge variant="secondary">{PARTNER_CATEGORY_LABEL[p.category] ?? p.category}</Badge></TableCell>
                 <TableCell className="text-sm">
@@ -133,7 +151,7 @@ export function PartnerCenter() {
               </TableRow>
             ))}
             {!q.isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Keine Partner gefunden.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Keine Partner gefunden.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -157,7 +175,30 @@ export function PartnerCenter() {
               <div className="space-y-1.5"><Label>Name</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Firmenname (optional)</Label><Input value={edit.legal_name ?? ""} onChange={(e) => setEdit({ ...edit, legal_name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Website</Label><Input value={edit.website ?? ""} onChange={(e) => setEdit({ ...edit, website: e.target.value })} placeholder="https://" /></div>
-              <div className="space-y-1.5"><Label>Logo-URL (optional)</Label><Input value={edit.logo_url ?? ""} onChange={(e) => setEdit({ ...edit, logo_url: e.target.value })} /></div>
+              <div className="space-y-1.5">
+                <Label>Logo</Label>
+                <div className="flex items-center gap-3">
+                  <PartnerLogo name={edit.name || "?"} url={edit.logo_url} size={56} />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
+                        <label className="cursor-pointer">
+                          {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                          {uploading ? "Wird geladen …" : "Logo hochladen"}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ""; }} />
+                        </label>
+                      </Button>
+                      {edit.logo_url && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setEdit({ ...edit, logo_url: null })}>
+                          <X className="mr-1 h-4 w-4" />Entfernen
+                        </Button>
+                      )}
+                    </div>
+                    <Input value={edit.logo_url ?? ""} onChange={(e) => setEdit({ ...edit, logo_url: e.target.value })} placeholder="oder Bild-URL einfügen" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">PNG, JPG oder SVG, höchstens 2 MB.</p>
+              </div>
               <div className="space-y-1.5"><Label>Beschreibung</Label><Textarea rows={2} value={edit.description ?? ""} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
               <div className="grid grid-cols-2 items-end gap-3">
                 <div className="space-y-1.5"><Label>Sortierung</Label><Input type="number" value={edit.sort_order ?? 0} onChange={(e) => setEdit({ ...edit, sort_order: Number(e.target.value) })} /></div>
