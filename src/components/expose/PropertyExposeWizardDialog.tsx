@@ -444,7 +444,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     return out;
   }, [withMacro, withMarket, macro, marketSections]);
 
-  const buildHtml = (cover: string | null, gallery: string[]) => {
+  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null) => {
     const p = property ?? {};
     const cols = GALLERY_OPTIONS.find((o) => o.id === galleryLayout)?.cols ?? 2;
     return renderExposeHTML(
