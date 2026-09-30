@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 
 export const PIPELINE_STAGES = [
@@ -15,15 +17,25 @@ export const PIPELINE_STAGES = [
 
 const NONE = "__none__";
 
-export function ClientKanban({ clients, onOpen }: { clients: any[]; onOpen: (id: string) => void }) {
+/** Gespeicherte Phase, sonst automatisch aus Status bzw. Selbstauskunft abgeleitet. */
+export function effectiveStage(c: any, disclosureIds: Set<string>): string {
+  if (c.pipeline_stage) return c.pipeline_stage;
+  if (c.status === "abgeschlossen") return "sold";
+  if (c.status === "finanzierung") return "financing";
+  if (disclosureIds.has(c.id)) return "self_disclosure";
+  return NONE;
+}
+
+export function ClientKanban({ clients, disclosureIds, onOpen }: { clients: any[]; disclosureIds: Set<string>; onOpen: (id: string) => void }) {
   const qc = useQueryClient();
   const [over, setOver] = useState<string | null>(null);
-  const columns = [{ value: NONE, label: "Ohne Phase", dot: "bg-muted-foreground/40" }, ...PIPELINE_STAGES];
+  const columns = PIPELINE_STAGES;
+  const [addOpen, setAddOpen] = useState<string | null>(null);
 
   const move = async (id: string, stage: string) => {
     const next = stage === NONE ? null : stage;
     const current = clients.find((c) => c.id === id);
-    if (!current || (current.pipeline_stage ?? null) === next) return;
+    if (!current || current.pipeline_stage === next) return;
     qc.setQueryData(["clients"], (old: any) =>
       Array.isArray(old) ? old.map((c) => (c.id === id ? { ...c, pipeline_stage: next } : c)) : old,
     );
@@ -37,7 +49,7 @@ export function ClientKanban({ clients, onOpen }: { clients: any[]; onOpen: (id:
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
       {columns.map((col) => {
-        const items = clients.filter((c) => (c.pipeline_stage ?? NONE) === col.value);
+        const items = clients.filter((c) => effectiveStage(c, disclosureIds) === col.value);
         return (
           <div
             key={col.value}
@@ -51,7 +63,29 @@ export function ClientKanban({ clients, onOpen }: { clients: any[]; onOpen: (id:
                 <span className={`h-2 w-2 rounded-full ${col.dot}`} />
                 {col.label}
               </span>
-              <span className="rounded-full bg-background px-2 text-xs text-muted-foreground">{items.length}</span>
+              <div className="flex items-center gap-1">
+                <span className="rounded-full bg-background px-2 text-xs text-muted-foreground">{items.length}</span>
+                <Popover open={addOpen === col.value} onOpenChange={(o) => setAddOpen(o ? col.value : null)}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="rounded-md p-1 text-muted-foreground hover:bg-background hover:text-foreground" aria-label="Kunde hinzufügen">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-0" align="end">
+                    <Command>
+                      <CommandInput placeholder="Kunde suchen…" />
+                      <CommandList>
+                        <CommandEmpty>Keine Kunden gefunden</CommandEmpty>
+                        {clients.filter((c) => effectiveStage(c, disclosureIds) !== col.value).map((c) => (
+                          <CommandItem key={c.id} value={`${c.full_name ?? ""} ${c.email ?? ""} ${c.id}`} onSelect={() => { setAddOpen(null); move(c.id, col.value); }}>
+                            <span className="truncate">{c.full_name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <div className="flex max-h-[70vh] min-h-24 flex-col gap-2 overflow-y-auto p-2">
               {items.map((c) => (
