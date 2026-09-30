@@ -49,6 +49,7 @@ const emptyForm = {
   location: "", notes: "",
   client_id: "", property_id: "", assigned_to: "",
   extra_assignee_ids: [] as string[], external_invitees: [] as string[],
+  repeat: "none", repeat_until: "",
   is_online: false, meeting_url: "",
 };
 
@@ -785,7 +786,7 @@ function addMin(local: string, min: number) {
 }
 
 function deriveTiming(starts: string, ends: string) {
-  if (!starts) return { mode: "time", duration: 60 };
+  if (!starts) return { mode: "time", duration: 60, repeat: "none", repeat_until: "" };
   const s = new Date(starts), e = ends ? new Date(ends) : null;
   const diff = e ? Math.round((e.getTime() - s.getTime()) / 60000) : 60;
   const midnight = s.getHours() === 0 && s.getMinutes() === 0 && e && e.getHours() === 0 && e.getMinutes() === 0;
