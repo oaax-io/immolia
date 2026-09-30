@@ -703,15 +703,15 @@ function TaskForm({
             </div>
             <div>
               <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
-              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+              <div className="grid grid-cols-3 gap-1.5">
                 {(["none", ...RELATED_TYPES] as string[]).map((r) => {
                   const Icon = RELATED_ICONS[r];
                   const active = form.related_type === r;
                   return (
                     <button key={r} type="button" onClick={() => setForm({ ...form, related_type: r, related_id: "" })}
-                      className={`flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] transition ${active ? "border-primary bg-primary/10 font-medium text-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
-                      <Icon className="h-4 w-4" />
-                      <span className="truncate">{r === "none" ? "Keiner" : labels.related[r]}</span>
+                      className={`flex min-w-0 flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] transition ${active ? "border-primary bg-primary/10 font-medium text-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="w-full truncate text-center leading-tight">{r === "none" ? "Keiner" : labels.related[r]}</span>
                     </button>
                   );
                 })}
