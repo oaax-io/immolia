@@ -384,7 +384,7 @@ function AppointmentsPage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
             <div>
               <ListView
-                appts={visibleAppts}
+                appts={visibleAppts.filter((a: any) => !a._busy)}
                 tasks={visibleTasks}
                 employees={employees}
                 onOpen={openAppt}

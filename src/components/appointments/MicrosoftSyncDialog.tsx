@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { getMsCalendarStatus, startMsConnect, listMsCalendars, saveMsCalendar, disconnectMs, syncMsNow } from "@/lib/ms-calendar.functions";
+import { getMsCalendarStatus, startMsConnect, listMsCalendars, saveMsCalendar, disconnectMs, syncMsNow, listMsConflicts, resolveMsConflict } from "@/lib/ms-calendar.functions";
 
 const RETURN_MSG: Record<string, { tone: "ok" | "err"; text: string }> = {
   canceled: { tone: "err", text: "Die Microsoft-Anmeldung wurde abgebrochen." },
@@ -104,6 +104,14 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
   const disc = useMutation({ mutationFn: () => discFn(), onSuccess: () => { toast.success("Verbindung getrennt."); setJustSaved(false); refresh(); }, onError: () => toast.error("Trennen fehlgeschlagen.") });
   const sync = useMutation({ mutationFn: () => syncFn(), onSuccess: (r) => { toast.success(r.queued ? "Synchronisierung angefordert." : "Eine Synchronisierung läuft bereits."); refresh(); }, onError: () => toast.error("Synchronisierung konnte nicht angefordert werden.") });
 
+  const conflictsFn = useServerFn(listMsConflicts);
+  const resolveFn = useServerFn(resolveMsConflict);
+  const conflicts = useQuery({ queryKey: ["ms-calendar-conflicts"], queryFn: () => conflictsFn(), enabled: st === "connected" || st === "syncing" });
+  const resolve = useMutation({
+    mutationFn: (v: { linkId: string; keep: "local" | "remote" }) => resolveFn({ data: v }),
+    onSuccess: () => { toast.success("Auflösung wird übernommen."); qc.invalidateQueries({ queryKey: ["ms-calendar-conflicts"] }); refresh(); },
+    onError: () => toast.error("Konflikt konnte nicht aufgelöst werden."),
+  });
   const ret = returnCode ? RETURN_MSG[returnCode] : undefined;
   const connected = st === "connected" || st === "syncing";
   const isConnecting = connect.isPending || connect.isSuccess;
@@ -175,6 +183,22 @@ function MicrosoftSyncDialog({ open, onOpenChange, returnCode }: { open: boolean
                 {st === "syncing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-2 w-2 rounded-full bg-success" />}{syncLabel}</span>} />
               <Row k="Letzte Synchronisierung" v={fmt(s.lastSyncedAt)} />
             </dl>
+            {(conflicts.data?.length ?? 0) > 0 && (
+              <div className="space-y-2 rounded-lg border border-destructive/30 p-3" role="region" aria-label="Synchronisationskonflikte">
+                <p className="text-sm font-medium">Termine wurden in Immolia und Outlook unterschiedlich geändert</p>
+                {conflicts.data!.map((c) => (
+                  <div key={c.id} className="space-y-1.5 border-t pt-2 text-xs first:border-t-0 first:pt-0">
+                    <p><span className="text-muted-foreground">Immolia:</span> {c.local!.title} · {fmt(c.local!.starts_at)}</p>
+                    {c.remote && <p><span className="text-muted-foreground">Outlook:</span> {c.remote.title} · {fmt(c.remote.starts_at)}</p>}
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => resolve.mutate({ linkId: c.id, keep: "local" })}>Immolia behalten</Button>
+                      <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => resolve.mutate({ linkId: c.id, keep: "remote" })}>Outlook übernehmen</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {s.lastErrorCode === "sync_failed" && <p className="text-xs text-muted-foreground">Vorübergehender Synchronisationsfehler – einzelne Änderungen werden erneut versucht.</p>}
             {s.lastErrorCode === "token_refresh_transient" && <p className="text-xs text-muted-foreground">Vorübergehender Synchronisationsfehler – Immolia versucht es automatisch erneut.</p>}
           </div>
         ) : st === "reconnect_required" || st === "error" ? (
