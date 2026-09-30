@@ -3342,6 +3342,8 @@ export type Database = {
       }
       financing_checklist_items: {
         Row: {
+          auto_detected: boolean
+          auto_reason: string | null
           created_at: string
           document_id: string | null
           dossier_id: string
@@ -3349,6 +3351,7 @@ export type Database = {
           is_present: boolean
           item_key: string
           label: string
+          manual_override: boolean
           note: string | null
           section: Database["public"]["Enums"]["financing_checklist_section"]
           sort_order: number
@@ -3356,6 +3359,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_detected?: boolean
+          auto_reason?: string | null
           created_at?: string
           document_id?: string | null
           dossier_id: string
@@ -3363,6 +3368,7 @@ export type Database = {
           is_present?: boolean
           item_key: string
           label: string
+          manual_override?: boolean
           note?: string | null
           section: Database["public"]["Enums"]["financing_checklist_section"]
           sort_order?: number
@@ -3370,6 +3376,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_detected?: boolean
+          auto_reason?: string | null
           created_at?: string
           document_id?: string | null
           dossier_id?: string
@@ -3377,6 +3385,7 @@ export type Database = {
           is_present?: boolean
           item_key?: string
           label?: string
+          manual_override?: boolean
           note?: string | null
           section?: Database["public"]["Enums"]["financing_checklist_section"]
           sort_order?: number
