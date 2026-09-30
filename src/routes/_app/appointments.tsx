@@ -1169,8 +1169,8 @@ function AppointmentForm({
 
       {/* Right: location & assignment */}
       <div className="space-y-4 rounded-lg bg-muted/40 p-4">
-        <Section title="Ort">
-          <div className="mb-3 flex items-center justify-between rounded-md border bg-background px-3 py-2">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-md border bg-background px-3 py-2">
             <div className="flex items-center gap-2">
               <Video className="h-4 w-4 text-primary" />
               <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
@@ -1193,39 +1193,45 @@ function AppointmentForm({
               />
             </div>
           )}
-        </Section>
+        </div>
 
         <Section title="Zuweisung">
           <div className="space-y-3">
             <div>
               <Label>{t("appointments.form.assignee")}</Label>
-              <Select value={form.assigned_to || "none"} onValueChange={(v) => setForm({ ...form, assigned_to: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.assignToMe")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.assignToMe")}</SelectItem>
-                  {employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <AssigneeMultiPicker
+                employees={employees}
+                primary={form.assigned_to}
+                extraIds={form.extra_assignee_ids ?? []}
+                onChange={(p, extra) => setForm({ ...form, assigned_to: p, extra_assignee_ids: extra })}
+              />
             </div>
             <div>
               <Label>{t("appointments.form.client")}</Label>
-              <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.clientPlaceholder")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.clientNone")}</SelectItem>
-                  {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchPicker
+                value={form.client_id}
+                onChange={(v) => setForm({ ...form, client_id: v })}
+                options={clients.map((c: any) => ({ id: c.id, label: c.full_name }))}
+                placeholder={t("appointments.form.clientPlaceholder")}
+                emptyLabel={t("appointments.form.clientNone")}
+              />
             </div>
             <div>
               <Label>{t("appointments.form.property")}</Label>
-              <Select value={form.property_id || "none"} onValueChange={(v) => setForm({ ...form, property_id: v === "none" ? "" : v })}>
-                <SelectTrigger><SelectValue placeholder={t("appointments.form.propertyPlaceholder")} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("appointments.form.propertyNone")}</SelectItem>
-                  {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchPicker
+                value={form.property_id}
+                onChange={(v) => setForm({ ...form, property_id: v })}
+                options={properties.map((p: any) => ({ id: p.id, label: p.title }))}
+                placeholder={t("appointments.form.propertyPlaceholder")}
+                emptyLabel={t("appointments.form.propertyNone")}
+              />
+            </div>
+            <div>
+              <Label>Externe Gäste (E-Mail)</Label>
+              <ExternalInvitees
+                emails={form.external_invitees ?? []}
+                onChange={(v) => setForm({ ...form, external_invitees: v })}
+              />
             </div>
           </div>
         </Section>
