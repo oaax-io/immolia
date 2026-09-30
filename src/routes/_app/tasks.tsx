@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List, X, User, Home, UserPlus, FileSignature, Bookmark, ChevronsUpDown, Check, Sparkles, Loader2, SlidersHorizontal, Link2, Repeat } from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List, X, User, Home, UserPlus, FileSignature, Bookmark, ChevronsUpDown, Check, Sparkles, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -309,7 +309,7 @@ function TasksPage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[92vh] w-full max-w-2xl overflow-hidden p-0">
+        <DialogContent className="max-h-[92vh] w-full max-w-3xl overflow-hidden p-0">
           <div className="flex max-h-[92vh] flex-col">
             <DialogHeader className="border-b px-6 pt-6 pb-4">
               <DialogTitle className="flex items-center gap-2 text-xl"><CheckSquare className="h-5 w-5 text-primary" />{t("tasks.new")}</DialogTitle>
@@ -609,7 +609,6 @@ function TaskForm({
   const labels = useTaskLabels();
   const improve = useServerFn(improveTaskText);
   const [aiBusy, setAiBusy] = useState(false);
-  const [tab, setTab] = useState("details");
   const relOptions = optionsFor(form.related_type);
   const relLabel = form.related_id ? relOptions.find((o) => o.id === form.related_id)?.label : undefined;
   const empOptions = employees.map((e: any) => ({ id: e.id, label: e.full_name || e.email }));
@@ -632,8 +631,9 @@ function TaskForm({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+      {/* Links: Wichtigste Angaben */}
+      <div className="space-y-3">
         <div>
           <Label className="mb-1.5 block">Titel *</Label>
           <Input
@@ -646,7 +646,7 @@ function TaskForm({
         </div>
         <div className="relative">
           <Textarea
-            rows={3}
+            rows={5}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Beschreibung, nächste Schritte, Notizen…"
@@ -658,116 +658,108 @@ function TaskForm({
             Mit KI optimieren
           </Button>
         </div>
-      </div>
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid h-9 w-full grid-cols-3 rounded-lg bg-primary/15 p-1">
-          <TabsTrigger value="details" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><SlidersHorizontal className="h-3.5 w-3.5" />Details</TabsTrigger>
-          <TabsTrigger value="link" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-            <Link2 className="h-3.5 w-3.5" />Zuweisung{(form.related_id || form.assigned_to) && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-          </TabsTrigger>
-          <TabsTrigger value="repeat" className="gap-1.5 rounded-md text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-            <Repeat className="h-3.5 w-3.5" />Wiederholung{form.recurrence && form.recurrence !== "none" && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="details" className="mt-3 space-y-3">
-          <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.priority")}</Label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {PRIORITIES.map((p) => (
-                <button key={p} type="button" onClick={() => setForm({ ...form, priority: p })}
-                  className={`rounded-md border px-2 py-1.5 text-xs font-medium transition ${form.priority === p
-                    ? (p === "urgent" || p === "high" ? "border-destructive bg-destructive text-destructive-foreground" : "border-primary bg-primary text-primary-foreground")
-                    : "bg-background hover:bg-muted"}`}>
-                  {labels.priority[p]}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.status")}</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.status[s]}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.dueDate")}</Label>
-              <Input type="date" className="h-9" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {[["Heute", 0], ["Morgen", 1], ["In 1 Woche", 7], ["In 1 Monat", 30]].map(([l, d]) => (
-              <button key={l as string} type="button" onClick={() => quickDue(d as number)}
-                className="rounded border border-dashed px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">{l}</button>
+        <div>
+          <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.priority")}</Label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {PRIORITIES.map((p) => (
+              <button key={p} type="button" onClick={() => setForm({ ...form, priority: p })}
+                className={`rounded-md border px-2 py-1.5 text-xs font-medium transition ${form.priority === p
+                  ? (p === "urgent" || p === "high" ? "border-destructive bg-destructive text-destructive-foreground" : "border-primary bg-primary text-primary-foreground")
+                  : "bg-background hover:bg-muted"}`}>
+                {labels.priority[p]}
+              </button>
             ))}
           </div>
-        </TabsContent>
-
-        <TabsContent value="link" className="mt-3 space-y-3">
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.assignee")}</Label>
-            <SearchPicker value={form.assigned_to} onChange={(v) => setForm({ ...form, assigned_to: v })} options={empOptions} placeholder="Mitarbeitende suchen…" emptyLabel={t("tasks.form.noAssignee")} />
+            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.status")}</Label>
+            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.status[s]}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
           <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-              {(["none", ...RELATED_TYPES] as string[]).map((r) => {
-                const Icon = RELATED_ICONS[r];
-                const active = form.related_type === r;
+            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.dueDate")}</Label>
+            <Input type="date" className="h-9" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {[["Heute", 0], ["Morgen", 1], ["In 1 Woche", 7], ["In 1 Monat", 30]].map(([l, d]) => (
+            <button key={l as string} type="button" onClick={() => quickDue(d as number)}
+              className="rounded border border-dashed px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rechts: Optionale Angaben */}
+      <div className="space-y-4 md:border-l md:pl-6">
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Zuweisung</p>
+          <div className="space-y-3">
+            <div>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.assignee")}</Label>
+              <SearchPicker value={form.assigned_to} onChange={(v) => setForm({ ...form, assigned_to: v })} options={empOptions} placeholder="Mitarbeitende suchen…" emptyLabel={t("tasks.form.noAssignee")} />
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                {(["none", ...RELATED_TYPES] as string[]).map((r) => {
+                  const Icon = RELATED_ICONS[r];
+                  const active = form.related_type === r;
+                  return (
+                    <button key={r} type="button" onClick={() => setForm({ ...form, related_type: r, related_id: "" })}
+                      className={`flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] transition ${active ? "border-primary bg-primary/10 font-medium text-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                      <Icon className="h-4 w-4" />
+                      <span className="truncate">{r === "none" ? "Keiner" : labels.related[r]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {form.related_type !== "none" && (
+              <div>
+                <Label className="mb-1.5 block text-xs text-muted-foreground">{labels.related[form.related_type]} auswählen</Label>
+                <SearchPicker value={form.related_id} onChange={(v) => setForm({ ...form, related_id: v })} options={relOptions} placeholder={`${labels.related[form.related_type]} suchen…`} emptyLabel="— keine Auswahl —" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Wiederholung</p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+              {RECURRENCES.map((r) => {
+                const active = (form.recurrence || "none") === r.value;
                 return (
-                  <button key={r} type="button" onClick={() => setForm({ ...form, related_type: r, related_id: "" })}
-                    className={`flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] transition ${active ? "border-primary bg-primary/10 font-medium text-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
-                    <Icon className="h-4 w-4" />
-                    <span className="truncate">{r === "none" ? "Keiner" : labels.related[r]}</span>
+                  <button key={r.value} type="button" onClick={() => setForm({ ...form, recurrence: r.value })}
+                    className={`rounded-md border px-2 py-1.5 text-xs transition ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
+                    {r.label}
                   </button>
                 );
               })}
             </div>
-          </div>
-          {form.related_type !== "none" && (
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">{labels.related[form.related_type]} auswählen</Label>
-              <SearchPicker value={form.related_id} onChange={(v) => setForm({ ...form, related_id: v })} options={relOptions} placeholder={`${labels.related[form.related_type]} suchen…`} emptyLabel="— keine Auswahl —" />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="repeat" className="mt-3 space-y-3">
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-            {RECURRENCES.map((r) => {
-              const active = (form.recurrence || "none") === r.value;
-              return (
-                <button key={r.value} type="button" onClick={() => setForm({ ...form, recurrence: r.value })}
-                  className={`rounded-md border px-2 py-1.5 text-xs transition ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
-                  {r.label}
-                </button>
-              );
-            })}
-          </div>
-          {form.recurrence && form.recurrence !== "none" && (
-            <div className="grid grid-cols-2 items-end gap-3">
+            {form.recurrence && form.recurrence !== "none" && (
               <div>
                 <Label className="mb-1.5 block text-xs text-muted-foreground">Wiederholen bis (optional)</Label>
                 <Input type="date" className="h-9" value={form.recurrence_until ?? ""} onChange={(e) => setForm({ ...form, recurrence_until: e.target.value })} />
+                <p className="mt-1.5 text-xs text-muted-foreground">Sobald die Aufgabe erledigt ist, wird automatisch die nächste mit neuer Frist erstellt.</p>
               </div>
-              <p className="text-xs text-muted-foreground">Sobald die Aufgabe erledigt ist, wird automatisch die nächste mit neuer Frist erstellt.</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            )}
+          </div>
+        </div>
 
-      <div className="border-t pt-3">
-        <Label className="mb-1.5 block text-xs text-muted-foreground">Betreff-Vorlage</Label>
-        <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
-          {SUBJECT_PRESETS.map((s) => (
-            <button key={s} type="button" onClick={() => setForm({ ...form, title: s })}
-              className={`rounded border px-2 py-0.5 text-[11px] transition ${form.title === s ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
-              {s}
-            </button>
-          ))}
+        <div>
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Betreff-Vorlage</p>
+          <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+            {SUBJECT_PRESETS.map((s) => (
+              <button key={s} type="button" onClick={() => setForm({ ...form, title: s })}
+                className={`rounded border px-2 py-0.5 text-[11px] transition ${form.title === s ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -820,7 +812,7 @@ function TaskDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
         {mode === "view" ? (
           <>
             <DialogHeader>
