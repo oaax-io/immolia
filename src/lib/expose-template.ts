@@ -580,6 +580,7 @@ function renderModern(d: ExposeData, t: ExposeTheme): string {
       ${facts.slice(0, kpiCols * 2).map((f) => `<div class="kpi"><div class="kpi-v">${esc(f.value)}</div><div class="kpi-l">${esc(f.label)}</div></div>`).join("")}
     </div>` : ""}
     ${d.description ? `<h2 class="sec">Über das Objekt</h2><p class="lead">${esc(d.description)}</p>` : ""}
+    ${(d.highlights ?? []).length ? `<h2 class="sec">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="sec">Ausstattung</h2><div class="chips">${(d.features ?? []).map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>` : ""}
     ${footer(d, t, 2, 0)}
   </div>`);
