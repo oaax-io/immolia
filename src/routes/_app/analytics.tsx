@@ -25,6 +25,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { StatusDonutGrid } from "@/components/dashboard/StatusDonutCards";
 
 export const Route = createFileRoute("/_app/analytics")({
   component: AnalyticsPage,
@@ -57,10 +58,10 @@ function useAnalyticsData() {
       const [properties, leads, clients, mandates, reservations, dossiers, tasks, profiles] = await Promise.all([
         supabase.from("properties").select("id,title,price,rent,living_area,plot_area,status,listing_type,property_type,assigned_to,owner_id,images,created_at,is_archived:is_unit").limit(5000),
         supabase.from("leads").select("id,status,assigned_to,owner_id,created_at,converted_client_id").limit(5000),
-        supabase.from("clients").select("id,assigned_to,owner_id,created_at,is_archived").limit(5000),
+        supabase.from("clients").select("id,status,assigned_to,owner_id,created_at,is_archived").limit(5000),
         supabase.from("mandates").select("id,property_id,client_id,commission_model,commission_value,status,generated_document_id,created_at").limit(5000),
         supabase.from("reservations").select("id,property_id,client_id,status,generated_document_id,created_at").limit(5000),
-        supabase.from("financing_dossiers").select("id,client_id,status,quick_check_status,created_at").limit(5000),
+        supabase.from("financing_dossiers").select("id,client_id,status,dossier_status,quick_check_status,created_at").limit(5000),
         supabase.from("tasks").select("id,status,due_date,assigned_to,created_at").limit(5000),
         supabase.from("profiles").select("id,full_name,email,is_active").limit(1000),
       ]);
@@ -360,6 +361,32 @@ function AnalyticsPage() {
     return { noPrice, noArea, noImages, noMandate, reservationsNoDoc, mandatesNoDoc, criticalFinancing, overdueTasks };
   }, [filtered]);
 
+  // ---- Status-Verteilungen (Ringdiagramme wie im Dashboard) ----
+  const statusCounts = useMemo(() => {
+    const count = (items: any[], key: (x: any) => string) => {
+      const out: Record<string, number> = {};
+      items.forEach((x) => { const k = key(x); out[k] = (out[k] ?? 0) + 1; });
+      return out;
+    };
+    const dossierList = filtered?.dossiers ?? [];
+    const qcCounts = { pass: 0, warn: 0, fail: 0, none: 0 };
+    const qcMap: Record<string, "pass" | "warn" | "fail" | "none"> = {
+      realistic: "pass", pass: "pass", critical: "warn", warn: "warn",
+      not_financeable: "fail", fail: "fail", incomplete: "none", none: "none",
+    };
+    dossierList.forEach((d: any) => {
+      const qc = qcMap[(d.quick_check_status ?? "none") as string] ?? "none";
+      qcCounts[qc] += 1;
+    });
+    return {
+      clientCounts: count(filtered?.clients ?? [], (c) => c.status ?? "entwurf"),
+      propCounts: count(filtered?.properties ?? [], (p) => p.status ?? "draft"),
+      leadCounts: count(filtered?.leads ?? [], (l) => l.status ?? "new"),
+      dossierCounts: count(dossierList, (d) => d.dossier_status ?? d.status ?? "draft"),
+      qcCounts,
+    };
+  }, [filtered]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -447,6 +474,19 @@ function AnalyticsPage() {
           <KpiCard icon={FileCheck2} label="Aktive Reservationen" value={kpis?.activeReservations ?? 0} loading={isLoading} />
           <KpiCard icon={Banknote} label="Finanzierungsdossiers" value={kpis?.financingDossiers ?? 0} loading={isLoading} />
         </div>
+      </section>
+
+      {/* Status-Verteilungen */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Status-Verteilungen</h2>
+        <StatusDonutGrid
+          clientCounts={statusCounts.clientCounts}
+          propCounts={statusCounts.propCounts}
+          leadCounts={statusCounts.leadCounts}
+          dossierCounts={statusCounts.dossierCounts}
+          qcCounts={statusCounts.qcCounts}
+          loading={isLoading}
+        />
       </section>
 
       {/* Portfolio */}
