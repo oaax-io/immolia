@@ -1347,6 +1347,127 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_group_members: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          group_id: string
+          last_read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          group_id: string
+          last_read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          group_id?: string
+          last_read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_group_messages: {
+        Row: {
+          attachments: Json
+          body: string
+          created_at: string
+          group_id: string
+          id: string
+          mentions: Json
+          sender_id: string
+        }
+        Insert: {
+          attachments?: Json
+          body?: string
+          created_at?: string
+          group_id: string
+          id?: string
+          mentions?: Json
+          sender_id?: string
+        }
+        Update: {
+          attachments?: Json
+          body?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          mentions?: Json
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_groups: {
+        Row: {
+          agency_id: string
+          created_at: string
+          created_by: string
+          id: string
+          kind: string
+          last_message_at: string | null
+          name: string
+          property_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          name: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          name?: string
+          property_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_groups_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_groups_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_pins: {
         Row: {
           created_at: string
@@ -6516,6 +6637,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _chat_valid_members: {
+        Args: { _agency: string; _ids: string[] }
+        Returns: string[]
+      }
       _commercial_credit_window: {
         Args: { _at?: string; _end: string; _start: string }
         Returns: {
@@ -6816,6 +6941,26 @@ export type Database = {
         Args: { _profile_agency: string; _profile_id: string }
         Returns: boolean
       }
+      chat_can_manage_group: { Args: { _group_id: string }; Returns: boolean }
+      chat_group_add_members: {
+        Args: { _group_id: string; _member_ids: string[] }
+        Returns: undefined
+      }
+      chat_group_create: {
+        Args: { _member_ids: string[]; _name: string }
+        Returns: string
+      }
+      chat_group_mark_read: { Args: { _group_id: string }; Returns: undefined }
+      chat_group_remove_member: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: undefined
+      }
+      chat_group_rename: {
+        Args: { _group_id: string; _name: string }
+        Returns: undefined
+      }
+      chat_is_group_member: { Args: { _group_id: string }; Returns: boolean }
+      chat_property_open: { Args: { _property_id: string }; Returns: string }
       client_calendar_items: {
         Args: { _client_id: string }
         Returns: {
