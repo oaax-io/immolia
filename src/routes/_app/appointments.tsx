@@ -841,10 +841,7 @@ function TimeSelect({ value, onChange, disabled }: { value: string; onChange: (t
   return (
     <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className="w-full font-normal">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <Clock className="h-4 w-4 shrink-0 text-primary" />
-          <SelectValue placeholder="Uhrzeit" />
-        </span>
+        <SelectValue placeholder="Uhrzeit" />
       </SelectTrigger>
       <SelectContent className="max-h-72">
         {TIME_OPTIONS.map((tm) => <SelectItem key={tm} value={tm}>{tm}</SelectItem>)}
