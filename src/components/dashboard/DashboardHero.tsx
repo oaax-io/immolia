@@ -237,7 +237,7 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
       if (cmd) {
         speak(cmd.say);
         toast.success(cmd.say, { description: `Verstanden: „${text.trim()}“` });
-        void navigate({ to: cmd.to });
+        void navigate({ to: cmd.to as never });
       } else {
         speak("Das habe ich leider nicht verstanden. Sag zum Beispiel: neuer Lead oder neue Immobilie.");
         toast("Befehl nicht erkannt", { description: `Verstanden: „${text.trim()}“` });
