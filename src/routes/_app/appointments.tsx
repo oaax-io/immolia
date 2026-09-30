@@ -28,6 +28,10 @@ import { holidayMap, holidaysForCanton, dateKey, type Holiday } from "@/lib/swis
 import { ApptHover, TaskHover, HolidayHover } from "@/components/appointments/CalendarHover";
 import { deleteToTrash } from "@/lib/trash";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 
 export const Route = createFileRoute("/_app/appointments")({ component: AppointmentsPage });
 
@@ -811,9 +815,24 @@ function AppointmentForm({
   const mode: string = form.mode ?? "time";
   const duration: number = form.duration ?? 60;
 
-  const setStart = (v: string) => {
-    if (!v) return setForm({ ...form, starts_at: "", ends_at: "" });
-    setForm({ ...form, starts_at: v, ends_at: duration > 0 ? addMin(v, duration) : (form.ends_at || addMin(v, 60)) });
+  const setStartDate = (date: string) => {
+    if (!date) return;
+    const time = form.starts_at?.slice(11, 16) || "09:00";
+    const s = `${date}T${time}`;
+    setForm({ ...form, starts_at: s, ends_at: duration > 0 ? addMin(s, duration) : (form.ends_at || addMin(s, 60)) });
+  };
+  const setStartTime = (time: string) => {
+    if (!time || !form.starts_at) return;
+    const s = `${form.starts_at.slice(0, 10)}T${time}`;
+    setForm({ ...form, starts_at: s, ends_at: duration > 0 ? addMin(s, duration) : (form.ends_at || addMin(s, 60)) });
+  };
+  const setEndDate = (date: string) => {
+    if (!date || !form.ends_at) return;
+    setForm({ ...form, ends_at: `${date}T${form.ends_at.slice(11, 16) || "10:00"}` });
+  };
+  const setEndTime = (time: string) => {
+    if (!time || !form.ends_at) return;
+    setForm({ ...form, ends_at: `${form.ends_at.slice(0, 10)}T${time}` });
   };
   const setDuration = (m: number) => {
     setForm({ ...form, duration: m, ends_at: form.starts_at && m > 0 ? addMin(form.starts_at, m) : form.ends_at });
