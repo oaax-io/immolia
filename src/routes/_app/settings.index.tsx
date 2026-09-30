@@ -2,7 +2,7 @@ import { useModuleAccess, moduleForPath } from "@/hooks/useModuleAccess";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
-  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid } from "lucide-react";
+  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid, CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -18,6 +18,7 @@ const TILES = [
   { to: "/settings/banks", icon: Banknote, labelKey: "settings.tabs.banks", desc: "Bankkonten und Zahlungsangaben" },
   { to: "/settings/categories", icon: Tags, labelKey: "settings.tabs.categories", desc: "Kategorien im Dokumentencenter" },
   { to: "/settings/video", icon: Video, labelKey: "", label: "Video", desc: "LiveKit für Video-Meetings" },
+  { to: "/settings/calendar", icon: CalendarDays, labelKey: "", label: "Microsoft-Kalender", desc: "Persönlichen Microsoft-365-Kalender verbinden" },
   { to: "/settings/esign", icon: FileSignature, labelKey: "settings.tabs.esign", desc: "PDF-Export und Signatur" },
   { to: "/settings/trash", icon: Trash2, labelKey: "", label: "Papierkorb", desc: "Gelöschtes ansehen und wiederherstellen" },
 ] as const;

@@ -1,0 +1,145 @@
+// Microsoft 365 Kalender – Server-Funktionen (persönlich, firmenbezogen).
+import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { GENERIC_APP_HOST } from "@/lib/workspaces";
+
+export type MsCalendarState =
+  | "not_connected" | "connecting" | "configuration_required" | "connected" | "syncing"
+  | "reconnect_required" | "admin_approval_required" | "error" | "disconnected";
+
+const PROJECT_HOST_SUFFIX = "4e795f2c-5909-4255-a6b0-36cc8098ec55.lovable.app";
+
+type Ctx = { supabase: any; userId: string };
+
+async function activeAgency(ctx: Ctx): Promise<string> {
+  const { data: agencyId } = await ctx.supabase.rpc("current_agency_id");
+  if (!agencyId) throw new Error("Keine aktive Firma ausgewählt.");
+  const { data: member } = await ctx.supabase.rpc("is_agency_member", { _agency_id: agencyId });
+  const { data: mod } = await ctx.supabase.rpc("agency_module_enabled_for", { _agency_id: agencyId, _module: "appointments" });
+  if (!member || !mod) throw new Error("Kein Zugriff auf den Kalender dieser Firma.");
+  return agencyId as string;
+}
+
+async function ownConnection(agencyId: string, userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("calendar_connections").select("*")
+    .eq("agency_id", agencyId).eq("user_id", userId).eq("provider", "microsoft").maybeSingle();
+  return { admin: supabaseAdmin, conn: data as any };
+}
+
+function mapState(conn: any, configured: boolean): MsCalendarState {
+  if (!configured) return "configuration_required";
+  if (!conn) return "not_connected";
+  switch (conn.status) {
+    case "connected": return conn.selected_calendar_id ? "connected" : "connecting";
+    case "syncing": return "syncing";
+    case "pending": case "connecting": return "connecting";
+    case "needs_reauth": case "reconnect_required": case "membership_revoked": return "reconnect_required";
+    case "admin_approval_required": return "admin_approval_required";
+    case "disconnected": return "disconnected";
+    default: return "error";
+  }
+}
+
+export const getMsCalendarStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { msConfig } = await import("./ms-calendar.server");
+    const agencyId = await activeAgency(context as Ctx);
+    const { conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    const state = mapState(conn, !!msConfig());
+    return {
+      state,
+      account: conn?.account_display ?? null,
+      calendarId: conn?.selected_calendar_id ?? null,
+      calendarName: conn?.selected_calendar_name ?? null,
+      lastSyncedAt: conn?.last_synced_at ?? null,
+      lastErrorCode: conn?.last_error_code ?? null,
+    };
+  });
+
+async function allowedReturnHost(agencyId: string): Promise<string> {
+  const host = (getRequestHeader("x-forwarded-host") || getRequestHeader("host") || "").split(",")[0].trim().toLowerCase();
+  if (host === GENERIC_APP_HOST || host.endsWith(PROJECT_HOST_SUFFIX)) return host;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("tenant_domains").select("domain, verification_status, activated_at")
+    .eq("agency_id", agencyId).eq("domain", host).maybeSingle();
+  if (data && (data.activated_at || data.verification_status === "verified")) return host;
+  return GENERIC_APP_HOST;
+}
+
+export const startMsConnect = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ reconnect: z.boolean().optional() }).parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    const s = await import("./ms-calendar.server");
+    const cfg = s.msConfig();
+    if (!cfg) return { state: "configuration_required" as const, url: null };
+    const ctx = context as Ctx;
+    const agencyId = await activeAgency(ctx);
+    const returnHost = await allowedReturnHost(agencyId);
+    const state = s.randomToken(32);
+    const verifier = s.randomToken(48);
+    const nonce = s.randomToken(24);
+    const challenge = s.b64url((await import("node:crypto")).createHash("sha256").update(verifier).digest());
+    const { admin, conn } = await ownConnection(agencyId, ctx.userId);
+    await admin.from("calendar_oauth_attempts").delete().lt("expires_at", new Date().toISOString());
+    const { error } = await admin.from("calendar_oauth_attempts").insert({
+      state_hash: s.sha256(state), agency_id: agencyId, user_id: ctx.userId, provider: "microsoft",
+      code_verifier_ct: s.encrypt(verifier, cfg.encKey), nonce_hash: s.sha256(nonce),
+      return_host: returnHost, return_path: "/settings/calendar",
+    } as never);
+    if (error) throw new Error("Verbindung konnte nicht gestartet werden.");
+    if (conn && conn.status !== "connected") {
+      await admin.from("calendar_connections").update({ status: "connecting" } as never).eq("id", conn.id);
+    }
+    return { state: "connecting" as const, url: s.buildAuthorizeUrl(cfg, state, challenge, nonce, data.reconnect ? "select_account" : undefined) };
+  });
+
+export const listMsCalendars = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const s = await import("./ms-calendar.server");
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn) throw new Error("Nicht verbunden.");
+    const token = await s.getAccessToken(admin, conn.id);
+    const r = await s.graphGet<{ value: any[] }>(token, "/me/calendars?$select=id,name,canEdit,isDefaultCalendar,owner&$top=100");
+    return r.value.filter((c) => c.canEdit).map((c) => ({ id: String(c.id), name: String(c.name), isDefault: !!c.isDefaultCalendar }));
+  });
+
+export const saveMsCalendar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ calendarId: z.string().min(1).max(512) }).parse(d))
+  .handler(async ({ context, data }) => {
+    const s = await import("./ms-calendar.server");
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn) throw new Error("Nicht verbunden.");
+    const token = await s.getAccessToken(admin, conn.id);
+    const cal = await s.graphGet<any>(token, `/me/calendars/${encodeURIComponent(data.calendarId)}?$select=id,name,canEdit`);
+    if (!cal?.canEdit) throw new Error("Dieser Kalender ist nicht beschreibbar.");
+    const { error } = await admin.from("calendar_connections").update({
+      selected_calendar_id: cal.id, selected_calendar_name: cal.name, status: "connected",
+      sync_enabled: true, delta_link: null, last_error_code: null, updated_at: new Date().toISOString(),
+    } as never).eq("id", conn.id);
+    if (error) throw new Error("Auswahl konnte nicht gespeichert werden.");
+    return { ok: true };
+  });
+
+export const disconnectMs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const agencyId = await activeAgency(context as Ctx);
+    const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
+    if (!conn) return { ok: true };
+    await admin.from("calendar_connection_tokens").delete().eq("connection_id", conn.id);
+    await admin.from("calendar_sync_jobs").update({ status: "canceled", finished_at: new Date().toISOString() } as never)
+      .eq("connection_id", conn.id).in("status", ["queued", "running"]);
+    await admin.from("calendar_connections").update({
+      status: "disconnected", sync_enabled: false, delta_link: null, subscription_id: null, updated_at: new Date().toISOString(),
+    } as never).eq("id", conn.id);
+    return { ok: true };
+  });

@@ -69,6 +69,7 @@ import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.m
 import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
 import { Route as AppSettingsCategoriesRouteImport } from './routes/_app/settings.categories'
+import { Route as AppSettingsCalendarRouteImport } from './routes/_app/settings.calendar'
 import { Route as AppSettingsBrandkitRouteImport } from './routes/_app/settings.brandkit'
 import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings.billing'
 import { Route as AppSettingsBanksRouteImport } from './routes/_app/settings.banks'
@@ -78,6 +79,7 @@ import { Route as AppLeadsIdRouteImport } from './routes/_app/leads.$id'
 import { Route as AppFinancingIdRouteImport } from './routes/_app/financing.$id'
 import { Route as AppClientsIdRouteImport } from './routes/_app/clients.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicMsCalendarCallbackRouteImport } from './routes/api/public/ms-calendar/callback'
 import { Route as ApiPublicBankPaketTokenRouteImport } from './routes/api/public/bank-paket.$token'
 import { Route as AppPropertiesIdExposeRouteImport } from './routes/_app/properties.$id.expose'
 import { Route as AppFinancingIdQuickCheckResultRouteImport } from './routes/_app/financing.$id.quick-check-result'
@@ -382,6 +384,11 @@ const AppSettingsCategoriesRoute = AppSettingsCategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsCalendarRoute = AppSettingsCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsBrandkitRoute = AppSettingsBrandkitRouteImport.update({
   id: '/brandkit',
   path: '/brandkit',
@@ -426,6 +433,12 @@ const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
     path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicMsCalendarCallbackRoute =
+  ApiPublicMsCalendarCallbackRouteImport.update({
+    id: '/api/public/ms-calendar/callback',
+    path: '/api/public/ms-calendar/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicBankPaketTokenRoute = ApiPublicBankPaketTokenRouteImport.update({
@@ -496,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/settings/banks': typeof AppSettingsBanksRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/settings/calendar': typeof AppSettingsCalendarRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/esign': typeof AppSettingsEsignRoute
@@ -516,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -565,6 +580,7 @@ export interface FileRoutesByTo {
   '/settings/banks': typeof AppSettingsBanksRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/settings/calendar': typeof AppSettingsCalendarRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/esign': typeof AppSettingsEsignRoute
@@ -585,6 +601,7 @@ export interface FileRoutesByTo {
   '/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -640,6 +657,7 @@ export interface FileRoutesById {
   '/_app/settings/banks': typeof AppSettingsBanksRoute
   '/_app/settings/billing': typeof AppSettingsBillingRoute
   '/_app/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/_app/settings/calendar': typeof AppSettingsCalendarRoute
   '/_app/settings/categories': typeof AppSettingsCategoriesRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/esign': typeof AppSettingsEsignRoute
@@ -660,6 +678,7 @@ export interface FileRoutesById {
   '/_app/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/_app/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -715,6 +734,7 @@ export interface FileRouteTypes {
     | '/settings/banks'
     | '/settings/billing'
     | '/settings/brandkit'
+    | '/settings/calendar'
     | '/settings/categories'
     | '/settings/company'
     | '/settings/esign'
@@ -735,6 +755,7 @@ export interface FileRouteTypes {
     | '/financing/$id/quick-check-result'
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -784,6 +805,7 @@ export interface FileRouteTypes {
     | '/settings/banks'
     | '/settings/billing'
     | '/settings/brandkit'
+    | '/settings/calendar'
     | '/settings/categories'
     | '/settings/company'
     | '/settings/esign'
@@ -804,6 +826,7 @@ export interface FileRouteTypes {
     | '/financing/$id/quick-check-result'
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -858,6 +881,7 @@ export interface FileRouteTypes {
     | '/_app/settings/banks'
     | '/_app/settings/billing'
     | '/_app/settings/brandkit'
+    | '/_app/settings/calendar'
     | '/_app/settings/categories'
     | '/_app/settings/company'
     | '/_app/settings/esign'
@@ -878,6 +902,7 @@ export interface FileRouteTypes {
     | '/_app/financing/$id/quick-check-result'
     | '/_app/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -896,6 +921,7 @@ export interface RootRouteChildren {
   InviteIndexRoute: typeof InviteIndexRoute
   ApiPublicPortalWebhookRoute: typeof ApiPublicPortalWebhookRoute
   ApiPublicBankPaketTokenRoute: typeof ApiPublicBankPaketTokenRoute
+  ApiPublicMsCalendarCallbackRoute: typeof ApiPublicMsCalendarCallbackRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -1321,6 +1347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsCategoriesRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/calendar': {
+      id: '/_app/settings/calendar'
+      path: '/calendar'
+      fullPath: '/settings/calendar'
+      preLoaderRoute: typeof AppSettingsCalendarRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/brandkit': {
       id: '/_app/settings/brandkit'
       path: '/brandkit'
@@ -1384,6 +1417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ms-calendar/callback': {
+      id: '/api/public/ms-calendar/callback'
+      path: '/api/public/ms-calendar/callback'
+      fullPath: '/api/public/ms-calendar/callback'
+      preLoaderRoute: typeof ApiPublicMsCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bank-paket/$token': {
       id: '/api/public/bank-paket/$token'
       path: '/api/public/bank-paket/$token'
@@ -1440,6 +1480,7 @@ interface AppSettingsRouteChildren {
   AppSettingsBanksRoute: typeof AppSettingsBanksRoute
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
   AppSettingsBrandkitRoute: typeof AppSettingsBrandkitRoute
+  AppSettingsCalendarRoute: typeof AppSettingsCalendarRoute
   AppSettingsCategoriesRoute: typeof AppSettingsCategoriesRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsEsignRoute: typeof AppSettingsEsignRoute
@@ -1456,6 +1497,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsBanksRoute: AppSettingsBanksRoute,
   AppSettingsBillingRoute: AppSettingsBillingRoute,
   AppSettingsBrandkitRoute: AppSettingsBrandkitRoute,
+  AppSettingsCalendarRoute: AppSettingsCalendarRoute,
   AppSettingsCategoriesRoute: AppSettingsCategoriesRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsEsignRoute: AppSettingsEsignRoute,
@@ -1605,6 +1647,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteIndexRoute: InviteIndexRoute,
   ApiPublicPortalWebhookRoute: ApiPublicPortalWebhookRoute,
   ApiPublicBankPaketTokenRoute: ApiPublicBankPaketTokenRoute,
+  ApiPublicMsCalendarCallbackRoute: ApiPublicMsCalendarCallbackRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
