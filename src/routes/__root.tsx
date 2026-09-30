@@ -108,7 +108,7 @@ function RootComponent() {
         <TenantBrandingProvider>
           <ConfirmProvider>
             <Outlet />
-            <Toaster richColors position="bottom-right" />
+            <Toaster richColors position="bottom-right" offset={{ bottom: "var(--chat-toast-offset, 24px)", right: "24px" }} mobileOffset={{ bottom: "var(--chat-toast-offset, 16px)" }} />
           </ConfirmProvider>
         </TenantBrandingProvider>
       </AuthProvider>
