@@ -25,6 +25,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
+import { StatusDonutGrid } from "@/components/dashboard/StatusDonutCards";
 
 export const Route = createFileRoute("/_app/analytics")({
   component: AnalyticsPage,
@@ -57,10 +58,10 @@ function useAnalyticsData() {
       const [properties, leads, clients, mandates, reservations, dossiers, tasks, profiles] = await Promise.all([
         supabase.from("properties").select("id,title,price,rent,living_area,plot_area,status,listing_type,property_type,assigned_to,owner_id,images,created_at,is_archived:is_unit").limit(5000),
         supabase.from("leads").select("id,status,assigned_to,owner_id,created_at,converted_client_id").limit(5000),
-        supabase.from("clients").select("id,assigned_to,owner_id,created_at,is_archived").limit(5000),
+        supabase.from("clients").select("id,status,assigned_to,owner_id,created_at,is_archived").limit(5000),
         supabase.from("mandates").select("id,property_id,client_id,commission_model,commission_value,status,generated_document_id,created_at").limit(5000),
         supabase.from("reservations").select("id,property_id,client_id,status,generated_document_id,created_at").limit(5000),
-        supabase.from("financing_dossiers").select("id,client_id,status,quick_check_status,created_at").limit(5000),
+        supabase.from("financing_dossiers").select("id,client_id,status,dossier_status,quick_check_status,created_at").limit(5000),
         supabase.from("tasks").select("id,status,due_date,assigned_to,created_at").limit(5000),
         supabase.from("profiles").select("id,full_name,email,is_active").limit(1000),
       ]);
