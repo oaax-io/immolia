@@ -86,7 +86,8 @@ export async function streamZipToStorage(opts: {
       return;
     }
     outBytes += chunk.byteLength;
-    pending = pending.then(() => writer.write(chunk));
+    // Leere Blöcke nie schreiben: manche Laufzeiten werten sie als Ende des Upload-Streams.
+    if (chunk.byteLength > 0) pending = pending.then(() => writer.write(chunk));
     if (final) pending = pending.then(() => writer.close());
   });
 
@@ -104,7 +105,7 @@ export async function streamZipToStorage(opts: {
     let total = 0;
     for (const e of opts.entries) {
       const file = new ZipPassThrough(e.path);
-      zip.add(file); if (process.env.DBG) console.log("add", e.path);
+      zip.add(file);
       if ("bytes" in e) {
         file.push(e.bytes, true);
         await drain();
@@ -137,7 +138,7 @@ export async function streamZipToStorage(opts: {
       file.push(new Uint8Array(0), true);
       await drain();
     }
-    if (process.env.DBG) console.log("end"); zip.end();
+    zip.end();
     await drain();
   } catch (err) {
     await writer.abort(err).catch(() => {});
