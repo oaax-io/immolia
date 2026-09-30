@@ -319,6 +319,9 @@ export function AttachmentView({ att }: { att: ChatAttachment }) {
       </>
     );
   }
+  if (isAudio(att)) {
+    return <VoiceNotePlayer url={url} name={att.name} />;
+  }
   return (
     <a
       href={url ?? "#"}
