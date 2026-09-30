@@ -807,6 +807,52 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   );
 }
 
+const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
+  const h = Math.floor(i / 4), m = (i % 4) * 15;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+});
+
+function DatePickerField({ value, onChange, disabled }: { value: string; onChange: (date: string) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const selected = value ? new Date(`${value}T12:00`) : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild disabled={disabled}>
+        <Button variant="outline" className={`w-full justify-start font-normal ${!value ? "text-muted-foreground" : ""}`}>
+          <CalIcon className="h-4 w-4 shrink-0 text-primary" />
+          <span className="truncate">{value ? format(new Date(`${value}T12:00`), "EEE, dd. MMM yyyy", { locale: de }) : "Datum wählen"}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selected}
+          defaultMonth={selected || new Date()}
+          onSelect={(d) => { if (d) { onChange(format(d, "yyyy-MM-dd")); setOpen(false); } }}
+          locale={de}
+          className="p-3 pointer-events-auto"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TimeSelect({ value, onChange, disabled }: { value: string; onChange: (time: string) => void; disabled?: boolean }) {
+  return (
+    <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className="w-full font-normal">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Clock className="h-4 w-4 shrink-0 text-primary" />
+          <SelectValue placeholder="Uhrzeit" />
+        </span>
+      </SelectTrigger>
+      <SelectContent className="max-h-72">
+        {TIME_OPTIONS.map((tm) => <SelectItem key={tm} value={tm}>{tm}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
 function AppointmentForm({
   form, setForm, clients, properties, employees, appts = [], currentUserId, selfId,
 }: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
@@ -905,9 +951,21 @@ function AppointmentForm({
           </div>
           {mode === "time" ? (
             <div className="space-y-3">
-              <div>
-                <Label>{t("appointments.form.start")} *</Label>
-                <Input type="datetime-local" value={form.starts_at} onChange={(e) => setStart(e.target.value)} />
+              <div className="grid grid-cols-5 gap-2">
+                <div className="col-span-3">
+                  <Label>{t("appointments.form.start")} *</Label>
+                  <DatePickerField
+                    value={form.starts_at ? form.starts_at.slice(0, 10) : ""}
+                    onChange={setStartDate}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label>Uhrzeit</Label>
+                  <TimeSelect
+                    value={form.starts_at?.slice(11, 16) || ""}
+                    onChange={setStartTime}
+                  />
+                </div>
               </div>
               <div>
                 <Label>Dauer</Label>
@@ -918,15 +976,32 @@ function AppointmentForm({
               </div>
               <div>
                 <Label>{t("appointments.form.end")}</Label>
-                <Input type="datetime-local" value={form.ends_at} disabled={duration !== -1}
-                  onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
+                <div className="grid grid-cols-5 gap-2">
+                  <div className="col-span-3">
+                    <DatePickerField
+                      value={form.ends_at ? form.ends_at.slice(0, 10) : ""}
+                      onChange={setEndDate}
+                      disabled={duration !== -1}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <TimeSelect
+                      value={form.ends_at?.slice(11, 16) || ""}
+                      onChange={setEndTime}
+                      disabled={duration !== -1}
+                    />
+                  </div>
+                </div>
                 {endInvalid && <p className="mt-1 text-xs text-destructive">Ende muss nach dem Beginn liegen.</p>}
               </div>
             </div>
           ) : (
             <div>
               <Label>{mode === "1d" ? "Datum" : "Erster Tag"} *</Label>
-              <Input type="date" value={form.starts_at ? form.starts_at.slice(0, 10) : ""} onChange={(e) => setDay(e.target.value)} />
+              <DatePickerField
+                value={form.starts_at ? form.starts_at.slice(0, 10) : ""}
+                onChange={(d) => d && setDay(d)}
+              />
               {form.starts_at && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   Ganztägig {mode === "2d" ? `bis ${new Date(new Date(form.ends_at).getTime() - 1).toLocaleDateString("de-CH")}` : ""}
