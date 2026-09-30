@@ -653,28 +653,37 @@ export type Database = {
       }
       calendar_connection_tokens: {
         Row: {
+          access_token_ct: string | null
           access_token_enc: string | null
           access_token_expires_at: string | null
           connection_id: string
           key_version: number
+          refresh_lock_until: string | null
+          refresh_token_ct: string | null
           refresh_token_enc: string | null
           scopes: string[] | null
           updated_at: string
         }
         Insert: {
+          access_token_ct?: string | null
           access_token_enc?: string | null
           access_token_expires_at?: string | null
           connection_id: string
           key_version?: number
+          refresh_lock_until?: string | null
+          refresh_token_ct?: string | null
           refresh_token_enc?: string | null
           scopes?: string[] | null
           updated_at?: string
         }
         Update: {
+          access_token_ct?: string | null
           access_token_enc?: string | null
           access_token_expires_at?: string | null
           connection_id?: string
           key_version?: number
+          refresh_lock_until?: string | null
+          refresh_token_ct?: string | null
           refresh_token_enc?: string | null
           scopes?: string[] | null
           updated_at?: string
@@ -842,36 +851,45 @@ export type Database = {
       calendar_oauth_attempts: {
         Row: {
           agency_id: string
+          code_verifier_ct: string | null
           code_verifier_enc: string | null
           created_at: string
           expires_at: string
           id: string
+          nonce_hash: string | null
           provider: string
           return_host: string | null
+          return_path: string | null
           state_hash: string
           used_at: string | null
           user_id: string
         }
         Insert: {
           agency_id: string
+          code_verifier_ct?: string | null
           code_verifier_enc?: string | null
           created_at?: string
           expires_at?: string
           id?: string
+          nonce_hash?: string | null
           provider?: string
           return_host?: string | null
+          return_path?: string | null
           state_hash: string
           used_at?: string | null
           user_id: string
         }
         Update: {
           agency_id?: string
+          code_verifier_ct?: string | null
           code_verifier_enc?: string | null
           created_at?: string
           expires_at?: string
           id?: string
+          nonce_hash?: string | null
           provider?: string
           return_host?: string | null
+          return_path?: string | null
           state_hash?: string
           used_at?: string | null
           user_id?: string
@@ -6285,6 +6303,38 @@ export type Database = {
           size_bytes: number
           status: string
         }[]
+      }
+      calendar_membership_active: {
+        Args: { _agency_id: string; _user_id: string }
+        Returns: boolean
+      }
+      calendar_oauth_consume: {
+        Args: { _state_hash: string }
+        Returns: {
+          agency_id: string
+          code_verifier_ct: string | null
+          code_verifier_enc: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          nonce_hash: string | null
+          provider: string
+          return_host: string | null
+          return_path: string | null
+          state_hash: string
+          used_at: string | null
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "calendar_oauth_attempts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      calendar_token_try_lock: {
+        Args: { _connection_id: string; _seconds?: number }
+        Returns: boolean
       }
       can_access_client: { Args: { _client_id: string }; Returns: boolean }
       can_access_property: { Args: { _property_id: string }; Returns: boolean }
