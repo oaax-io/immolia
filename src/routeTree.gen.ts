@@ -21,6 +21,7 @@ import { Route as SelbstauskunftTokenRouteImport } from './routes/selbstauskunft
 import { Route as PlatformUsersRouteImport } from './routes/platform.users'
 import { Route as PlatformSettingsRouteImport } from './routes/platform.settings'
 import { Route as PlatformSecurityRouteImport } from './routes/platform.security'
+import { Route as PlatformPartnersRouteImport } from './routes/platform.partners'
 import { Route as PlatformModulesRouteImport } from './routes/platform.modules'
 import { Route as PlatformFeedbackRouteImport } from './routes/platform.feedback'
 import { Route as PlatformDomainsRouteImport } from './routes/platform.domains'
@@ -143,6 +144,11 @@ const PlatformSettingsRoute = PlatformSettingsRouteImport.update({
 const PlatformSecurityRoute = PlatformSecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformPartnersRoute = PlatformPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => PlatformRoute,
 } as any)
 const PlatformModulesRoute = PlatformModulesRouteImport.update({
@@ -509,6 +515,7 @@ export interface FileRoutesByFullPath {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -582,6 +589,7 @@ export interface FileRoutesByTo {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -661,6 +669,7 @@ export interface FileRoutesById {
   '/platform/domains': typeof PlatformDomainsRoute
   '/platform/feedback': typeof PlatformFeedbackRoute
   '/platform/modules': typeof PlatformModulesRoute
+  '/platform/partners': typeof PlatformPartnersRoute
   '/platform/security': typeof PlatformSecurityRoute
   '/platform/settings': typeof PlatformSettingsRoute
   '/platform/users': typeof PlatformUsersRoute
@@ -740,6 +749,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -813,6 +823,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -891,6 +902,7 @@ export interface FileRouteTypes {
     | '/platform/domains'
     | '/platform/feedback'
     | '/platform/modules'
+    | '/platform/partners'
     | '/platform/security'
     | '/platform/settings'
     | '/platform/users'
@@ -1037,6 +1049,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/platform/security'
       preLoaderRoute: typeof PlatformSecurityRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/partners': {
+      id: '/platform/partners'
+      path: '/partners'
+      fullPath: '/platform/partners'
+      preLoaderRoute: typeof PlatformPartnersRouteImport
       parentRoute: typeof PlatformRoute
     }
     '/platform/modules': {
@@ -1648,6 +1667,7 @@ interface PlatformRouteChildren {
   PlatformDomainsRoute: typeof PlatformDomainsRoute
   PlatformFeedbackRoute: typeof PlatformFeedbackRoute
   PlatformModulesRoute: typeof PlatformModulesRoute
+  PlatformPartnersRoute: typeof PlatformPartnersRoute
   PlatformSecurityRoute: typeof PlatformSecurityRoute
   PlatformSettingsRoute: typeof PlatformSettingsRoute
   PlatformUsersRoute: typeof PlatformUsersRoute
@@ -1662,6 +1682,7 @@ const PlatformRouteChildren: PlatformRouteChildren = {
   PlatformDomainsRoute: PlatformDomainsRoute,
   PlatformFeedbackRoute: PlatformFeedbackRoute,
   PlatformModulesRoute: PlatformModulesRoute,
+  PlatformPartnersRoute: PlatformPartnersRoute,
   PlatformSecurityRoute: PlatformSecurityRoute,
   PlatformSettingsRoute: PlatformSettingsRoute,
   PlatformUsersRoute: PlatformUsersRoute,
