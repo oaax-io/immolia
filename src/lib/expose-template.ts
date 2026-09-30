@@ -622,14 +622,21 @@ function renderModern(d: ExposeData, t: ExposeTheme): string {
       <h2 class="sec">Ihr Ansprechpartner</h2>
       <div class="m-contact">
         <div class="m-contact-l">
-          ${d.contact_name ? `<div class="m-contact-name">${esc(d.contact_name)}</div>` : ""}
-          ${d.agency_name ? `<div class="m-contact-ag">${esc(d.agency_name)}</div>` : ""}
+          <div class="c-person">
+            ${portrait(d)}
+            <div>
+              ${d.contact_name ? `<div class="m-contact-name">${esc(d.contact_name)}</div>` : ""}
+              ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+              ${d.agency_name ? `<div class="m-contact-ag">${esc(d.agency_name)}</div>` : ""}
+            </div>
+          </div>
         </div>
         <div class="m-contact-r">
           ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
           ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }
