@@ -104,7 +104,7 @@ export async function streamZipToStorage(opts: {
     let total = 0;
     for (const e of opts.entries) {
       const file = new ZipPassThrough(e.path);
-      zip.add(file);
+      zip.add(file); if (process.env.DBG) console.log("add", e.path);
       if ("bytes" in e) {
         file.push(e.bytes, true);
         await drain();
@@ -137,7 +137,7 @@ export async function streamZipToStorage(opts: {
       file.push(new Uint8Array(0), true);
       await drain();
     }
-    zip.end();
+    if (process.env.DBG) console.log("end"); zip.end();
     await drain();
   } catch (err) {
     await writer.abort(err).catch(() => {});
