@@ -253,12 +253,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   });
 
   const contact = useMemo(() => {
-    if (!withContact) return { name: null, email: null, phone: null };
+    if (!withContact) return { name: null, email: null, phone: null, role: null, photo: null };
     if (contactMode === "custom") {
       return {
-        name: [customContact.name, customContact.role].filter(Boolean).join(" · ") || null,
+        name: customContact.name || null,
         email: customContact.email || null,
         phone: customContact.phone || null,
+        role: customContact.role || null,
+        photo: null,
       };
     }
     const emp = (employees as any[]).find((e) => e.id === contactUserId) ?? (profile as any);
@@ -266,8 +268,10 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       name: emp?.full_name ?? null,
       email: emp?.email ?? null,
       phone: emp?.phone ?? null,
+      role: employeeRole || null,
+      photo: emp?.avatar_url ?? null,
     };
-  }, [withContact, contactMode, customContact, employees, contactUserId, profile]);
+  }, [withContact, contactMode, customContact, employees, contactUserId, profile, employeeRole]);
 
   const imagePool = useMemo(() => {
     const fromMedia = (media as any[])
