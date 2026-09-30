@@ -154,7 +154,7 @@ export function PropertyImageSorter({ items, getUrl, title, onReorder, onOpen, o
       <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2,0,0,1)" }}>
         {activeId ? (
           <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border-2 border-primary shadow-2xl">
-            <img src={getUrl(activeId)} alt="" className="h-full w-full object-cover" draggable={false} />
+            <PropertyPhoto sources={[getUrl(activeId)]} alt={title} />
           </div>
         ) : null}
       </DragOverlay>

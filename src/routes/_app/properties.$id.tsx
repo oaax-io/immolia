@@ -1704,7 +1704,7 @@ function UploadModal({
                       className={`group relative aspect-square overflow-hidden rounded-lg border-2 transition ${alreadyAdded ? "cursor-not-allowed opacity-40" : isSelected ? "border-primary ring-2 ring-primary/40" : "border-transparent hover:border-primary/50"}`}
                       title={m.file_name ?? ""}
                     >
-                      <img src={getMediaPublicUrl(m.file_url)} alt={m.file_name ?? ""} className="h-full w-full object-cover" />
+                      <PropertyPhoto sources={[m.file_url]} alt={m.file_name ?? "Immobilie"} />
                       {alreadyAdded && (
                         <div className="absolute inset-0 flex items-center justify-center bg-background/70 text-[10px] font-medium">Bereits hinzugefügt</div>
                       )}
