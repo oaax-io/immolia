@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,7 +104,8 @@ function TasksPage() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"view" | "edit">("view");
   const [waitingFor, setWaitingFor] = useState<{ id: string; title: string } | null>(null);
   const [waitingComment, setWaitingComment] = useState("");
   const [search, setSearch] = useState("");
@@ -202,7 +202,7 @@ function TasksPage() {
     onSuccess: () => {
       toast.success(t("tasks.toasts.deleted"));
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      setEditId(null);
+      setDetailId(null);
     },
     onError: (e: Error) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["tasks"] }); },
   });
@@ -260,7 +260,7 @@ function TasksPage() {
     return true;
   }), [tasks, search, fStatus, fPriority, fAssignee, fDue, now, user?.id]);
 
-  const editing = tasks.find((tk: any) => tk.id === editId);
+  const detailTask = tasks.find((tk: any) => tk.id === detailId);
 
   return (
     <>
@@ -339,95 +339,48 @@ function TasksPage() {
           action={tasks.length === 0 ? <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.createButton")}</Button> : undefined}
         />
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((tk: any) => {
             const overdue = tk.due_date && new Date(tk.due_date).getTime() < now && tk.status !== "done" && tk.status !== "cancelled";
             const Icon = tk.status === "done" ? CheckCircle2 : tk.status === "in_progress" ? Clock : tk.priority === "urgent" ? AlertCircle : Circle;
             const assignee = employees.find((e: any) => e.id === tk.assigned_to);
             const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
-            const relatedLabel = tk.related_id ? (optionsFor(tk.related_type).find(o => o.id === tk.related_id)?.label) : null;
             const sStyle = STATUS_STYLES[tk.status] ?? STATUS_STYLES.open;
             return (
               <Card
                 key={tk.id}
-                className={`cursor-pointer border border-border/80 border-l-4 bg-muted/40 shadow-sm transition hover:-translate-y-px hover:border-border hover:bg-muted/60 hover:shadow-md ${overdue ? "border-l-destructive bg-destructive/5" : sStyle.border}`}
-                onClick={() => setEditId(tk.id)}
+                title={tk.title}
+                className={`cursor-pointer border border-border/80 border-l-4 bg-muted/40 shadow-sm transition hover:bg-muted/60 ${overdue ? "border-l-destructive bg-destructive/5" : sStyle.border}`}
+                onClick={() => { setDetailId(tk.id); setMode("view"); }}
               >
-                <CardContent className="flex items-start gap-3 p-4">
+                <CardContent className="flex items-center gap-2 px-3 py-2.5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); update.mutate({ id: tk.id, patch: { status: tk.status === "done" ? "open" : "done" } }); }}
-                    className="mt-0.5"
+                    className="shrink-0"
                   >
-                    <Icon className={`h-5 w-5 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
+                    <Icon className={`h-4 w-4 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
                   </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className={`font-medium ${tk.status === "done" ? "text-muted-foreground line-through" : ""}`}>{tk.title}</h3>
-                      <Badge variant="outline" className={`text-xs ${sStyle.badge}`}>
-                        <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${sStyle.dot}`} />
-                        {labels.status[tk.status] ?? tk.status}
-                      </Badge>
-                      {tk.priority !== "normal" && (
-                        <Badge variant={PRIORITY_VARIANTS[tk.priority]}>{labels.priority[tk.priority] ?? tk.priority}</Badge>
-                      )}
-                      {overdue && <Badge variant="destructive" className="text-xs">{t("tasks.overdue")}</Badge>}
-                    </div>
-                    {tk.description && <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{tk.description}</p>}
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      {tk.related_type && (
-                        <Badge
-                          variant="secondary"
-                          className={`gap-1 font-normal ${tk.related_type === "client" ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200" : ""}`}
-                        >
-                          <span className={tk.related_type === "client" ? "text-amber-700 dark:text-amber-300/80" : "text-muted-foreground"}>{labels.related[tk.related_type] ?? tk.related_type}:</span>
-                          <span className="font-medium">{relatedLabel ?? "—"}</span>
-                        </Badge>
-                      )}
-                      {assignee && (
-                        <Badge variant="outline" className="gap-1.5 font-normal">
-                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">{initials(assigneeName)}</span>
-                          {assigneeName}
-                        </Badge>
-                      )}
-                      {tk.due_date && (
-                        <Badge
-                          variant="outline"
-                          className={`gap-1 text-xs font-semibold ${overdue ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-primary/30 bg-primary/10 text-primary"}`}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {t("tasks.due")}: {formatDate(tk.due_date)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Select
-                    value={tk.status}
-                    onValueChange={(v) => {
-                      if (v === "waiting" && tk.status !== "waiting") {
-                        setWaitingComment("");
-                        setWaitingFor({ id: tk.id, title: tk.title });
-                      } else {
-                        update.mutate({ id: tk.id, patch: { status: v } });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={`h-8 w-36 text-xs ${sStyle.trigger}`} onClick={(e) => e.stopPropagation()}>
-                      <span className={`mr-1 inline-block h-2 w-2 rounded-full ${sStyle.dot}`} />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map(s => (
-                        <SelectItem key={s} value={s}>
-                          <span className="flex items-center gap-2">
-                            <span className={`inline-block h-2 w-2 rounded-full ${STATUS_STYLES[s]?.dot ?? "bg-slate-400"}`} />
-                            {labels.status[s]}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
+                  <span className={`min-w-0 flex-1 truncate text-sm ${tk.status === "done" ? "text-muted-foreground line-through" : "font-medium"}`}>{tk.title}</span>
+                  {(tk.priority === "high" || tk.priority === "urgent") && (
+                    <Badge variant={PRIORITY_VARIANTS[tk.priority]} className="shrink-0 px-1.5 py-0 text-[10px]">
+                      {labels.priority[tk.priority] ?? tk.priority}
+                    </Badge>
+                  )}
+                  {assignee && (
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary"
+                      title={assigneeName}
+                    >
+                      {initials(assigneeName)}
+                    </span>
+                  )}
+                  {tk.due_date && (
+                    <span className={`flex shrink-0 items-center gap-1 text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                      <Clock className="h-3 w-3" />
+                      {formatDate(tk.due_date)}
+                    </span>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -435,14 +388,16 @@ function TasksPage() {
         </div>
       )}
 
-      <TaskEditDrawer
-        task={editing}
-        open={!!editId}
-        onClose={() => setEditId(null)}
+      <TaskDetailDialog
+        task={detailTask}
+        open={!!detailId}
+        mode={mode}
+        setMode={setMode}
+        onClose={() => setDetailId(null)}
         employees={employees}
         optionsFor={optionsFor}
-        onSave={(patch) => update.mutate({ id: editing!.id, patch }, { onSuccess: () => { toast.success(t("tasks.toasts.updated")); setEditId(null); } })}
-        onDelete={async () => { if (await confirm({ title: t("tasks.confirmDelete.title"), confirmText: t("tasks.confirmDelete.confirm") })) remove.mutate(editing!.id); }}
+        onSave={(patch) => update.mutate({ id: detailTask!.id, patch }, { onSuccess: () => { toast.success(t("tasks.toasts.updated")); setDetailId(null); } })}
+        onDelete={async () => { if (await confirm({ title: t("tasks.confirmDelete.title"), confirmText: t("tasks.confirmDelete.confirm") })) remove.mutate(detailTask!.id); }}
         onRequestWaiting={(task) => { setWaitingComment(""); setWaitingFor({ id: task.id, title: task.title }); }}
       />
 
@@ -474,7 +429,7 @@ function TasksPage() {
                 const newDesc = existing ? `${existing}\n\n${entry}` : entry;
                 update.mutate(
                   { id: waitingFor.id, patch: { status: "waiting", description: newDesc } },
-                  { onSuccess: () => { toast.success("Aufgabe auf Pendent gesetzt"); setWaitingFor(null); setEditId(null); } },
+                  { onSuccess: () => { toast.success("Aufgabe auf Pendent gesetzt"); setWaitingFor(null); setDetailId(null); } },
                 );
               }}
             >Speichern</Button>
@@ -560,16 +515,17 @@ function TaskForm({
   );
 }
 
-function TaskEditDrawer({
-  task, open, onClose, employees, optionsFor, onSave, onDelete, onRequestWaiting,
+function TaskDetailDialog({
+  task, open, mode, setMode, onClose, employees, optionsFor, onSave, onDelete, onRequestWaiting,
 }: {
-  task: any; open: boolean; onClose: () => void;
+  task: any; open: boolean; mode: "view" | "edit"; setMode: (m: "view" | "edit") => void;
+  onClose: () => void;
   employees: any[]; optionsFor: (t: string) => { id: string; label: string }[];
   onSave: (patch: any) => void; onDelete: () => void;
   onRequestWaiting: (task: any) => void;
 }) {
-
   const { t } = useTranslation();
+  const labels = useTaskLabels();
   const [form, setForm] = useState<any>({ ...emptyForm });
 
   useEffect(() => {
@@ -595,45 +551,100 @@ function TaskEditDrawer({
     return null;
   }, [task]);
 
-  return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{t("tasks.edit")}</SheetTitle>
-          <SheetDescription>{t("tasks.editDescription")}</SheetDescription>
-        </SheetHeader>
-        <div className="my-4">
-          <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
-        </div>
-        {relatedHref && (
-          <Button variant="outline" asChild className="mb-4 w-full">
-            <Link to={relatedHref as any}><ExternalLink className="mr-1 h-4 w-4" />{t("tasks.openRelated")}</Link>
-          </Button>
-        )}
-        <SheetFooter className="flex-row justify-between gap-2">
-          <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("tasks.actions.delete")}</Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onClose}>{t("tasks.actions.close")}</Button>
-            <Button onClick={() => {
-              if (form.status === "waiting" && task?.status !== "waiting") {
-                onRequestWaiting(task);
-                return;
-              }
-              onSave({
-                title: form.title.trim(),
-                description: form.description.trim() || null,
-                status: form.status,
-                priority: form.priority,
-                due_date: form.due_date ? new Date(`${form.due_date}T12:00:00`).toISOString() : null,
-                assigned_to: form.assigned_to || null,
-                related_type: form.related_type !== "none" ? form.related_type : null,
-                related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
-              });
-            }} disabled={!form.title.trim()}>{t("tasks.actions.save")}</Button>
+  const assignee = employees.find((e: any) => e.id === task?.assigned_to);
+  const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
+  const relatedLabel = task?.related_id ? optionsFor(task?.related_type ?? "none").find(o => o.id === task.related_id)?.label : null;
+  const sStyle = STATUS_STYLES[task?.status] ?? STATUS_STYLES.open;
+  const overdue = !!task?.due_date && new Date(task.due_date).getTime() < Date.now() && task?.status !== "done" && task?.status !== "cancelled";
 
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        {mode === "view" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${sStyle.dot}`} />
+                {task?.title}
+              </DialogTitle>
+              <DialogDescription>
+                {overdue ? `${t("tasks.overdue")} · ` : ""}
+                {labels.status[task?.status] ?? task?.status} · {labels.priority[task?.priority] ?? task?.priority}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.status")}</Label>
+                  <p>{labels.status[task?.status] ?? task?.status ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.priority")}</Label>
+                  <p>{labels.priority[task?.priority] ?? task?.priority ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.dueDate")}</Label>
+                  <p className={overdue ? "font-medium text-destructive" : ""}>{task?.due_date ? formatDate(task.due_date) : "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.assignee")}</Label>
+                  <p>{assigneeName ?? "—"}</p>
+                </div>
+                {task?.related_type && (
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
+                    <p>{labels.related[task.related_type] ?? task.related_type}: {relatedLabel ?? "—"}</p>
+                  </div>
+                )}
+              </div>
+              {task?.description && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.description")}</Label>
+                  <p className="whitespace-pre-wrap rounded-md bg-muted/40 p-3">{task.description}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="flex-row justify-between gap-2">
+              <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("tasks.actions.delete")}</Button>
+              <div className="flex gap-2">
+                {relatedHref && (
+                  <Button variant="outline" asChild>
+                    <Link to={relatedHref as any}><ExternalLink className="mr-1 h-4 w-4" />{t("tasks.openRelated")}</Link>
+                  </Button>
+                )}
+                <Button onClick={() => setMode("edit")}>{t("tasks.edit")}</Button>
+              </div>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>{t("tasks.edit")}</DialogTitle>
+              <DialogDescription>{t("tasks.editDescription")}</DialogDescription>
+            </DialogHeader>
+            <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setMode("view")}>{t("tasks.actions.cancel")}</Button>
+              <Button onClick={() => {
+                if (form.status === "waiting" && task?.status !== "waiting") {
+                  onRequestWaiting(task);
+                  return;
+                }
+                onSave({
+                  title: form.title.trim(),
+                  description: form.description.trim() || null,
+                  status: form.status,
+                  priority: form.priority,
+                  due_date: form.due_date ? new Date(`${form.due_date}T12:00:00`).toISOString() : null,
+                  assigned_to: form.assigned_to || null,
+                  related_type: form.related_type !== "none" ? form.related_type : null,
+                  related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
+                });
+              }} disabled={!form.title.trim()}>{t("tasks.actions.save")}</Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
