@@ -115,7 +115,7 @@ function TasksPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [view, setView] = useState<"cards" | "kanban" | "list">(() => {
     const v = typeof window !== "undefined" ? window.localStorage.getItem("tasks-view") : null;
-    return v === "kanban" || v === "list" ? v : "cards";
+    return v === "cards" || v === "kanban" ? v : "list";
   });
   const changeView = (v: "cards" | "kanban" | "list") => {
     setView(v);
