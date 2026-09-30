@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon } from "lucide-react";
+import { Plus, Calendar as CalIcon, MapPin, Clock, ChevronLeft, ChevronRight, Trash2, CheckSquare, Video, Link2, Copy, Flag, CalendarDays, CalendarRange, CalendarClock, List as ListIcon, ChevronsUpDown, Check, X, Mail, UserPlus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/_app/appointments")({ component: AppointmentsPage });
 
@@ -46,6 +48,7 @@ const emptyForm = {
   starts_at: "", ends_at: "",
   location: "", notes: "",
   client_id: "", property_id: "", assigned_to: "",
+  extra_assignee_ids: [] as string[], external_invitees: [] as string[],
   is_online: false, meeting_url: "",
 };
 
@@ -121,7 +124,7 @@ function AppointmentsPage() {
   });
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
-    queryFn: async () => (await supabase.from("profiles").select("id, full_name, email").eq("is_active", true)).data ?? [],
+    queryFn: async () => (await supabase.from("profiles").select("id, full_name, email, avatar_url").eq("is_active", true)).data ?? [],
   });
 
   const create = useMutation({
@@ -142,6 +145,8 @@ function AppointmentsPage() {
         client_id: form.client_id || null,
         property_id: form.property_id || null,
         assigned_to: form.assigned_to || user!.id,
+        extra_assignee_ids: form.extra_assignee_ids?.length ? form.extra_assignee_ids : null,
+        external_invitees: form.external_invitees?.length ? form.external_invitees : null,
         is_online: form.is_online,
         meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
       });
