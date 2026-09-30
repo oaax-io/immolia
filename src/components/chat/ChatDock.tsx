@@ -103,6 +103,7 @@ function timeLabel(iso: string) {
         d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
 }
 const isImage = (a: ChatAttachment) => (a.type || "").startsWith("image/");
+const isAudio = (a: ChatAttachment) => (a.type || "").startsWith("audio/");
 
 export function ChatDockProvider({ children }: { children: ReactNode }) {
   const [chats, setChats] = useState<DockChat[]>([]);
