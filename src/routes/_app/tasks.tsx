@@ -339,95 +339,48 @@ function TasksPage() {
           action={tasks.length === 0 ? <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.createButton")}</Button> : undefined}
         />
       ) : (
-        <div className="grid gap-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((tk: any) => {
             const overdue = tk.due_date && new Date(tk.due_date).getTime() < now && tk.status !== "done" && tk.status !== "cancelled";
             const Icon = tk.status === "done" ? CheckCircle2 : tk.status === "in_progress" ? Clock : tk.priority === "urgent" ? AlertCircle : Circle;
             const assignee = employees.find((e: any) => e.id === tk.assigned_to);
             const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
-            const relatedLabel = tk.related_id ? (optionsFor(tk.related_type).find(o => o.id === tk.related_id)?.label) : null;
             const sStyle = STATUS_STYLES[tk.status] ?? STATUS_STYLES.open;
             return (
               <Card
                 key={tk.id}
-                className={`cursor-pointer border border-border/80 border-l-4 bg-muted/40 shadow-sm transition hover:-translate-y-px hover:border-border hover:bg-muted/60 hover:shadow-md ${overdue ? "border-l-destructive bg-destructive/5" : sStyle.border}`}
-                onClick={() => setEditId(tk.id)}
+                title={tk.title}
+                className={`cursor-pointer border border-border/80 border-l-4 bg-muted/40 shadow-sm transition hover:bg-muted/60 ${overdue ? "border-l-destructive bg-destructive/5" : sStyle.border}`}
+                onClick={() => { setDetailId(tk.id); setMode("view"); }}
               >
-                <CardContent className="flex items-start gap-3 p-4">
+                <CardContent className="flex items-center gap-2 px-3 py-2.5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); update.mutate({ id: tk.id, patch: { status: tk.status === "done" ? "open" : "done" } }); }}
-                    className="mt-0.5"
+                    className="shrink-0"
                   >
-                    <Icon className={`h-5 w-5 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
+                    <Icon className={`h-4 w-4 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
                   </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className={`font-medium ${tk.status === "done" ? "text-muted-foreground line-through" : ""}`}>{tk.title}</h3>
-                      <Badge variant="outline" className={`text-xs ${sStyle.badge}`}>
-                        <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${sStyle.dot}`} />
-                        {labels.status[tk.status] ?? tk.status}
-                      </Badge>
-                      {tk.priority !== "normal" && (
-                        <Badge variant={PRIORITY_VARIANTS[tk.priority]}>{labels.priority[tk.priority] ?? tk.priority}</Badge>
-                      )}
-                      {overdue && <Badge variant="destructive" className="text-xs">{t("tasks.overdue")}</Badge>}
-                    </div>
-                    {tk.description && <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{tk.description}</p>}
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      {tk.related_type && (
-                        <Badge
-                          variant="secondary"
-                          className={`gap-1 font-normal ${tk.related_type === "client" ? "border-amber-300 bg-amber-100 text-amber-900 hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-900/30 dark:text-amber-200" : ""}`}
-                        >
-                          <span className={tk.related_type === "client" ? "text-amber-700 dark:text-amber-300/80" : "text-muted-foreground"}>{labels.related[tk.related_type] ?? tk.related_type}:</span>
-                          <span className="font-medium">{relatedLabel ?? "—"}</span>
-                        </Badge>
-                      )}
-                      {assignee && (
-                        <Badge variant="outline" className="gap-1.5 font-normal">
-                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">{initials(assigneeName)}</span>
-                          {assigneeName}
-                        </Badge>
-                      )}
-                      {tk.due_date && (
-                        <Badge
-                          variant="outline"
-                          className={`gap-1 text-xs font-semibold ${overdue ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-primary/30 bg-primary/10 text-primary"}`}
-                        >
-                          <Clock className="h-3 w-3" />
-                          {t("tasks.due")}: {formatDate(tk.due_date)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Select
-                    value={tk.status}
-                    onValueChange={(v) => {
-                      if (v === "waiting" && tk.status !== "waiting") {
-                        setWaitingComment("");
-                        setWaitingFor({ id: tk.id, title: tk.title });
-                      } else {
-                        update.mutate({ id: tk.id, patch: { status: v } });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={`h-8 w-36 text-xs ${sStyle.trigger}`} onClick={(e) => e.stopPropagation()}>
-                      <span className={`mr-1 inline-block h-2 w-2 rounded-full ${sStyle.dot}`} />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map(s => (
-                        <SelectItem key={s} value={s}>
-                          <span className="flex items-center gap-2">
-                            <span className={`inline-block h-2 w-2 rounded-full ${STATUS_STYLES[s]?.dot ?? "bg-slate-400"}`} />
-                            {labels.status[s]}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
+                  <span className={`min-w-0 flex-1 truncate text-sm ${tk.status === "done" ? "text-muted-foreground line-through" : "font-medium"}`}>{tk.title}</span>
+                  {(tk.priority === "high" || tk.priority === "urgent") && (
+                    <Badge variant={PRIORITY_VARIANTS[tk.priority]} className="shrink-0 px-1.5 py-0 text-[10px]">
+                      {labels.priority[tk.priority] ?? tk.priority}
+                    </Badge>
+                  )}
+                  {assignee && (
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary"
+                      title={assigneeName}
+                    >
+                      {initials(assigneeName)}
+                    </span>
+                  )}
+                  {tk.due_date && (
+                    <span className={`flex shrink-0 items-center gap-1 text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                      <Clock className="h-3 w-3" />
+                      {formatDate(tk.due_date)}
+                    </span>
+                  )}
                 </CardContent>
               </Card>
             );
