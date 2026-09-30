@@ -13,7 +13,6 @@ import {
   getPropertyStatusBadgeClass,
   propertyStatusLabels,
 } from "@/lib/format";
-import { supabase } from "@/integrations/supabase/client";
 import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
 
 interface Props {
