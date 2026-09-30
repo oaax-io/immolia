@@ -5388,6 +5388,9 @@ export type Database = {
           id: string
           is_pinned: boolean
           priority: Database["public"]["Enums"]["task_priority"]
+          recurrence: string | null
+          recurrence_spawned: boolean
+          recurrence_until: string | null
           related_id: string | null
           related_type: string | null
           status: Database["public"]["Enums"]["task_status"]
@@ -5404,6 +5407,9 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           priority?: Database["public"]["Enums"]["task_priority"]
+          recurrence?: string | null
+          recurrence_spawned?: boolean
+          recurrence_until?: string | null
           related_id?: string | null
           related_type?: string | null
           status?: Database["public"]["Enums"]["task_status"]
@@ -5420,6 +5426,9 @@ export type Database = {
           id?: string
           is_pinned?: boolean
           priority?: Database["public"]["Enums"]["task_priority"]
+          recurrence?: string | null
+          recurrence_spawned?: boolean
+          recurrence_until?: string | null
           related_id?: string | null
           related_type?: string | null
           status?: Database["public"]["Enums"]["task_status"]
