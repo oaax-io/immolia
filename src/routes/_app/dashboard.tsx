@@ -20,6 +20,7 @@ import {
 } from "@/lib/format";
 import { isBackendUnavailableError } from "@/lib/backend-errors";
 import { UpcomingCalendarList } from "@/components/dashboard/UpcomingCalendarList";
+import { ActionRadar } from "@/components/dashboard/ActionRadar";
 
 import { useTranslation } from "react-i18next";
 
@@ -309,6 +310,10 @@ function Dashboard() {
         <KpiCard icon={FileSignature} label={t("dashboard.kpis.activeReservations")} value={kpis.data?.activeRes ?? "—"} loading={kpis.isLoading} to="/reservations" />
         <KpiCard icon={UserPlus} label={t("dashboard.lists.newLeads")} value={kpis.data?.newLeads ?? "—"} loading={kpis.isLoading} to="/leads" />
       </div>
+
+      {/* Smart Action Radar – sagt aktiv, was zu tun ist (live) */}
+      <ActionRadar displayName={displayName} />
+
       {/* Fokus: Offene Aufgaben + bevorstehende Termine */}
       <div className="mt-4 grid gap-3 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-primary/30 shadow-sm">
