@@ -1,7 +1,8 @@
 import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video, Minus } from "lucide-react";
+import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video, Minus, Plus } from "lucide-react";
+import { GroupAvatar, GroupChatPanel, NewGroupDialog, OPEN_GROUP_EVENT, useChatGroups } from "@/components/chat/GroupChat";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export function TeamInbox() {
   const [expanded, setExpanded] = useState(false);
   const [inlineId, setInlineId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
 
   const agencyId = useTenantConfig().data?.agency_id ?? null;
   const { data: members = [] } = useQuery({
@@ -158,10 +160,28 @@ export function TeamInbox() {
     };
   }, [user?.id, agencyId, members, qc, openChat, notifyChat]);
 
+  const { data: groups = [] } = useChatGroups(agencyId);
+  const groupUnread = groups.reduce((n, g) => n + g.unread, 0);
   const unreadTotal = useMemo(
-    () => messages.filter((m) => m.recipient_id === user?.id && !m.read_at).length,
-    [messages, user?.id],
+    () => messages.filter((m) => m.recipient_id === user?.id && !m.read_at).length + groupUnread,
+    [messages, user?.id, groupUnread],
   );
+
+  // Gruppen-/Projekt-Chat von aussen öffnen (z. B. Immobilien-Ansicht)
+  useEffect(() => {
+    const h = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      qc.invalidateQueries({ queryKey: ["chat-groups"] });
+      setOpen(false);
+      setInlineId(`g:${id}`);
+      setExpanded(true);
+    };
+    window.addEventListener(OPEN_GROUP_EVENT, h);
+    return () => window.removeEventListener(OPEN_GROUP_EVENT, h);
+  }, [qc]);
+
+  const filteredGroups = groups.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()));
+  const activeGroup = inlineId?.startsWith("g:") ? groups.find((g) => g.id === inlineId.slice(2)) ?? null : null;
 
   const threads = useMemo(() => {
     const map = new Map<string, { last: Message; unread: number }>();
@@ -186,6 +206,12 @@ export function TeamInbox() {
   );
 
   const selectDock = (id: string) => {
+    if (id.startsWith("g:")) {
+      setInlineId(id);
+      setOpen(false);
+      setExpanded(true);
+      return;
+    }
     openChat(id);
     setOpen(false);
     setExpanded(false);
@@ -197,6 +223,39 @@ export function TeamInbox() {
 
   const ThreadList = ({ dense, onSelect }: { dense?: boolean; onSelect: (id: string) => void }) => (
     <div className="p-2">
+      <div className="mb-2">
+        <div className="flex items-center justify-between px-2 py-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Gruppen & Projekte</p>
+          <button type="button" onClick={() => setNewGroupOpen(true)} className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-primary hover:bg-muted">
+            <Plus className="h-3 w-3" /> Neue Gruppe
+          </button>
+        </div>
+        {filteredGroups.length === 0 && (
+          <p className="px-2 pb-1 text-[11px] text-muted-foreground">Noch keine Gruppen. Projekt-Chats startest du in der Immobilie.</p>
+        )}
+        {filteredGroups.map((g) => (
+          <button
+            key={g.id}
+            onClick={() => onSelect(`g:${g.id}`)}
+            className={cn("flex w-full items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-muted", inlineId === `g:${g.id}` && "bg-muted")}
+          >
+            <GroupAvatar group={g} className={dense ? "h-8 w-8" : undefined} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-medium">{g.name}</span>
+                {g.last_message_at && <span className="shrink-0 text-[10px] text-muted-foreground">{timeLabel(g.last_message_at)}</span>}
+              </div>
+              <p className={cn("truncate text-xs", g.unread ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                {g.kind === "property" ? "Projekt · " : ""}
+                {g.lastBody ? `${g.lastSender === user?.id ? "Du: " : ""}${g.lastBody || "Anhang"}` : "Keine Nachrichten"}
+              </p>
+            </div>
+            {g.unread > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">{g.unread}</span>
+            )}
+          </button>
+        ))}
+      </div>
       {!search && threads.length > 0 && (
         <div className="mb-2">
           <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -209,6 +268,7 @@ export function TeamInbox() {
               className={cn(
                 "flex w-full items-center gap-3 rounded-md px-2 py-2 pr-9 text-left transition hover:bg-muted",
                 t.pinned && "bg-primary/5",
+                inlineId === t.id && "bg-muted",
               )}
             >
               <span className="relative">
@@ -298,7 +358,7 @@ export function TeamInbox() {
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Mitarbeitende suchen…"
+        placeholder="Personen oder Gruppen suchen…"
         className="pl-8"
       />
     </div>
@@ -370,7 +430,15 @@ export function TeamInbox() {
             </ScrollArea>
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {inlineId ? (
+            {inlineId?.startsWith("g:") ? (
+              activeGroup ? (
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <GroupChatPanel key={activeGroup.id} group={activeGroup} allMembers={members} onLeft={() => setInlineId(null)} />
+                </div>
+              ) : (
+                <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Lädt…</div>
+              )
+            ) : inlineId ? (
               <>
                 <div className="flex shrink-0 items-center justify-end gap-2 border-b px-3 py-2 pr-12">
                   <Button
@@ -412,6 +480,16 @@ export function TeamInbox() {
           </div>
         </DialogContent>
       </Dialog>
+      <NewGroupDialog
+        open={newGroupOpen}
+        onOpenChange={setNewGroupOpen}
+        members={members}
+        onCreated={(id) => {
+          setOpen(false);
+          setInlineId(`g:${id}`);
+          setExpanded(true);
+        }}
+      />
     </>
   );
 }

@@ -276,7 +276,7 @@ function ChatBubble({
 
 
 
-function AttachmentView({ att }: { att: ChatAttachment }) {
+export function AttachmentView({ att }: { att: ChatAttachment }) {
   const [zoom, setZoom] = useState(false);
   const { data, isError, isLoading } = useQuery({
     queryKey: ["chat-att-url", att.path],
@@ -424,7 +424,7 @@ function ImageLightbox({ open, onOpenChange, name, preview, downloadUrl }: {
 }
 
 /** Verkleinert grosse Fotos vor dem Hochladen (max. 2560 px Kantenlänge). Bei Fehlern bleibt das Original. */
-async function shrinkImage(file: File): Promise<File> {
+export async function shrinkImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return file;
   try {
     const bmp = await createImageBitmap(file);
@@ -447,7 +447,7 @@ async function shrinkImage(file: File): Promise<File> {
 
 const EMOJIS = "😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😎 🤩 🥳 😏 🤔 🤨 😐 😴 😮 😲 😢 😭 😤 😡 🤯 😱 🙄 🤗 🤝 👍 👎 👏 🙌 🙏 💪 👋 ✌️ 👌 ☝️ ❤️ 🧡 💛 💚 💙 💜 🔥 ⭐ ✨ 🎉 🎂 ✅ ❌ ⚠️ ❓ 💡 📌 📎 📅 ⏰ 📞 📧 💬 🏠 🏡 🏢 🔑 📄 ✍️ 💰 💶 📈 🚗 ☕ 🍾".split(" ");
 
-function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
+export function EmojiPicker({ onPick }: { onPick: (e: string) => void }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
