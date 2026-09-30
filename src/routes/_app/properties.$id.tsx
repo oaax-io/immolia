@@ -1,3 +1,5 @@
+import { openPropertyChat } from "@/components/chat/GroupChat";
+import { MessagesSquare } from "lucide-react";
 import { UsageCostNotice, useUsagePreview, costButtonLabel, isBlocked } from "@/components/credits/UsageCostNotice";
 import { tenantStoragePath } from "@/lib/tenant-storage";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -397,6 +399,7 @@ function PropertyDetail() {
           <Button variant="outline" onClick={() => setFinancingOpen(true)}>
             <Banknote className="mr-1 h-4 w-4" />Finanzierung starten
           </Button>
+          <Button variant="outline" onClick={() => openPropertyChat(id)}><MessagesSquare className="mr-1 h-4 w-4" />Projekt-Chat</Button>
           <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-1 h-4 w-4" />Bearbeiten</Button>
           <Select value={p.status} onValueChange={(v) => updateStatus.mutate(v)}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
