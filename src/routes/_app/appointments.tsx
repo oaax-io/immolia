@@ -347,7 +347,10 @@ function AppointmentsPage() {
               <ListIcon className="h-4 w-4" />{t("appointments.tabs.list")}
             </TabsTrigger>
           </TabsList>
-          <LayerPanel layers={layer.layers} toggle={layer.toggle} />
+          {view !== "list" && <ToolbarNav view={view} anchor={anchor} setAnchor={setAnchor} />}
+          <div className="ml-auto">
+            <LayerPanel layers={layer.layers} toggle={layer.toggle} />
+          </div>
         </div>
 
 
@@ -560,16 +563,32 @@ function ApptCard({
   );
 }
 
-function CalendarNav({ label, onPrev, onNext, onToday, right }: any) {
+function ToolbarNav({ view, anchor, setAnchor }: { view: "month" | "week" | "day"; anchor: Date; setAnchor: (d: Date) => void }) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language?.startsWith("fr") ? "fr-CH" : "de-CH";
+  const step = view === "month" ? 0 : view === "week" ? 7 : 1;
+  const shift = (dir: 1 | -1) => {
+    const d = new Date(anchor);
+    if (view === "month") d.setMonth(d.getMonth() + dir);
+    else d.setTime(d.getTime() + dir * step * 86400000);
+    setAnchor(d);
+  };
+  let label: string;
+  if (view === "month") {
+    label = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+  } else if (view === "week") {
+    const s = startOfWeek(anchor);
+    const e = new Date(s.getTime() + 6 * 86400000);
+    label = `${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short" }).format(s)} – ${new Intl.DateTimeFormat(locale, { day: "2-digit", month: "short", year: "numeric" }).format(e)}`;
+  } else {
+    label = new Intl.DateTimeFormat(locale, { weekday: "long", day: "2-digit", month: "long", year: "numeric" }).format(anchor);
+  }
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={onPrev}><ChevronLeft className="h-4 w-4" /></Button>
-        <Button variant="outline" size="sm" onClick={onToday}>Heute</Button>
-        <Button variant="outline" size="icon" onClick={onNext}><ChevronRight className="h-4 w-4" /></Button>
-        <p className="ml-2 text-sm font-semibold">{label}</p>
-      </div>
-      {right}
+    <div className="flex items-center gap-1.5">
+      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+      <Button variant="outline" size="sm" className="h-9" onClick={() => setAnchor(new Date())}>Heute</Button>
+      <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => shift(1)}><ChevronRight className="h-4 w-4" /></Button>
+      <p className="ml-1 whitespace-nowrap text-sm font-semibold">{label}</p>
     </div>
   );
 }
