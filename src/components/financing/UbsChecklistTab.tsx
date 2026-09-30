@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useChecklistAutofill } from "@/hooks/useChecklistAutofill";
 import { ChecklistReadinessCard } from "@/components/financing/ChecklistReadinessCard";
@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, AlertTriangle, MinusCircle, Circle, Sparkles } from "lucide-react";
+import { CheckCircle2, AlertTriangle, MinusCircle, Circle, Sparkles, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   CHECKLIST_TEMPLATE, SECTION_LABELS, SECTION_ORDER, STATUS_LABELS,
@@ -23,20 +23,9 @@ type Props = { dossierId: string };
 
 export function UbsChecklistTab({ dossierId }: Props) {
   const qc = useQueryClient();
+  const [openSections, setOpenSections] = useState<string[]>(SECTION_ORDER.slice(0, 3));
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["financing_checklist", dossierId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financing_checklist_items")
-        .select("*")
-        .eq("dossier_id", dossierId)
-        .order("section")
-        .order("sort_order");
-      if (error) throw error;
-      return (data ?? []) as any as ChecklistRow[];
-    },
-  });
+  const { rows, stats, missing, missingRequired, isReady, isLoading } = useChecklistAutofill(dossierId);
 
   const seedMutation = useMutation({
     mutationFn: async () => {
@@ -53,7 +42,7 @@ export function UbsChecklistTab({ dossierId }: Props) {
 
   // Auto-seed beim ersten Öffnen
   useEffect(() => {
-    if (!isLoading && rows.length === 0) {
+    if (!isLoading && rows.length === 0 && !seedMutation.isPending) {
       seedMutation.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,6 +60,21 @@ export function UbsChecklistTab({ dossierId }: Props) {
     onError: (e: any) => toast.error(e.message ?? "Fehler"),
   });
 
+  const resetManual = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("financing_checklist_items")
+        .update({ manual_override: false } as any)
+        .eq("dossier_id", dossierId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["financing_checklist", dossierId] });
+      toast.success("Automatische Prüfung übernimmt wieder alle Punkte");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Fehler"),
+  });
+
   const grouped = useMemo(() => {
     const map = new Map<ChecklistSection, ChecklistRow[]>();
     SECTION_ORDER.forEach((s) => map.set(s, []));
@@ -78,17 +82,32 @@ export function UbsChecklistTab({ dossierId }: Props) {
     return map;
   }, [rows]);
 
-  const stats = checklistStats(rows);
+  const missingOptional = missing.filter((m) => !m.required);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Laden…</p>;
 
   return (
     <div className="space-y-4">
+      <ChecklistReadinessCard
+        isReady={isReady}
+        requiredPercent={stats.requiredPercent}
+        requiredPresent={stats.requiredPresent}
+        requiredTotal={stats.requiredTotal}
+        missingRequired={missingRequired}
+        missingOptional={missingOptional}
+        onJump={(section) => setOpenSections((prev) => (prev.includes(section) ? prev : [...prev, section]))}
+      />
+
       <Card>
-        <CardContent className="p-4 grid gap-3 sm:grid-cols-3">
+        <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
           <Stat label="Vollständigkeit" value={`${stats.completionPercent}%`} hint={`${stats.present} von ${stats.total}`} />
           <Stat label="Pflichtdokumente" value={`${stats.requiredPercent}%`} hint={`${stats.requiredPresent} von ${stats.requiredTotal}`} />
-          <Stat label="Fehlend" value={String(stats.missing)} hint="explizit als fehlend markiert" />
+          <Stat label="Fehlend" value={String(stats.missing)} hint="noch nicht vorhanden" />
+          <div className="flex items-end">
+            <Button variant="outline" size="sm" onClick={() => resetManual.mutate()} disabled={resetManual.isPending}>
+              <RotateCcw className="mr-2 h-4 w-4" />Automatik neu anwenden
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -98,7 +117,7 @@ export function UbsChecklistTab({ dossierId }: Props) {
         </Button>
       )}
 
-      <Accordion type="multiple" defaultValue={SECTION_ORDER.slice(0, 3)} className="space-y-2">
+      <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="space-y-2">
         {SECTION_ORDER.map((section) => {
           const list = grouped.get(section) ?? [];
           const presentCount = list.filter((r) => r.is_present || r.status === "present").length;
@@ -116,7 +135,7 @@ export function UbsChecklistTab({ dossierId }: Props) {
                     <ItemRow
                       key={r.id}
                       row={r}
-                      onChange={(patch) => updateMutation.mutate({ id: r.id!, patch })}
+                      onChange={(patch) => updateMutation.mutate({ id: r.id!, patch: { ...patch, manual_override: true } as any })}
                     />
                   ))}
                 </div>
@@ -132,6 +151,7 @@ export function UbsChecklistTab({ dossierId }: Props) {
 function ItemRow({ row, onChange }: { row: ChecklistRow; onChange: (patch: Partial<ChecklistRow>) => void }) {
   const [note, setNote] = useState(row.note ?? "");
   const required = CHECKLIST_TEMPLATE[row.section].find((t) => t.key === row.item_key)?.required;
+  const auto = row as any;
 
   return (
     <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-[24px_1fr_180px_auto]">
@@ -148,11 +168,17 @@ function ItemRow({ row, onChange }: { row: ChecklistRow; onChange: (patch: Parti
         />
       </div>
       <div className="space-y-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm">{row.label}</span>
           {required && <Badge variant="outline" className="text-[10px]">Pflicht</Badge>}
+          {auto.manual_override
+            ? <Badge variant="outline" className="text-[10px]">von Hand</Badge>
+            : auto.auto_detected && <Badge variant="secondary" className="gap-1 text-[10px]"><Sparkles className="h-2.5 w-2.5" />automatisch</Badge>}
           <StatusIcon status={row.status} />
         </div>
+        {auto.auto_reason && !auto.manual_override && (
+          <p className="text-xs text-muted-foreground">{auto.auto_reason}</p>
+        )}
         <Input
           placeholder="Bemerkung"
           value={note}
@@ -192,4 +218,4 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   );
 }
 
-export { Textarea }; // placeholder export to avoid tree-shake noise
+export { Textarea, checklistStats }; // placeholder export to avoid tree-shake noise
