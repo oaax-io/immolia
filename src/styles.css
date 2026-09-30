@@ -251,3 +251,18 @@
             mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 90%, transparent 100%);
   }
 }
+
+@keyframes wave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+}
+
+@keyframes fall {
+  0%   { transform: translateY(-20%); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(420%); opacity: 0; }
+}
