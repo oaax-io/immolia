@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { AttachmentView, EmojiPicker, shrinkImage, type ChatAttachment } from "@/components/chat/ChatDock";
+import { VoiceRecorder } from "@/components/chat/VoiceNote";
 
 export type GroupMember = { id: string; full_name: string | null; email: string | null; avatar_url: string | null };
 export type ChatGroup = {
@@ -314,6 +315,25 @@ export function GroupChatPanel({
     }
   };
 
+  /** Sprachnotiz sofort hochladen und in die Gruppe senden. */
+  const sendVoice = async (file: File) => {
+    if (!user?.id) return;
+    try {
+      const path = await tenantStoragePath(`${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`);
+      const { error: upErr } = await supabase.storage.from("chat-attachments").upload(path, file);
+      if (upErr) throw upErr;
+      const att: ChatAttachment = { path, name: file.name, type: file.type, size: file.size };
+      const { error } = await supabase
+        .from("chat_group_messages")
+        .insert({ group_id: group.id, sender_id: user.id, body: "Sprachnotiz", attachments: [att] as unknown as never });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["chat-group-messages", group.id] });
+      qc.invalidateQueries({ queryKey: ["chat-groups"] });
+    } catch {
+      toast.error("Sprachnotiz konnte nicht gesendet werden");
+    }
+  };
+
   const refreshMembers = () => {
     qc.invalidateQueries({ queryKey: ["chat-group-members", group.id] });
   };
@@ -493,6 +513,7 @@ export function GroupChatPanel({
           <Button variant="ghost" size="icon" className="h-8 w-8" title="Anhang" disabled={uploading} onClick={() => fileRef.current?.click()}>
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
           </Button>
+          <VoiceRecorder onRecorded={sendVoice} />
           <Button size="sm" className="ml-auto gap-1.5" disabled={send.isPending || (!draft.trim() && !pending.length)} onClick={() => send.mutate()}>
             <Send className="h-4 w-4" /> Senden
           </Button>

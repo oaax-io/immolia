@@ -50,6 +50,7 @@ import { PhoneOff } from "lucide-react";
 import { IncomingCallListener } from "@/components/video/IncomingCallListener";
 import { AddCallParticipant } from "@/components/video/AddCallParticipant";
 import { CALL_RING_MS, chatRoomName, setCallStatus, startCall, type CallRow } from "@/lib/calls";
+import { VoiceNotePlayer, VoiceRecorder } from "@/components/chat/VoiceNote";
 
 
 export type ChatAttachment = {
@@ -103,6 +104,7 @@ function timeLabel(iso: string) {
         d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
 }
 const isImage = (a: ChatAttachment) => (a.type || "").startsWith("image/");
+const isAudio = (a: ChatAttachment) => (a.type || "").startsWith("audio/");
 
 export function ChatDockProvider({ children }: { children: ReactNode }) {
   const [chats, setChats] = useState<DockChat[]>([]);
@@ -317,6 +319,9 @@ export function AttachmentView({ att }: { att: ChatAttachment }) {
         <ImageLightbox open={zoom} onOpenChange={setZoom} name={att.name} preview={preview} downloadUrl={url} />
       </>
     );
+  }
+  if (isAudio(att)) {
+    return <VoiceNotePlayer url={url} name={att.name} />;
   }
   return (
     <a
@@ -605,7 +610,7 @@ export function ChatPanel({
     setTimeout(() => taRef.current?.focus(), 0);
   };
 
-  const handleFiles = async (files: FileList | null) => {
+  const handleFiles = async (files: FileList | File[] | null) => {
     if (!files?.length || !user?.id) return;
     setUploading(true);
     try {
@@ -623,6 +628,29 @@ export function ChatPanel({
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  /** Sprachnotiz sofort hochladen und senden. */
+  const sendVoice = async (file: File) => {
+    if (!user?.id) return;
+    try {
+      const path = await tenantStoragePath(`${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`);
+      const { error: upErr } = await supabase.storage.from("chat-attachments").upload(path, file);
+      if (upErr) throw upErr;
+      const att: ChatAttachment = { path, name: file.name, type: file.type, size: file.size };
+      const { error } = await supabase.from("direct_messages").insert({
+        sender_id: user.id,
+        recipient_id: memberId,
+        body: "Sprachnotiz",
+        attachments: [att] as unknown as never,
+        mentions: [] as unknown as never,
+      });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["chat-thread", user.id, memberId] });
+      qc.invalidateQueries({ queryKey: ["direct-messages", user.id] });
+    } catch (e) {
+      toast.error((e as Error).message);
     }
   };
 
@@ -848,6 +876,7 @@ export function ChatPanel({
                   >
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                   </Button>
+                  <VoiceRecorder onRecorded={sendVoice} />
                   <Button
                     variant="ghost"
                     size="icon"
