@@ -11,7 +11,7 @@ import {
   ArrowRight, Banknote, Building2, CheckCircle2, Gavel, Radar, UserPlus, Users, Zap,
 } from "lucide-react";
 import {
-  buildRadar, buildBriefing, GROUP_LABELS,
+  buildRadar, buildBriefing, balancedItems, GROUP_LABELS,
   type RadarGroup, type RadarItem, type RadarSeverity,
 } from "@/lib/dashboard-radar";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
@@ -89,7 +89,7 @@ export function ActionRadar({ displayName }: { displayName?: string }) {
     return c;
   }, [items]);
 
-  const filtered = group === "all" ? items : items.filter((i) => i.group === group);
+  const filtered = group === "all" ? balancedItems(items) : items.filter((i) => i.group === group);
   const visible = expanded ? filtered.slice(0, 40) : filtered.slice(0, 6);
   const briefing = buildBriefing(items, radar.data?.todayAppts ?? 0);
   const urgent = items.filter((i) => i.severity === "urgent").length;
