@@ -50,8 +50,7 @@ export function PresenceLabel({
   useTick(!!updatedAt);
   const meta = presenceMeta(effectivePresence(status, updatedAt));
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs", meta.text, className)}>
-      <span className={cn("inline-block h-2.5 w-2.5 shrink-0 rounded-full", meta.dot)} />
+    <span className={cn("inline-flex items-center text-xs", meta.text, className)}>
       {meta.label}
     </span>
   );
