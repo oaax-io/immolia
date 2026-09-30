@@ -651,40 +651,116 @@ export type Database = {
           },
         ]
       }
+      calendar_assignment_suggestions: {
+        Row: {
+          agency_id: string
+          client_id: string
+          connection_id: string
+          created_at: string
+          id: string
+          owner_user_id: string
+          provider_event_id: string
+          reason: string
+          status: string
+        }
+        Insert: {
+          agency_id: string
+          client_id: string
+          connection_id: string
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          provider_event_id: string
+          reason?: string
+          status?: string
+        }
+        Update: {
+          agency_id?: string
+          client_id?: string
+          connection_id?: string
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          provider_event_id?: string
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_assignment_suggestions_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_assignment_suggestions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_assignment_suggestions_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_busy_blocks: {
         Row: {
           agency_id: string
+          attendee_emails: string[] | null
           connection_id: string
           ends_at: string
           id: string
           is_all_day: boolean
+          is_cancelled: boolean | null
+          is_organizer: boolean | null
+          is_private: boolean | null
+          location: string | null
           provider_event_id: string
           show_as: string | null
           starts_at: string
+          subject: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           agency_id: string
+          attendee_emails?: string[] | null
           connection_id: string
           ends_at: string
           id?: string
           is_all_day?: boolean
+          is_cancelled?: boolean | null
+          is_organizer?: boolean | null
+          is_private?: boolean | null
+          location?: string | null
           provider_event_id: string
           show_as?: string | null
           starts_at: string
+          subject?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           agency_id?: string
+          attendee_emails?: string[] | null
           connection_id?: string
           ends_at?: string
           id?: string
           is_all_day?: boolean
+          is_cancelled?: boolean | null
+          is_organizer?: boolean | null
+          is_private?: boolean | null
+          location?: string | null
           provider_event_id?: string
           show_as?: string | null
           starts_at?: string
+          subject?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -831,6 +907,73 @@ export type Database = {
             columns: ["agency_id"]
             isOneToOne: false
             referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_assignments: {
+        Row: {
+          agency_id: string
+          assignment_source: string
+          client_id: string | null
+          connection_id: string
+          created_at: string
+          id: string
+          owner_user_id: string
+          provider_event_id: string
+          responsible_user_ids: string[]
+          shared_with_user_ids: string[]
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          agency_id: string
+          assignment_source?: string
+          client_id?: string | null
+          connection_id: string
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          provider_event_id: string
+          responsible_user_ids?: string[]
+          shared_with_user_ids?: string[]
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          agency_id?: string
+          assignment_source?: string
+          client_id?: string | null
+          connection_id?: string
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          provider_event_id?: string
+          responsible_user_ids?: string[]
+          shared_with_user_ids?: string[]
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_assignments_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_assignments_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
             referencedColumns: ["id"]
           },
         ]
@@ -6403,6 +6546,18 @@ export type Database = {
           status: string
         }[]
       }
+      calendar_assign_event: {
+        Args: {
+          _client_id: string
+          _provider_event_id: string
+          _responsible: string[]
+          _shared_with: string[]
+          _source?: string
+          _visibility: string
+        }
+        Returns: string
+      }
+      calendar_dismiss_suggestion: { Args: { _id: string }; Returns: undefined }
       calendar_jobs_claim: {
         Args: { _limit?: number }
         Returns: {
@@ -6460,6 +6615,24 @@ export type Database = {
         }
       }
       calendar_periodic: { Args: never; Returns: undefined }
+      calendar_shared_events: {
+        Args: { _client_id?: string; _from: string; _to: string }
+        Returns: {
+          assignment_id: string
+          client_id: string
+          ends_at: string
+          is_all_day: boolean
+          is_cancelled: boolean
+          is_own: boolean
+          location: string
+          owner_user_id: string
+          provider_event_id: string
+          responsible_user_ids: string[]
+          starts_at: string
+          subject: string
+          visibility: string
+        }[]
+      }
       calendar_token_try_lock: {
         Args: { _connection_id: string; _seconds?: number }
         Returns: boolean
