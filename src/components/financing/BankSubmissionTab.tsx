@@ -224,6 +224,39 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   );
 }
 
+/** Kompakte Zeitachse: Bereit → Eingereicht → Entscheid. */
+function SubmissionTimeline({
+  status, submittedAt, decisionAt,
+}: { status?: DossierStatus; submittedAt?: string | null; decisionAt?: string | null }) {
+  const submitted = !!submittedAt || status === "submitted_to_bank" || status === "approved" || status === "rejected";
+  const decided = status === "approved" || status === "rejected";
+  const steps = [
+    { label: "Bereit für Bank", done: submitted || status === "ready_for_bank", note: "" },
+    { label: "Eingereicht", done: submitted, note: submittedAt ? formatZurich(submittedAt) : "" },
+    {
+      label: status === "rejected" ? "Abgelehnt" : status === "approved" ? "Bewilligt" : "Entscheid offen",
+      done: decided,
+      note: decisionAt ? formatZurich(decisionAt) : "",
+    },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border bg-muted/20 p-3">
+      {steps.map((s, i) => (
+        <div key={s.label} className="flex items-center gap-2">
+          {s.done
+            ? <CheckCircle2 className="h-4 w-4 text-primary" />
+            : <Circle className="h-4 w-4 text-muted-foreground" />}
+          <div className="text-sm">
+            <span className={s.done ? "font-medium" : "text-muted-foreground"}>{s.label}</span>
+            {s.note && <span className="ml-1 text-xs text-muted-foreground">{s.note}</span>}
+          </div>
+          {i < steps.length - 1 && <span className="text-muted-foreground">→</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function formatBytes(n: number | null | undefined) {
   if (!n) return "—";
   if (n < 1024) return `${n} B`;
