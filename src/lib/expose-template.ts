@@ -786,13 +786,20 @@ function renderLuxury(d: ExposeData, t: ExposeTheme): string {
       <div class="lx-rule double"></div>
       <h2 class="lx-h2">Kontakt</h2>
       <div class="lx-contact">
-        ${d.agency_name ? `<div class="lx-c-ag">${esc(d.agency_name)}</div>` : ""}
-        ${d.contact_name ? `<div class="lx-c-name">${esc(d.contact_name)}</div>` : ""}
-        <div class="lx-c-meta">
-          ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
-          ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
+        <div class="c-person">
+          ${portrait(d)}
+          <div>
+            ${d.agency_name ? `<div class="lx-c-ag">${esc(d.agency_name)}</div>` : ""}
+            ${d.contact_name ? `<div class="lx-c-name">${esc(d.contact_name)}</div>` : ""}
+            ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+            <div class="lx-c-meta">
+              ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
+              ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
+            </div>
+          </div>
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }
