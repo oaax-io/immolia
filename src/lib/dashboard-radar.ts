@@ -185,16 +185,19 @@ export function buildRadar(input: RadarInput): RadarItem[] {
   }
 
   // ---------- Leads ----------
+  // Nur wirklich handlungsrelevante Leads: älter als 12 h, aber nicht älter als
+  // 30 Tage – Altbestände gehören in die Lead-Liste, nicht ins Tages-Cockpit.
   for (const l of input.leads) {
     if (!["new", "neu"].includes(String(l.status))) continue;
     const age = daysSince(l.created_at) ?? 0;
     const hours = (Date.now() - new Date(l.created_at).getTime()) / 3_600_000;
-    if (hours < 12) continue;
+    if (hours < 12 || age > 30) continue;
     push({
-      id: `lead-${l.id}`, group: "leads", severity: age >= 2 ? "urgent" : "warn",
+      id: `lead-${l.id}`, group: "leads", severity: age <= 7 ? "urgent" : "warn",
       title: `${l.full_name || "Neuer Lead"} – noch kein Erstkontakt`,
       subtitle: age >= 1 ? `seit ${age} Tag${age === 1 ? "" : "en"} offen` : `seit ${Math.round(hours)} Stunden offen`,
-      to: "/leads/$id", params: { id: l.id }, actionLabel: "Lead kontaktieren", weight: Math.min(age * 5, 40),
+      to: "/leads/$id", params: { id: l.id }, actionLabel: "Lead kontaktieren",
+      weight: Math.max(0, 40 - age),
     });
   }
 
