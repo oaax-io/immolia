@@ -10,7 +10,7 @@ import { propertyStatusLabels, leadStatusLabels } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 
 export type StatusCounts = Record<string, number>;
-export type QcCounts = { pass: number; warn: number; fail: number; none: number };
+export type QcCounts = Record<string, number>;
 
 export function DonutCard({ title, icon: Icon, to, counts, rows, loading, emptyText, footer }: {
   title: string; icon: any; to: string; counts: StatusCounts;
