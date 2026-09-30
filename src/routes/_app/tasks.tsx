@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,7 +104,8 @@ function TasksPage() {
   const confirm = useConfirm();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"view" | "edit">("view");
   const [waitingFor, setWaitingFor] = useState<{ id: string; title: string } | null>(null);
   const [waitingComment, setWaitingComment] = useState("");
   const [search, setSearch] = useState("");
@@ -202,7 +202,7 @@ function TasksPage() {
     onSuccess: () => {
       toast.success(t("tasks.toasts.deleted"));
       qc.invalidateQueries({ queryKey: ["tasks"] });
-      setEditId(null);
+      setDetailId(null);
     },
     onError: (e: Error) => { toast.error(e.message); qc.invalidateQueries({ queryKey: ["tasks"] }); },
   });
@@ -260,7 +260,7 @@ function TasksPage() {
     return true;
   }), [tasks, search, fStatus, fPriority, fAssignee, fDue, now, user?.id]);
 
-  const editing = tasks.find((tk: any) => tk.id === editId);
+  const detailTask = tasks.find((tk: any) => tk.id === detailId);
 
   return (
     <>
@@ -474,7 +474,7 @@ function TasksPage() {
                 const newDesc = existing ? `${existing}\n\n${entry}` : entry;
                 update.mutate(
                   { id: waitingFor.id, patch: { status: "waiting", description: newDesc } },
-                  { onSuccess: () => { toast.success("Aufgabe auf Pendent gesetzt"); setWaitingFor(null); setEditId(null); } },
+                  { onSuccess: () => { toast.success("Aufgabe auf Pendent gesetzt"); setWaitingFor(null); setDetailId(null); } },
                 );
               }}
             >Speichern</Button>
