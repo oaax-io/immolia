@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
   SidebarProvider, SidebarTrigger, SidebarInset, useSidebar,
 } from "@/components/ui/sidebar";
@@ -112,11 +112,6 @@ function AppSidebar() {
       <SidebarContent className="gap-0 overflow-y-auto">
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.labelKey} className="px-2 py-1.5">
-            {!collapsed && (
-              <SidebarGroupLabel className="h-5 px-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {t(group.labelKey)}
-              </SidebarGroupLabel>
-            )}
             <SidebarGroupContent>
               <SidebarMenu className="gap-1">
                 {group.items.filter((item) => modules.isEnabled(moduleForPath(item.to))).map((item) => {
