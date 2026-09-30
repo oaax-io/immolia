@@ -33,6 +33,7 @@ import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { ClientRelationshipsTab } from "@/components/clients/ClientRelationshipsTab";
 import { ClientProfileSummary } from "@/components/clients/ClientProfileSummary";
 import { ClientSmartOverview } from "@/components/clients/ClientSmartOverview";
+import { ClientAppointmentsTab } from "@/components/clients/ClientAppointmentsTab";
 import { ClientEditDialog } from "@/components/clients/ClientEditDialog";
 import { ClientQuickActions } from "@/components/clients/ClientQuickActions";
 import { BenchmarkCard } from "@/components/clients/BenchmarkCard";
@@ -672,6 +673,12 @@ export function ClientDetail({ id, inDialog, onClose, clientIds, onNavigate }: {
                 <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs tabular-nums">{documentsCount}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger
+              value="appointments"
+              className="relative flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-muted-foreground rounded-xl border border-transparent transition-all hover:bg-sidebar/25 hover:backdrop-blur-xl hover:text-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.08)] data-[state=active]:border-border/60"
+            >
+              <Calendar className="h-4 w-4" />Termine
+            </TabsTrigger>
           </TabsList>
         </section>
         </div>
@@ -889,6 +896,10 @@ export function ClientDetail({ id, inDialog, onClose, clientIds, onNavigate }: {
         {/* 7. Dokumente */}
         <TabsContent value="documents" className="mt-6">
           <ClientDocumentsTab clientId={id} userId={user!.id} />
+        </TabsContent>
+
+        <TabsContent value="appointments" className="mt-6">
+          <ClientAppointmentsTab clientId={id} />
         </TabsContent>
 
         {/* 8. Aktivitäten (über Icon-Button im Header erreichbar) */}
