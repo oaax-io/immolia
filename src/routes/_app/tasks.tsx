@@ -4,14 +4,13 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare} from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -114,6 +113,14 @@ function TasksPage() {
   const [fAssignee, setFAssignee] = useState("all");
   const [fDue, setFDue] = useState("all");
   const [form, setForm] = useState({ ...emptyForm });
+  const [view, setView] = useState<"cards" | "kanban" | "list">(() => {
+    const v = typeof window !== "undefined" ? window.localStorage.getItem("tasks-view") : null;
+    return v === "kanban" || v === "list" ? v : "cards";
+  });
+  const changeView = (v: "cards" | "kanban" | "list") => {
+    setView(v);
+    try { window.localStorage.setItem("tasks-view", v); } catch { /* ignore */ }
+  };
 
 
   const { data: tasks = [], isLoading } = useQuery({
@@ -260,6 +267,14 @@ function TasksPage() {
     return true;
   }), [tasks, search, fStatus, fPriority, fAssignee, fDue, now, user?.id]);
 
+  const sorted = useMemo(
+    () => [...filtered].sort((a: any, b: any) => Number(b.is_pinned ?? false) - Number(a.is_pinned ?? false)),
+    [filtered],
+  );
+
+  const togglePin = (tk: any) =>
+    update.mutate({ id: tk.id, patch: { is_pinned: !tk.is_pinned } });
+
   const detailTask = tasks.find((tk: any) => tk.id === detailId);
 
   return (
@@ -328,9 +343,29 @@ function TasksPage() {
         </Select>
       </div>
 
+      <div className="mb-4 flex items-center justify-end gap-1">
+        {([
+          { v: "cards" as const, icon: LayoutGrid, label: "Karten" },
+          { v: "kanban" as const, icon: Columns3, label: "Kanban" },
+          { v: "list" as const, icon: List, label: "Liste" },
+        ]).map(({ v, icon: VIcon, label }) => (
+          <Button
+            key={v}
+            type="button"
+            variant={view === v ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => changeView(v)}
+          >
+            <VIcon className="h-4 w-4" />
+            {label}
+          </Button>
+        ))}
+      </div>
+
       {isLoading ? (
-        <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">{t("tasks.loading")}</div>
-      ) : filtered.length === 0 ? (
+        <div className="rounded-md border bg-muted/20 p-4 text-sm text-muted-foreground">{t("tasks.loading")}</div>
+      ) : sorted.length === 0 ? (
         <EmptyState
           title={tasks.length === 0 ? t("tasks.empty.none") : t("tasks.empty.noResults")}
           description={tasks.length === 0
@@ -338,53 +373,70 @@ function TasksPage() {
             : t("tasks.empty.noResultsDescription")}
           action={tasks.length === 0 ? <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.createButton")}</Button> : undefined}
         />
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((tk: any) => {
+      ) : view === "kanban" ? (
+        <div className="grid gap-3 overflow-x-auto pb-2 md:grid-cols-2 xl:grid-cols-4">
+          {(["open", "in_progress", "waiting", "done"] as const).map((status) => {
+            const col = sorted.filter((tk: any) => tk.status === status);
+            const sStyle = STATUS_STYLES[status];
+            return (
+              <div key={status} className="flex min-w-[240px] flex-col rounded-md border bg-muted/30">
+                <div className="flex items-center gap-2 border-b px-3 py-2">
+                  <span className={`h-2 w-2 rounded-full ${sStyle.dot}`} />
+                  <span className="text-sm font-semibold">{labels.status[status]}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{col.length}</span>
+                </div>
+                <div className="flex flex-col gap-2 p-2">
+                  {col.length === 0 ? (
+                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">—</div>
+                  ) : col.map((tk: any) => (
+                    <TaskCard key={tk.id} tk={tk} now={now} employees={employees} labels={labels} onOpen={() => { setDetailId(tk.id); setMode("view"); }} onToggleDone={() => update.mutate({ id: tk.id, patch: { status: tk.status === "done" ? "open" : "done" } })} onTogglePin={() => togglePin(tk)} compact />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : view === "list" ? (
+        <div className="overflow-hidden rounded-md border">
+          {sorted.map((tk: any, i: number) => {
             const overdue = tk.due_date && new Date(tk.due_date).getTime() < now && tk.status !== "done" && tk.status !== "cancelled";
-            const Icon = tk.status === "done" ? CheckCircle2 : tk.status === "in_progress" ? Clock : tk.priority === "urgent" ? AlertCircle : Circle;
             const assignee = employees.find((e: any) => e.id === tk.assigned_to);
             const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
             const sStyle = STATUS_STYLES[tk.status] ?? STATUS_STYLES.open;
             return (
-              <Card
+              <div
                 key={tk.id}
-                title={tk.title}
-                className={`cursor-pointer border border-border/80 border-l-4 bg-muted/40 shadow-sm transition hover:bg-muted/60 ${overdue ? "border-l-destructive bg-destructive/5" : sStyle.border}`}
+                className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-sm transition hover:bg-muted/50 ${i > 0 ? "border-t" : ""} ${tk.is_pinned ? "bg-primary/[0.03]" : ""}`}
                 onClick={() => { setDetailId(tk.id); setMode("view"); }}
               >
-                <CardContent className="flex items-center gap-2 px-3 py-2.5">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); update.mutate({ id: tk.id, patch: { status: tk.status === "done" ? "open" : "done" } }); }}
-                    className="shrink-0"
-                  >
-                    <Icon className={`h-4 w-4 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
-                  </button>
-                  <span className={`min-w-0 flex-1 truncate text-sm ${tk.status === "done" ? "text-muted-foreground line-through" : "font-medium"}`}>{tk.title}</span>
-                  {(tk.priority === "high" || tk.priority === "urgent") && (
-                    <Badge variant={PRIORITY_VARIANTS[tk.priority]} className="shrink-0 px-1.5 py-0 text-[10px]">
-                      {labels.priority[tk.priority] ?? tk.priority}
-                    </Badge>
-                  )}
-                  {assignee && (
-                    <span
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary"
-                      title={assigneeName}
-                    >
-                      {initials(assigneeName)}
-                    </span>
-                  )}
-                  {tk.due_date && (
-                    <span className={`flex shrink-0 items-center gap-1 text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
-                      <Clock className="h-3 w-3" />
-                      {formatDate(tk.due_date)}
-                    </span>
-                  )}
-                </CardContent>
-              </Card>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); togglePin(tk); }}
+                  className={`shrink-0 ${tk.is_pinned ? "text-primary" : "text-muted-foreground/40 hover:text-muted-foreground"}`}
+                  title={tk.is_pinned ? "Nicht mehr anpinnen" : "Anpinnen"}
+                >
+                  <Pin className={`h-3.5 w-3.5 ${tk.is_pinned ? "fill-current" : ""}`} />
+                </button>
+                <span className={`min-w-0 flex-1 truncate ${tk.status === "done" ? "text-muted-foreground line-through" : "font-medium"}`}>{tk.title}</span>
+                <Badge variant="outline" className={`hidden shrink-0 border px-1.5 py-0 text-[10px] sm:inline-flex ${sStyle.badge}`}>{labels.status[tk.status] ?? tk.status}</Badge>
+                {(tk.priority === "high" || tk.priority === "urgent") && (
+                  <Badge variant={PRIORITY_VARIANTS[tk.priority]} className="shrink-0 px-1.5 py-0 text-[10px]">{labels.priority[tk.priority] ?? tk.priority}</Badge>
+                )}
+                {assignee && (
+                  <span className="hidden h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary sm:flex" title={assigneeName}>{initials(assigneeName)}</span>
+                )}
+                <span className={`w-20 shrink-0 text-right text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                  {tk.due_date ? formatDate(tk.due_date) : "—"}
+                </span>
+              </div>
             );
           })}
+        </div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {sorted.map((tk: any) => (
+            <TaskCard key={tk.id} tk={tk} now={now} employees={employees} labels={labels} onOpen={() => { setDetailId(tk.id); setMode("view"); }} onToggleDone={() => update.mutate({ id: tk.id, patch: { status: tk.status === "done" ? "open" : "done" } })} onTogglePin={() => togglePin(tk)} />
+          ))}
         </div>
       )}
 
@@ -440,6 +492,65 @@ function TasksPage() {
   );
 }
 
+
+function TaskCard({
+  tk, now, employees, labels, onOpen, onToggleDone, onTogglePin, compact = false,
+}: {
+  tk: any; now: number; employees: any[];
+  labels: { status: Record<string, string>; priority: Record<string, string>; related: Record<string, string> };
+  onOpen: () => void; onToggleDone: () => void; onTogglePin: () => void; compact?: boolean;
+}) {
+  const overdue = tk.due_date && new Date(tk.due_date).getTime() < now && tk.status !== "done" && tk.status !== "cancelled";
+  const Icon = tk.status === "done" ? CheckCircle2 : tk.status === "in_progress" ? Clock : tk.priority === "urgent" ? AlertCircle : Circle;
+  const assignee = employees.find((e: any) => e.id === tk.assigned_to);
+  const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
+  const sStyle = STATUS_STYLES[tk.status] ?? STATUS_STYLES.open;
+  return (
+    <div
+      title={tk.title}
+      className={`group cursor-pointer rounded-md border border-border/70 border-l-[3px] bg-card shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition hover:border-border hover:shadow-md ${overdue ? "border-l-destructive bg-destructive/[0.04]" : sStyle.border} ${tk.is_pinned ? "ring-1 ring-primary/20" : ""}`}
+      onClick={onOpen}
+    >
+      <div className={`flex items-center gap-2 ${compact ? "px-2.5 py-2" : "px-3 py-2.5"}`}>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleDone(); }}
+          className="shrink-0"
+        >
+          <Icon className={`h-4 w-4 ${tk.status === "done" ? "text-success" : overdue ? "text-destructive" : "text-muted-foreground"}`} />
+        </button>
+        <span className={`min-w-0 flex-1 truncate text-sm ${tk.status === "done" ? "text-muted-foreground line-through" : "font-medium"}`}>{tk.title}</span>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
+          className={`shrink-0 transition ${tk.is_pinned ? "text-primary" : "text-muted-foreground/30 opacity-0 hover:text-muted-foreground group-hover:opacity-100"}`}
+          title={tk.is_pinned ? "Nicht mehr anpinnen" : "Anpinnen"}
+        >
+          <Pin className={`h-3.5 w-3.5 ${tk.is_pinned ? "fill-current" : ""}`} />
+        </button>
+        {(tk.priority === "high" || tk.priority === "urgent") && (
+          <Badge variant={PRIORITY_VARIANTS[tk.priority]} className="shrink-0 px-1.5 py-0 text-[10px]">
+            {labels.priority[tk.priority] ?? tk.priority}
+          </Badge>
+        )}
+        {assignee && (
+          <span
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary"
+            title={assigneeName}
+          >
+            {initials(assigneeName)}
+          </span>
+        )}
+        {tk.due_date && (
+          <span className={`flex shrink-0 items-center gap-1 text-xs ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+            <Clock className="h-3 w-3" />
+            {formatDate(tk.due_date)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TaskForm({
   form, setForm, employees, optionsFor,

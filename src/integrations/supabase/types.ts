@@ -5386,6 +5386,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          is_pinned: boolean
           priority: Database["public"]["Enums"]["task_priority"]
           related_id: string | null
           related_type: string | null
@@ -5401,6 +5402,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          is_pinned?: boolean
           priority?: Database["public"]["Enums"]["task_priority"]
           related_id?: string | null
           related_type?: string | null
@@ -5416,6 +5418,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          is_pinned?: boolean
           priority?: Database["public"]["Enums"]["task_priority"]
           related_id?: string | null
           related_type?: string | null
