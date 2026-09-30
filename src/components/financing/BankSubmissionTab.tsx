@@ -27,10 +27,11 @@ import { generateBankCoverLetter } from "@/lib/bank-letter.functions";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useIsMasterDataAdmin } from "@/hooks/useIsMasterDataAdmin";
 import { useChecklistAutofill } from "@/hooks/useChecklistAutofill";
+import { logActivity } from "@/components/ActivityTab";
 import { ChecklistReadinessCard } from "@/components/financing/ChecklistReadinessCard";
 
 const SUBMISSION_STATUSES: DossierStatus[] = [
-  "ready_for_bank", "submitted_to_bank", "documents_missing", "approved", "rejected",
+  "submitted_to_bank", "documents_missing", "approved", "rejected",
 ];
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
@@ -58,6 +59,7 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const merged = { ...(dossier ?? {}), ...form };
 
   const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["activity_logs", "financing_dossier", dossierId] });
     qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
     qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
     qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
@@ -67,6 +69,13 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
     mutationFn: async (patch: Record<string, any>) => {
       const { error } = await supabase.from("financing_dossiers").update(patch as any).eq("id", dossierId);
       if (error) throw error;
+      const labels: Record<string, string> = { bank_name: "Bank", bank_contact: "Kontaktperson", bank_email: "Bank-E-Mail", bank_phone: "Bank-Telefon", bank_notes: "Interne Notizen" };
+      const changed = Object.keys(patch).map((k) => labels[k] ?? k);
+      await logActivity({
+        relatedType: "financing_dossier", relatedId: dossierId,
+        action: patch.bank_name ? `Bank ausgewählt: ${patch.bank_name}` : `Bankangaben geändert: ${changed.join(", ")}`,
+        metadata: { kind: "bank_details", fields: Object.keys(patch) },
+      });
     },
     onSuccess: () => { invalidate(); toast.success("Gespeichert"); setForm({}); },
     onError: (e: any) => toast.error(e.message ?? "Fehler"),
@@ -84,6 +93,11 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
       }
       const { error } = await supabase.from("financing_dossiers").update(patch as any).eq("id", dossierId);
       if (error) throw error;
+      await logActivity({
+        relatedType: "financing_dossier", relatedId: dossierId,
+        action: `Bank-Status manuell geändert: ${DOSSIER_STATUS_LABELS[currentStatus as DossierStatus] ?? currentStatus ?? "—"} → ${DOSSIER_STATUS_LABELS[s]}`,
+        metadata: { kind: "dossier_status_manual", from: currentStatus, to: s },
+      });
       return s;
     },
     onSuccess: (s) => { invalidate(); toast.success(`Status: ${DOSSIER_STATUS_LABELS[s]}`); },
@@ -98,6 +112,8 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
         return;
       }
       const text = res?.result?.text ?? res?.text ?? "";
+      logActivity({ relatedType: "financing_dossier", relatedId: dossierId, action: "Nachricht an die Bank mit KI erstellt", metadata: { kind: "bank_letter_ai" } })
+        .then(() => qc.invalidateQueries({ queryKey: ["activity_logs", "financing_dossier", dossierId] }));
       setLetter(text);
       toast.success("Nachricht erstellt – bitte prüfen");
     },
@@ -117,6 +133,8 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
         requiredPresent={readiness.stats.requiredPresent}
         requiredTotal={readiness.stats.requiredTotal}
         missingRequired={readiness.missingRequired}
+        isForced={readiness.isForced}
+        onForceSubmit={readiness.forceReady}
       />
 
       <Card>
@@ -319,6 +337,7 @@ function BankPackageCard({
         return;
       }
       toast.success("Version gelöscht");
+      log("Bank-Paket-Version gelöscht", "bank_package_deleted");
       qc.invalidateQueries({ queryKey: ["bank_packages", dossierId] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -341,6 +360,7 @@ function BankPackageCard({
         });
       }
       qc.invalidateQueries({ queryKey: ["bank_packages", dossierId] });
+      log(`Bank-Paket erstellt (${res.attachmentCount} Anhänge)`, "bank_package_created");
       if (res.fileUrl) downloadViaProxy(res.filePath ?? "", res.fileUrl);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -374,6 +394,7 @@ function BankPackageCard({
       const url = `${window.location.origin}/bank-paket/${res.token}`;
       await navigator.clipboard.writeText(url);
       toast.success("Öffentlicher Download-Link kopiert (7 Tage gültig)");
+      await log("Download-Link zum Bank-Paket kopiert (7 Tage gültig)", "bank_package_link");
       await markSubmitted();
     } else {
       toast.error(res.message ?? "Link konnte nicht erstellt werden.");
@@ -390,6 +411,7 @@ function BankPackageCard({
     const url = `${window.location.origin}/bank-paket/${res.token}`;
     const body = `${letter.trim() || "Guten Tag\n\nAnbei erhalten Sie die Unterlagen zum Finanzierungsdossier."}\n\nDownload der Unterlagen (7 Tage gültig):\n${url}`;
     const subject = `Finanzierungsanfrage${bankName ? ` – ${bankName}` : ""}`;
+    await log(`E-Mail an die Bank geöffnet${bankName ? ` (${bankName})` : ""} mit Download-Link`, "bank_package_email");
     window.location.href = `mailto:${encodeURIComponent(bankEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     await markSubmitted();
   }
@@ -412,13 +434,19 @@ function BankPackageCard({
     qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
     qc.invalidateQueries({ queryKey: ["financing_dossiers"] });
     toast.info("Status auf «Bei Bank eingereicht» gesetzt");
+    await log("Status automatisch auf «Bei Bank eingereicht» gesetzt (Paket geteilt)", "dossier_status_auto");
   }
 
 
   async function downloadPackage(path: string) {
     const res = await getUrl({ data: { path } });
-    if (res.ok && res.fileUrl) downloadViaProxy(path, res.fileUrl);
+    if (res.ok && res.fileUrl) { downloadViaProxy(path, res.fileUrl); log("Bank-Paket heruntergeladen", "bank_package_download"); }
     else toast.error(res.message ?? "Download fehlgeschlagen.");
+  }
+
+  async function log(action: string, kind: string) {
+    await logActivity({ relatedType: "financing_dossier", relatedId: dossierId, action, metadata: { kind } });
+    qc.invalidateQueries({ queryKey: ["activity_logs", "financing_dossier", dossierId] });
   }
 
   const items = packages.data?.ok ? packages.data.packages : [];

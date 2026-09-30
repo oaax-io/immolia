@@ -3415,6 +3415,8 @@ export type Database = {
           bank_name: string | null
           bank_notes: string | null
           bank_phone: string | null
+          bank_ready_forced_at: string | null
+          bank_ready_forced_by: string | null
           bank_type: string | null
           calculated_interest_rate: number | null
           client_id: string
@@ -3509,6 +3511,8 @@ export type Database = {
           bank_name?: string | null
           bank_notes?: string | null
           bank_phone?: string | null
+          bank_ready_forced_at?: string | null
+          bank_ready_forced_by?: string | null
           bank_type?: string | null
           calculated_interest_rate?: number | null
           client_id: string
@@ -3603,6 +3607,8 @@ export type Database = {
           bank_name?: string | null
           bank_notes?: string | null
           bank_phone?: string | null
+          bank_ready_forced_at?: string | null
+          bank_ready_forced_by?: string | null
           bank_type?: string | null
           calculated_interest_rate?: number | null
           client_id?: string

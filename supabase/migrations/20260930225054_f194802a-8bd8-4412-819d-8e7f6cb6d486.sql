@@ -1,0 +1,1 @@
+ALTER TABLE public.financing_dossiers ADD COLUMN IF NOT EXISTS bank_ready_forced_at timestamptz NULL, ADD COLUMN IF NOT EXISTS bank_ready_forced_by uuid NULL;

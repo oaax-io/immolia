@@ -1,3 +1,4 @@
+import { logActivity } from "@/components/ActivityTab";
 // Automatischer Abgleich der Bank-Checkliste mit vorhandenen Daten und Dokumenten.
 // Setzt erkannte Punkte selbstständig, respektiert aber jede manuelle Entscheidung.
 
@@ -193,7 +194,10 @@ export function useChecklistAutofill(dossierId: string, options?: { sync?: boole
     const status = dossier.dossier_status as string;
     if (["submitted_to_bank", "approved", "rejected", "cancelled"].includes(status)) return;
 
-    const target = isReady ? "ready_for_bank" : status === "ready_for_bank" ? "documents_missing" : null;
+    const forced = !!(dossier as any).bank_ready_forced_at;
+    const target = isReady
+      ? "ready_for_bank"
+      : status === "ready_for_bank" && !forced ? "documents_missing" : null;
     if (!target || target === status) return;
 
     (async () => {
@@ -202,6 +206,15 @@ export function useChecklistAutofill(dossierId: string, options?: { sync?: boole
         .update({ dossier_status: target } as any)
         .eq("id", dossierId);
       if (error) return;
+      await logActivity({
+        relatedType: "financing_dossier",
+        relatedId: dossierId,
+        action: target === "ready_for_bank"
+          ? "Status automatisch auf «Bereit für Bank» gesetzt (alle Pflichtpunkte erfüllt)"
+          : "Status automatisch auf «Unterlagen fehlen» gesetzt (Pflichtpunkte offen)",
+        metadata: { kind: "dossier_status_auto", from: status, to: target },
+      });
+      qc.invalidateQueries({ queryKey: ["activity_logs", "financing_dossier", dossierId] });
       qc.invalidateQueries({ queryKey: ["financing_dossier", dossierId] });
       qc.invalidateQueries({ queryKey: ["financing_dossier_auto", dossierId] });
       qc.invalidateQueries({ queryKey: ["financing_dossier_bank", dossierId] });
@@ -209,7 +222,31 @@ export function useChecklistAutofill(dossierId: string, options?: { sync?: boole
     })();
   }, [sync, isReady, dossier, rows.length, dossierId, qc]);
 
+  /** Manuell trotz fehlender Pflichtpunkte auf «Bereit für Bank» setzen (mit Protokoll). */
+  const forceReady = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("financing_dossiers")
+      .update({
+        dossier_status: "ready_for_bank",
+        bank_ready_forced_at: new Date().toISOString(),
+        bank_ready_forced_by: u?.user?.id ?? null,
+      } as any)
+      .eq("id", dossierId);
+    if (error) throw error;
+    await logActivity({
+      relatedType: "financing_dossier",
+      relatedId: dossierId,
+      action: `Trotz fehlender Unterlagen manuell auf «Bereit für Bank» gesetzt – bestätigt fehlend: ${missingRequired.map((m) => m.label).join(", ")}`,
+      metadata: { kind: "bank_ready_forced", missing: missingRequired.map((m) => m.key) },
+    });
+    for (const k of [["activity_logs", "financing_dossier", dossierId], ["financing_dossier", dossierId], ["financing_dossier_auto", dossierId], ["financing_dossier_bank", dossierId], ["financing_dossiers"]])
+      qc.invalidateQueries({ queryKey: k });
+  };
+
   return {
+    forceReady,
+    isForced: !!(dossier as any)?.bank_ready_forced_at && (dossier as any)?.dossier_status === "ready_for_bank",
     rows,
     auto,
     stats,
