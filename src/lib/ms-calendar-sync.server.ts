@@ -257,7 +257,7 @@ export async function runCalendarWorker(admin: Admin, budgetMs = 45_000) {
         if (job.job_type === "initial" || job.job_type === "delta") await deltaSync(admin, conn, token, job.job_type === "initial");
         else if (job.job_type === "push_appointment" && job.appointment_id) await pushAppointment(admin, conn, token, job.appointment_id);
         else if (job.job_type === "delete_appointment" && job.link_id) await deleteRemote(admin, token, job.link_id);
-        else if (job.job_type === "resolve_conflict" && job.link_id) await resolveConflict(admin, conn, token, job.link_id, (job.error_detail_sanitized === "keep_remote" ? "remote" : "local"));
+        else if (job.job_type === "resolve_conflict" && job.link_id) await resolveConflict(admin, conn, token, job.link_id, (String(job.idempotency_key ?? "").startsWith("resolve:remote") ? "remote" : "local"));
         await finish({ status: "succeeded", error_code: null });
       } catch (e) {
         const transient = e instanceof RetryLater || (e instanceof MsTokenError && e.code === "transient");
