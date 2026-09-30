@@ -426,6 +426,7 @@ function renderClassic(d: ExposeData, t: ExposeTheme): string {
       </tbody>
     </table>
     ${d.description ? `<h2 class="section-title mt">Objektbeschreibung</h2><p class="prose">${esc(d.description)}</p>` : ""}
+    ${(d.highlights ?? []).length ? `<h2 class="section-title mt">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="section-title mt">Ausstattung</h2><ul class="bullets">${(d.features ?? []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${footer(d, t, 2, 0)}
   </div>`);
