@@ -137,13 +137,17 @@ async function createRecordSplits(
     };
   });
 
-  const { data: inserted, error } = await sb
-    .from("commission_record_splits")
-    .insert(rows)
-    .select("id, user_id, role, split_percent, gross_share, payout_rate, payout_amount");
-
+  // Ohne RETURNING einfügen: Nicht-Admins dürfen Anteile von Kollegen anlegen (tenant_insert),
+  // aber nur eigene lesen (tenant_select). insert().select() scheitert sonst mit einem RLS-Fehler.
+  const { error } = await sb.from("commission_record_splits").insert(rows);
   if (error) throw new Error(`Splits konnten nicht gespeichert werden: ${error.message}`);
-  return (inserted ?? []) as CommissionSplitRow[];
+
+  // Danach nur die für diese Person sichtbaren Anteile zurückgeben (RLS).
+  const { data: visible } = await sb
+    .from("commission_record_splits")
+    .select("id, user_id, role, split_percent, gross_share, payout_rate, payout_amount")
+    .eq("commission_record_id", recordId);
+  return (visible ?? []) as CommissionSplitRow[];
 }
 
 /** Ledger-Eintrag anlegen und mit Splits zurückgeben. */

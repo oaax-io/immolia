@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SortOrderInput } from "./SortOrderInput";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -121,13 +122,10 @@ export function MasterListManager({
                   else invalidate();
                 }}
               />
-              <Input
-                type="number"
+              <SortOrderInput
                 value={row.sort_order}
                 disabled={!canEdit}
-                onChange={(e) =>
-                  update.mutate({ id: row.id, patch: { sort_order: Number(e.target.value) || 0 } })
-                }
+                onCommit={(v) => update.mutate({ id: row.id, patch: { sort_order: v } })}
               />
               <div className="flex items-center gap-2">
                 <Switch
