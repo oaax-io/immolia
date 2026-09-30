@@ -13,6 +13,8 @@
  * Pure function: no React. Reusable by server-side PDF renderers.
  */
 
+import { matchExposeIcon, exposeIconSvg } from "@/lib/expose-icons";
+
 export type ExposeFamily = "classic" | "modern" | "luxury";
 
 export interface ExposeData {
