@@ -42,6 +42,7 @@ import type { EmployeeLite } from "@/components/clients/ClientAssignees";
 import { PropertyQuickActions } from "@/components/properties/PropertyQuickActions";
 import { deleteToTrash } from "@/lib/trash";
 import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter";
+import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 
 
 export const Route = createFileRoute("/_app/properties/$id")({ component: PropertyDetail });
@@ -1068,7 +1069,7 @@ function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { p
   const images = useMemo(() => {
     const fromMedia = [...new Set(extractPropertyImagePaths((mediaRows ?? []) as any[]))];
     const merged = [...fromMedia];
-    for (const p of fallbackImages) if (p && !merged.includes(p)) merged.push(p);
+    for (const p of propertyPhotoCandidates(fallbackImages)) if (!merged.includes(p)) merged.push(p);
     return merged;
   }, [mediaRows, fallbackImages]);
 
@@ -1318,7 +1319,7 @@ function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { p
           className="absolute inset-0 z-0 h-full w-full cursor-zoom-in"
           aria-label="Bild vergrössern"
         >
-          <img src={getMediaPublicUrl(current!)} alt={title} className="h-full w-full object-cover" />
+          <PropertyPhoto sources={current ? [current] : []} alt={title} />
         </button>
       )}
 
@@ -1441,14 +1442,9 @@ function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { p
             <DialogDescription>Bild {Math.min(idx, images.length - 1) + 1} von {images.length}</DialogDescription>
           </DialogHeader>
           <div className="relative flex h-[88vh] w-full items-center justify-center overflow-hidden">
-            <img
-              key={idx}
-              src={getMediaPublicUrl(current!)}
-              alt={title}
-              className="max-h-full max-w-full select-none object-contain"
-              style={{ transform: `scale(${zoom})`, transition: zoom === 1 ? "none" : "transform 150ms ease-out", cursor: zoom > 1 ? "grab" : "default" }}
-              draggable={false}
-            />
+            <div key={idx} className="flex h-full w-full items-center justify-center" style={{ transform: `scale(${zoom})`, transition: zoom === 1 ? "none" : "transform 150ms ease-out", cursor: zoom > 1 ? "grab" : "default" }}>
+              <PropertyPhoto sources={current ? [current] : []} alt={title} className="max-h-full max-w-full select-none object-contain" />
+            </div>
 
             {/* Preload adjacent images for instant navigation */}
             {images.length > 1 && (
@@ -1794,14 +1790,14 @@ function MediaTab({ propertyId, cover }: { propertyId: string; cover?: string | 
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {cover && (
             <div className="group relative aspect-[4/3] overflow-hidden rounded-xl border bg-muted">
-              <img src={cover} alt="Cover" className="h-full w-full object-cover" />
+              <PropertyPhoto sources={[cover]} alt="Cover" />
               <Badge className="absolute left-2 top-2">Cover</Badge>
             </div>
           )}
           {media.map((m: any) => (
             <div key={m.id} className="group relative aspect-[4/3] overflow-hidden rounded-xl border bg-muted">
               {m.file_type === "image" || m.file_url?.match(/\.(jpe?g|png|webp|gif|avif|jfif)$/i) ? (
-                <img src={getMediaPublicUrl(m.file_url)} alt={m.title ?? ""} className="h-full w-full object-cover" />
+                <PropertyPhoto sources={[m.file_url]} alt={m.title ?? "Immobilie"} />
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
                   <ImageIcon className="h-6 w-6" />
