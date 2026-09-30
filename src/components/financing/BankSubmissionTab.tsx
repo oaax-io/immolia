@@ -84,6 +84,9 @@ const SUBMISSION_STATUSES: DossierStatus[] = [
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
+  const bankCatalog = usePartnerCatalog("bank");
+  const bankContacts = usePartnerContacts("bank");
+
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier_bank", dossierId],
