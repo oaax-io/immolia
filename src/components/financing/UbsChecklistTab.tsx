@@ -25,7 +25,7 @@ export function UbsChecklistTab({ dossierId }: Props) {
   const qc = useQueryClient();
   const [openSections, setOpenSections] = useState<string[]>(SECTION_ORDER.slice(0, 3));
 
-  const { rows, stats, missing, missingRequired, isReady, isLoading } = useChecklistAutofill(dossierId);
+  const { rows, stats, missing, missingRequired, isReady, isLoading, forceReady, isForced } = useChecklistAutofill(dossierId);
 
   const seedMutation = useMutation({
     mutationFn: async () => {
@@ -95,6 +95,8 @@ export function UbsChecklistTab({ dossierId }: Props) {
         requiredTotal={stats.requiredTotal}
         missingRequired={missingRequired}
         missingOptional={missingOptional}
+        isForced={isForced}
+        onForceSubmit={forceReady}
         onJump={(section) => setOpenSections((prev) => (prev.includes(section) ? prev : [...prev, section]))}
       />
 
