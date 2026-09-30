@@ -454,16 +454,10 @@ function BankPackageCard({
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold flex items-center gap-2">
-              <Package className="h-4 w-4" />Bank-Paket
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Erstellt ein ZIP mit Master-Dossier (PDF) + allen Unterlagen von Kunde, Ehepartner, Objekt &
-              Finanzierung. Kopierbarer Download-Link zur Weitergabe an die Bank.
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Package className="h-4 w-4" />Bank-Paket
+          </h3>
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
             {create.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -474,13 +468,11 @@ function BankPackageCard({
           </Button>
         </div>
 
-        <div className="flex gap-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <p>
-            Viele Banken öffnen keine Links von unbekannten Absendern. Falls der Link blockiert wird: ZIP herunterladen
-            und im Partnerportal der Bank hochladen oder über einen sicheren Mailkanal (z. B. IncaMail) senden.
-          </p>
-        </div>
+          ZIP mit Master-Dossier und allen Unterlagen – als Download-Link für die Bank oder direkt herunterladen.
+          Blockiert die Bank den Link, das ZIP im Bankportal hochladen oder per IncaMail senden.
+        </p>
 
         {items.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">Noch keine Pakete erstellt.</p>
