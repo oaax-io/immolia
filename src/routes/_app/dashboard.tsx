@@ -21,6 +21,7 @@ import {
 import { isBackendUnavailableError } from "@/lib/backend-errors";
 import { UpcomingCalendarList } from "@/components/dashboard/UpcomingCalendarList";
 import { ActionRadar } from "@/components/dashboard/ActionRadar";
+import { DashboardHero } from "@/components/dashboard/DashboardHero";
 
 import { useTranslation } from "react-i18next";
 
@@ -253,48 +254,7 @@ function Dashboard() {
 
   return (
     <>
-      <div className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/50 px-5 py-4 shadow-sm backdrop-blur">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            {t(getGreetingKey())}{displayName ? `, ${displayName}` : ""} 👋
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(i18n.language || "de-CH", { weekday: "long", day: "numeric", month: "long" })} · {t("dashboard.subtitle")}
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="shrink-0">
-              <Plus className="mr-1 h-4 w-4" />
-              {t("dashboard.quickActions")}
-              <ChevronDown className="ml-1 h-4 w-4 opacity-70" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>{t("dashboard.quickActionsLabel")}</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link to="/leads"><UserPlus className="mr-2 h-4 w-4" />{t("dashboard.quick.newLead")}</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/clients"><Users className="mr-2 h-4 w-4" />{t("dashboard.quick.newClient")}</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/properties"><Building2 className="mr-2 h-4 w-4" />{t("dashboard.quick.newProperty")}</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/appointments"><CalendarDays className="mr-2 h-4 w-4" />{t("dashboard.quick.newAppointment")}</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/tasks"><CheckSquare className="mr-2 h-4 w-4" />{t("dashboard.quick.newTask")}</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/documents"><Upload className="mr-2 h-4 w-4" />{t("dashboard.quick.uploadDocument")}</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DashboardHero displayName={displayName} />
 
       {anyError && (
         <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
