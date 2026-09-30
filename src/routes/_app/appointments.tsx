@@ -790,9 +790,9 @@ function deriveTiming(starts: string, ends: string) {
   const s = new Date(starts), e = ends ? new Date(ends) : null;
   const diff = e ? Math.round((e.getTime() - s.getTime()) / 60000) : 60;
   const midnight = s.getHours() === 0 && s.getMinutes() === 0 && e && e.getHours() === 0 && e.getMinutes() === 0;
-  if (midnight && diff === 1440) return { mode: "1d", duration: diff };
-  if (midnight && diff === 2880) return { mode: "2d", duration: diff };
-  return { mode: "time", duration: DURATIONS.some((d) => d.m === diff) ? diff : -1 };
+  if (midnight && diff === 1440) return { mode: "time", duration: -1, repeat: "none", repeat_until: "" };
+  if (midnight && diff === 2880) return { mode: "time", duration: -1, repeat: "none", repeat_until: "" };
+  return { mode: "time", duration: DURATIONS.some((d) => d.m === diff) ? diff : -1, repeat: "none", repeat_until: "" };
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
