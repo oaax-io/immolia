@@ -2,7 +2,7 @@ import { useModuleAccess, moduleForPath } from "@/hooks/useModuleAccess";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
-  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid, CalendarDays } from "lucide-react";
+  User, Bell, Building2, Palette, Banknote, Tags, Video, FileSignature, ChevronRight, Trash2, LayoutGrid, CalendarDays, Handshake } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 
