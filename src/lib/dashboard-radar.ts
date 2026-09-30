@@ -204,6 +204,33 @@ export function buildRadar(input: RadarInput): RadarItem[] {
   return items.sort((a, b) => b.weight - a.weight);
 }
 
+/**
+ * Gemischte Ansicht: reihum je ein Eintrag pro Bereich, damit das Cockpit nie
+ * von einer einzigen Kategorie (z.B. Leads) überflutet wird.
+ */
+export function balancedItems(items: RadarItem[]): RadarItem[] {
+  const buckets = new Map<RadarGroup, RadarItem[]>();
+  for (const i of items) {
+    const b = buckets.get(i.group) ?? [];
+    b.push(i);
+    buckets.set(i.group, b);
+  }
+  const lists = [...buckets.values()].sort((a, b) => b[0].weight - a[0].weight);
+  const out: RadarItem[] = [];
+  let idx = 0;
+  while (out.length < items.length) {
+    let added = false;
+    for (const l of lists) {
+      if (l[idx]) { out.push(l[idx]); added = true; }
+    }
+    if (!added) break;
+    idx += 1;
+  }
+  return out;
+}
+
+
+
 /** Dynamischer Begrüssungssatz – ohne KI, immer sofort da. */
 export function buildBriefing(items: RadarItem[], todayAppts: number): string[] {
   const by = (g: RadarGroup) => items.filter((i) => i.group === g).length;
