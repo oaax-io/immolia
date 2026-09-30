@@ -27,6 +27,7 @@ import { HolidaySettings } from "@/components/appointments/HolidaySettings";
 import { holidayMap, holidaysForCanton, dateKey, type Holiday } from "@/lib/swiss-holidays";
 import { ApptHover, TaskHover, HolidayHover } from "@/components/appointments/CalendarHover";
 import { deleteToTrash } from "@/lib/trash";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 
 export const Route = createFileRoute("/_app/appointments")({ component: AppointmentsPage });
 
@@ -165,7 +166,13 @@ function AppointmentsPage() {
   const editing = appts.find((a: any) => a.id === editId);
 
   const startNew = (preset?: Partial<typeof emptyForm>) => {
-    setForm({ ...emptyForm, ...preset });
+    const f: any = { ...emptyForm, mode: "time", duration: 60, ...preset };
+    if (f.starts_at && !f.ends_at) {
+      const d = new Date(f.starts_at);
+      f.starts_at = localInput(d);
+      f.ends_at = localInput(new Date(d.getTime() + 3600000));
+    }
+    setForm(f);
     setOpen(true);
   };
 
@@ -197,6 +204,8 @@ function AppointmentsPage() {
         clients={clients}
         properties={properties}
         employees={employees}
+        appts={appts}
+        currentUserId={user?.id}
         onSubmit={() => create.mutate()}
         submitting={create.isPending}
       />
@@ -755,102 +764,264 @@ function MonthView({ appts, tasks, employees = [], holidays, onOpen, onCreateAt 
 
 /* -------------------- Forms -------------------- */
 
+const DURATIONS = [
+  { m: 15, l: "15 Min" }, { m: 30, l: "30 Min" }, { m: 60, l: "1 Std" },
+  { m: 90, l: "1.5 Std" }, { m: 120, l: "2 Std" }, { m: 180, l: "3 Std" },
+];
+
+function addMin(local: string, min: number) {
+  return localInput(new Date(new Date(local).getTime() + min * 60000));
+}
+
+function deriveTiming(starts: string, ends: string) {
+  if (!starts) return { mode: "time", duration: 60 };
+  const s = new Date(starts), e = ends ? new Date(ends) : null;
+  const diff = e ? Math.round((e.getTime() - s.getTime()) / 60000) : 60;
+  const midnight = s.getHours() === 0 && s.getMinutes() === 0 && e && e.getHours() === 0 && e.getMinutes() === 0;
+  if (midnight && diff === 1440) return { mode: "1d", duration: diff };
+  if (midnight && diff === 2880) return { mode: "2d", duration: diff };
+  return { mode: "time", duration: DURATIONS.some((d) => d.m === diff) ? diff : -1 };
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`min-w-0 truncate rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
+      {children}
+    </button>
+  );
+}
+
 function AppointmentForm({
-  form, setForm, clients, properties, employees,
-}: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[] }) {
+  form, setForm, clients, properties, employees, appts = [], currentUserId, selfId,
+}: { form: any; setForm: (f: any) => void; clients: any[]; properties: any[]; employees: any[]; appts?: any[]; currentUserId?: string; selfId?: string }) {
   const { t } = useTranslation();
   const labels = useApptLabels();
+  const mode: string = form.mode ?? "time";
+  const duration: number = form.duration ?? 60;
+
+  const setStart = (v: string) => {
+    if (!v) return setForm({ ...form, starts_at: "", ends_at: "" });
+    setForm({ ...form, starts_at: v, ends_at: duration > 0 ? addMin(v, duration) : (form.ends_at || addMin(v, 60)) });
+  };
+  const setDuration = (m: number) => {
+    setForm({ ...form, duration: m, ends_at: form.starts_at && m > 0 ? addMin(form.starts_at, m) : form.ends_at });
+  };
+  const setMode = (m: string) => {
+    if (m === "time") {
+      const base = form.starts_at ? form.starts_at.slice(0, 10) + "T09:00" : "";
+      setForm({ ...form, mode: m, duration: 60, starts_at: base, ends_at: base ? addMin(base, 60) : "" });
+    } else {
+      const days = m === "1d" ? 1 : 2;
+      const date = (form.starts_at || localInput(new Date())).slice(0, 10);
+      const s = `${date}T00:00`;
+      setForm({ ...form, mode: m, duration: days * 1440, starts_at: s, ends_at: addMin(s, days * 1440) });
+    }
+  };
+  const setDay = (date: string) => {
+    if (!date) return;
+    const s = `${date}T00:00`;
+    setForm({ ...form, starts_at: s, ends_at: addMin(s, duration) });
+  };
+
+  const conflicts = useMemo(() => {
+    if (!form.starts_at) return [];
+    const s = new Date(form.starts_at).getTime();
+    const e = form.ends_at ? new Date(form.ends_at).getTime() : s + 3600000;
+    if (!(e > s)) return [];
+    const who = form.assigned_to || currentUserId;
+    return appts.filter((a: any) => {
+      if (a.id === selfId || a.status === "cancelled") return false;
+      if (who && (a.assigned_to || a.owner_id) !== who) return false;
+      const as = new Date(a.starts_at).getTime();
+      const ae = a.ends_at ? new Date(a.ends_at).getTime() : as + 3600000;
+      return as < e && ae > s;
+    });
+  }, [form.starts_at, form.ends_at, form.assigned_to, appts, currentUserId, selfId]);
+
+  const endInvalid = form.starts_at && form.ends_at && new Date(form.ends_at) <= new Date(form.starts_at);
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <Video className="h-4 w-4 text-primary" />
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+      {/* Left: essentials */}
+      <div className="space-y-4">
+        <div>
+          <Label>{t("appointments.form.title")} *</Label>
+          <Input className="h-10 font-medium" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("appointments.form.titlePlaceholder")} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-sm">Online-Meeting</Label>
-            <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
+            <Label>{t("appointments.form.type")}</Label>
+            <Select value={form.appointment_type} onValueChange={(v) => setForm({ ...form, appointment_type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{TYPES.map(ty => <SelectItem key={ty} value={ty}>{labels.types[ty]}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t("appointments.form.status")}</Label>
+            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.statuses[s]}</SelectItem>)}</SelectContent>
+            </Select>
           </div>
         </div>
-        <Switch checked={!!form.is_online} onCheckedChange={(v) => setForm({ ...form, is_online: v })} />
+
+        <Section title="Zeitpunkt">
+          <div className="mb-3 grid grid-cols-3 gap-1.5">
+            <Chip active={mode === "time"} onClick={() => setMode("time")}>Uhrzeit</Chip>
+            <Chip active={mode === "1d"} onClick={() => setMode("1d")}>1 Tag</Chip>
+            <Chip active={mode === "2d"} onClick={() => setMode("2d")}>2 Tage</Chip>
+          </div>
+          {mode === "time" ? (
+            <div className="space-y-3">
+              <div>
+                <Label>{t("appointments.form.start")} *</Label>
+                <Input type="datetime-local" value={form.starts_at} onChange={(e) => setStart(e.target.value)} />
+              </div>
+              <div>
+                <Label>Dauer</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {DURATIONS.map((d) => <Chip key={d.m} active={duration === d.m} onClick={() => setDuration(d.m)}>{d.l}</Chip>)}
+                  <Chip active={duration === -1} onClick={() => setForm({ ...form, duration: -1 })}>Individuell</Chip>
+                </div>
+              </div>
+              <div>
+                <Label>{t("appointments.form.end")}</Label>
+                <Input type="datetime-local" value={form.ends_at} disabled={duration !== -1}
+                  onChange={(e) => setForm({ ...form, ends_at: e.target.value })} />
+                {endInvalid && <p className="mt-1 text-xs text-destructive">Ende muss nach dem Beginn liegen.</p>}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Label>{mode === "1d" ? "Datum" : "Erster Tag"} *</Label>
+              <Input type="date" value={form.starts_at ? form.starts_at.slice(0, 10) : ""} onChange={(e) => setDay(e.target.value)} />
+              {form.starts_at && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ganztägig {mode === "2d" ? `bis ${new Date(new Date(form.ends_at).getTime() - 1).toLocaleDateString("de-CH")}` : ""}
+                </p>
+              )}
+            </div>
+          )}
+          {conflicts.length > 0 && (
+            <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs">
+              <p className="flex items-center gap-1.5 font-semibold text-destructive">
+                <Flag className="h-3.5 w-3.5" />Terminkollision: {conflicts.length} überschneidende{conflicts.length === 1 ? "r Termin" : " Termine"}
+              </p>
+              <ul className="mt-1.5 space-y-0.5 text-foreground/80">
+                {conflicts.slice(0, 4).map((c: any) => (
+                  <li key={c.id} className="truncate">• {c.title} – {formatDateTime(c.starts_at)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Section>
+
+        <div>
+          <Label>{t("appointments.form.notes")}</Label>
+          <Textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+        </div>
       </div>
 
-      <div><Label>{t("appointments.form.title")} *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder={t("appointments.form.titlePlaceholder")} /></div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>{t("appointments.form.type")}</Label>
-          <Select value={form.appointment_type} onValueChange={(v) => setForm({ ...form, appointment_type: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{TYPES.map(ty => <SelectItem key={ty} value={ty}>{labels.types[ty]}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("appointments.form.status")}</Label>
-          <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.statuses[s]}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div><Label>{t("appointments.form.start")} *</Label><Input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} /></div>
-        <div><Label>{t("appointments.form.end")}</Label><Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></div>
-        {form.is_online ? (
-          <div className="col-span-2">
-            <Label>Raumname (optional)</Label>
-            <Input value={form.meeting_url} onChange={(e) => setForm({ ...form, meeting_url: e.target.value.replace(/\s+/g, "-").toLowerCase() })} placeholder="wird automatisch generiert" />
+      {/* Right: location & assignment */}
+      <div className="space-y-4 md:border-l md:pl-6">
+        <Section title="Ort">
+          <div className="mb-3 flex items-center justify-between rounded-md border px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Video className="h-4 w-4 text-primary" />
+              <div>
+                <Label className="text-sm">Online-Meeting</Label>
+                <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
+              </div>
+            </div>
+            <Switch checked={!!form.is_online} onCheckedChange={(v) => setForm({ ...form, is_online: v })} />
           </div>
-        ) : (
-          <div className="col-span-2"><Label>{t("appointments.form.location")}</Label><Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder={t("appointments.form.locationPlaceholder")} /></div>
-        )}
-        <div>
-          <Label>{t("appointments.form.client")}</Label>
-          <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder={t("appointments.form.clientPlaceholder")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("appointments.form.clientNone")}</SelectItem>
-              {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("appointments.form.property")}</Label>
-          <Select value={form.property_id || "none"} onValueChange={(v) => setForm({ ...form, property_id: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder={t("appointments.form.propertyPlaceholder")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("appointments.form.propertyNone")}</SelectItem>
-              {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="col-span-2">
-          <Label>{t("appointments.form.assignee")}</Label>
-          <Select value={form.assigned_to || "none"} onValueChange={(v) => setForm({ ...form, assigned_to: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder={t("appointments.form.assignToMe")} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("appointments.form.assignToMe")}</SelectItem>
-              {employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+          {form.is_online ? (
+            <div>
+              <Label>Raumname (optional)</Label>
+              <Input value={form.meeting_url} onChange={(e) => setForm({ ...form, meeting_url: e.target.value.replace(/\s+/g, "-").toLowerCase() })} placeholder="wird automatisch generiert" />
+            </div>
+          ) : (
+            <div>
+              <Label>{t("appointments.form.location")}</Label>
+              <AddressAutocomplete
+                value={form.location}
+                onChange={(v) => setForm({ ...form, location: v })}
+                onSelect={(s) => setForm({ ...form, location: s.label })}
+                placeholder={t("appointments.form.locationPlaceholder")}
+              />
+            </div>
+          )}
+        </Section>
+
+        <Section title="Zuweisung">
+          <div className="space-y-3">
+            <div>
+              <Label>{t("appointments.form.assignee")}</Label>
+              <Select value={form.assigned_to || "none"} onValueChange={(v) => setForm({ ...form, assigned_to: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder={t("appointments.form.assignToMe")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("appointments.form.assignToMe")}</SelectItem>
+                  {employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("appointments.form.client")}</Label>
+              <Select value={form.client_id || "none"} onValueChange={(v) => setForm({ ...form, client_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder={t("appointments.form.clientPlaceholder")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("appointments.form.clientNone")}</SelectItem>
+                  {clients.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("appointments.form.property")}</Label>
+              <Select value={form.property_id || "none"} onValueChange={(v) => setForm({ ...form, property_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder={t("appointments.form.propertyPlaceholder")} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("appointments.form.propertyNone")}</SelectItem>
+                  {properties.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Section>
       </div>
-      <div><Label>{t("appointments.form.notes")}</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
     </div>
   );
 }
 
 function AppointmentDialog({
-  open, onOpenChange, title, form, setForm, clients, properties, employees, onSubmit, submitting,
+  open, onOpenChange, title, form, setForm, clients, properties, employees, onSubmit, submitting, appts, currentUserId,
 }: any) {
   const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{t("appointments.dialogDescription")}</DialogDescription>
-        </DialogHeader>
-        <AppointmentForm form={form} setForm={setForm} clients={clients} properties={properties} employees={employees} />
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("appointments.actions.cancel")}</Button>
-          <Button onClick={onSubmit} disabled={submitting}>{t("appointments.actions.save")}</Button>
-        </DialogFooter>
+      <DialogContent className="max-h-[92vh] w-full max-w-3xl overflow-hidden p-0">
+        <div className="flex max-h-[92vh] flex-col">
+          <DialogHeader className="border-b px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-xl"><CalIcon className="h-5 w-5 text-primary" />{title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <AppointmentForm form={form} setForm={setForm} clients={clients} properties={properties} employees={employees} appts={appts} currentUserId={currentUserId} />
+          </div>
+          <DialogFooter className="border-t px-6 py-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>{t("appointments.actions.cancel")}</Button>
+            <Button onClick={onSubmit} disabled={submitting}>{t("appointments.actions.save")}</Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
