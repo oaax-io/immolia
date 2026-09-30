@@ -37,8 +37,14 @@ export interface ExposeData {
   extra_sections?: ExposeExtraSection[];
   section_order?: string[];
 
+  /** Visuelle Ausstattungs-Highlights (max. ~8), werden mit Icons dargestellt. */
+  highlights?: string[] | null;
+
   agency_name?: string | null;
+  agency_logo_url?: string | null;
   contact_name?: string | null;
+  contact_role?: string | null;
+  contact_photo_url?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
   generated_on?: string;
