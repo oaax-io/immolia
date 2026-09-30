@@ -78,6 +78,7 @@ import { Route as AppLeadsIdRouteImport } from './routes/_app/leads.$id'
 import { Route as AppFinancingIdRouteImport } from './routes/_app/financing.$id'
 import { Route as AppClientsIdRouteImport } from './routes/_app/clients.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicMsCalendarCallbackRouteImport } from './routes/api/public/ms-calendar/callback'
 import { Route as ApiPublicBankPaketTokenRouteImport } from './routes/api/public/bank-paket.$token'
 import { Route as AppPropertiesIdExposeRouteImport } from './routes/_app/properties.$id.expose'
 import { Route as AppFinancingIdQuickCheckResultRouteImport } from './routes/_app/financing.$id.quick-check-result'
@@ -428,6 +429,12 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMsCalendarCallbackRoute =
+  ApiPublicMsCalendarCallbackRouteImport.update({
+    id: '/api/public/ms-calendar/callback',
+    path: '/api/public/ms-calendar/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicBankPaketTokenRoute = ApiPublicBankPaketTokenRouteImport.update({
   id: '/api/public/bank-paket/$token',
   path: '/api/public/bank-paket/$token',
@@ -516,6 +523,7 @@ export interface FileRoutesByFullPath {
   '/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -585,6 +593,7 @@ export interface FileRoutesByTo {
   '/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
@@ -660,6 +669,7 @@ export interface FileRoutesById {
   '/_app/financing/$id/quick-check-result': typeof AppFinancingIdQuickCheckResultRoute
   '/_app/properties/$id/expose': typeof AppPropertiesIdExposeRoute
   '/api/public/bank-paket/$token': typeof ApiPublicBankPaketTokenRoute
+  '/api/public/ms-calendar/callback': typeof ApiPublicMsCalendarCallbackRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
@@ -735,6 +745,7 @@ export interface FileRouteTypes {
     | '/financing/$id/quick-check-result'
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -804,6 +815,7 @@ export interface FileRouteTypes {
     | '/financing/$id/quick-check-result'
     | '/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   id:
     | '__root__'
@@ -878,6 +890,7 @@ export interface FileRouteTypes {
     | '/_app/financing/$id/quick-check-result'
     | '/_app/properties/$id/expose'
     | '/api/public/bank-paket/$token'
+    | '/api/public/ms-calendar/callback'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
@@ -896,6 +909,7 @@ export interface RootRouteChildren {
   InviteIndexRoute: typeof InviteIndexRoute
   ApiPublicPortalWebhookRoute: typeof ApiPublicPortalWebhookRoute
   ApiPublicBankPaketTokenRoute: typeof ApiPublicBankPaketTokenRoute
+  ApiPublicMsCalendarCallbackRoute: typeof ApiPublicMsCalendarCallbackRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -1384,6 +1398,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ms-calendar/callback': {
+      id: '/api/public/ms-calendar/callback'
+      path: '/api/public/ms-calendar/callback'
+      fullPath: '/api/public/ms-calendar/callback'
+      preLoaderRoute: typeof ApiPublicMsCalendarCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bank-paket/$token': {
       id: '/api/public/bank-paket/$token'
       path: '/api/public/bank-paket/$token'
@@ -1605,6 +1626,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteIndexRoute: InviteIndexRoute,
   ApiPublicPortalWebhookRoute: ApiPublicPortalWebhookRoute,
   ApiPublicBankPaketTokenRoute: ApiPublicBankPaketTokenRoute,
+  ApiPublicMsCalendarCallbackRoute: ApiPublicMsCalendarCallbackRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport

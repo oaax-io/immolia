@@ -63,10 +63,14 @@ export const Route = createFileRoute("/api/public/ms-calendar/callback")({
           const me = await s.graphGet<{ id: string; displayName?: string; userPrincipalName?: string; mail?: string }>(t.access_token, "/me?$select=id,displayName,userPrincipalName,mail");
           if (me.id !== claims.oid) return ret("invalid");
 
+          const { data: prev } = await admin.from("calendar_connections").select("ms_user_id")
+            .eq("agency_id", att.agency_id).eq("user_id", att.user_id).eq("provider", "microsoft").maybeSingle();
+          const sameAccount = (prev as any)?.ms_user_id === me.id;
           const { data: conn, error } = await admin.from("calendar_connections").upsert({
             agency_id: att.agency_id, user_id: att.user_id, provider: "microsoft",
             ms_tenant_id: String(claims.tid), ms_user_id: me.id,
             account_display: me.mail || me.userPrincipalName || me.displayName || null,
+            ...(sameAccount ? {} : { selected_calendar_id: null, selected_calendar_name: null, delta_link: null }),
             status: "connecting", sync_enabled: false, last_error_code: null, last_error_at: null,
             updated_at: new Date().toISOString(),
           } as never, { onConflict: "agency_id,user_id,provider" }).select("id, ms_user_id, selected_calendar_id").single();
