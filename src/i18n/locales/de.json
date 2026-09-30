@@ -1160,7 +1160,7 @@
     "dialogDescription": "Verknüpfe Termin mit Kunde und/oder Immobilie und weise einen Mitarbeiter zu.",
     "tabs": {
       "list": "Liste",
-      "week": "Wochenkalender"
+      "week": "Woche"
     },
     "sections": {
       "upcoming": "Anstehend",
