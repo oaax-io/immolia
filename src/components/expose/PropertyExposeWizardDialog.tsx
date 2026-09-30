@@ -178,6 +178,8 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [contactMode, setContactMode] = useState<"employee" | "custom">("employee");
   const [contactUserId, setContactUserId] = useState<string | null>(null);
   const [customContact, setCustomContact] = useState({ name: "", email: "", phone: "", role: "" });
+  const [employeeRole, setEmployeeRole] = useState("");
+  const [highlights, setHighlights] = useState<string[] | null>(null);
 
   const renderPdf = useServerFn(renderDocumentPdf);
   const fetchBytes = useServerFn(fetchDocumentPdfBytes);
