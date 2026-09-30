@@ -17,14 +17,18 @@ export function PresenceDot({
   updatedAt,
   className,
   ring = true,
+  raw = false,
 }: {
   status?: string | null;
   updatedAt?: string | null;
   className?: string;
   ring?: boolean;
+  /** Zeigt die Farbe des rohen Status, ohne Heartbeat-Prüfung (z.B. Status-Auswahl). */
+  raw?: boolean;
 }) {
-  useTick(!!updatedAt);
-  const meta = presenceMeta(effectivePresence(status, updatedAt));
+  useTick(!raw && !!updatedAt);
+  const effective = raw ? (status ?? "offline") : effectivePresence(status, updatedAt);
+  const meta = presenceMeta(effective);
   return (
     <span
       title={meta.label}
