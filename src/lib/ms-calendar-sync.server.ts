@@ -8,9 +8,18 @@ const WINDOW_BACK_DAYS = 30;
 const WINDOW_FWD_DAYS = 365;
 const WINDOW_RENEW_DAYS = 7;
 
+// Schreibschutz: vor jedem Graph-Schreibzugriff prüfen, ob die Verbindung noch aktiv ist (Trennen während laufendem Job).
+const writeGuard = new Map<string, { admin: Admin; connId: string }>();
+class ConnectionStopped extends Error { constructor() { super("connection_stopped"); } }
+
 export class RetryLater extends Error { constructor(public seconds: number, msg: string) { super(msg); } }
 
 async function graph(token: string, method: string, url: string, body?: unknown, extraHeaders: Record<string, string> = {}) {
+  const g = method !== "GET" ? writeGuard.get(token) : undefined;
+  if (g) {
+    const { data } = await g.admin.from("calendar_connections").select("status, sync_enabled").eq("id", g.connId).maybeSingle();
+    if (!data || (data as any).status !== "connected" || !(data as any).sync_enabled) throw new ConnectionStopped();
+  }
   const res = await fetch(url.startsWith("http") ? url : `${GRAPH}${url}`, {
     method,
     headers: {
@@ -255,12 +264,17 @@ export async function runCalendarWorker(admin: Admin, budgetMs = 45_000) {
         const { data: ok } = await admin.rpc("calendar_membership_active", { _agency_id: conn.agency_id, _user_id: conn.user_id });
         if (!ok) { await finish({ status: "canceled", error_code: "membership_inactive" }); return; }
         const token = await getAccessToken(admin, conn.id);
-        if (job.job_type === "initial" || job.job_type === "delta") await deltaSync(admin, conn, token, job.job_type === "initial");
+        writeGuard.set(token, { admin, connId: conn.id });
+        if (job.job_type === "ensure_subscription") {
+          const { ensureSubscription } = await import("./ms-calendar-subscriptions.server");
+          await ensureSubscription(admin, conn, token);
+        } else if (job.job_type === "initial" || job.job_type === "delta") await deltaSync(admin, conn, token, job.job_type === "initial");
         else if (job.job_type === "push_appointment" && job.appointment_id) await pushAppointment(admin, conn, token, job.appointment_id);
         else if (job.job_type === "delete_appointment" && job.link_id) await deleteRemote(admin, token, job.link_id);
         else if (job.job_type === "resolve_conflict" && job.link_id) await resolveConflict(admin, conn, token, job.link_id, (String(job.idempotency_key ?? "").startsWith("resolve:remote") ? "remote" : "local"));
         await finish({ status: "succeeded", error_code: null });
       } catch (e) {
+        if (e instanceof ConnectionStopped) { await finish({ status: "canceled", error_code: "connection_stopped" }); processed++; return; }
         const transient = e instanceof RetryLater || (e instanceof MsTokenError && e.code === "transient");
         const final = e instanceof MsTokenError && (e.code === "invalid_grant" || e.code === "admin_consent");
         const delay = e instanceof RetryLater ? e.seconds : Math.min(3600, 30 * 2 ** job.attempts);

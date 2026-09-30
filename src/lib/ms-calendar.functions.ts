@@ -60,7 +60,25 @@ export const getMsCalendarStatus = createServerFn({ method: "GET" })
       if (state === "connected" && pendingJob) state = "syncing";
     }
     const meta = (conn?.sync_metadata ?? {}) as Record<string, unknown>;
+    // Synchronisationszustand getrennt von der Verbindung auswerten
+    let lastJob: any = null; let lastSuccessAt: string | null = null; let runningJob = false;
+    if (conn) {
+      const { data: j } = await supabaseAdmin.from("calendar_sync_jobs").select("status, error_code, finished_at, job_type")
+        .eq("connection_id", conn.id).in("status", ["succeeded", "failed"]).in("job_type", ["initial", "delta", "push_appointment", "delete_appointment", "ensure_subscription"])
+        .order("finished_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
+      lastJob = j;
+      const { count: r } = await supabaseAdmin.from("calendar_sync_jobs").select("id", { count: "exact", head: true }).eq("connection_id", conn.id).eq("status", "running");
+      runningJob = (r ?? 0) > 0;
+      lastSuccessAt = conn.last_synced_at ?? null;
+    }
+    const syncState: "never" | "running" | "ok" | "failed" | "retrying" =
+      runningJob ? "running" : lastJob?.status === "failed" ? "failed"
+      : conn?.last_error_code === "sync_failed" || conn?.last_error_code === "token_refresh_transient" ? "retrying"
+      : lastSuccessAt ? "ok" : "never";
     return {
+      syncState,
+      lastFailedAt: lastJob?.status === "failed" ? lastJob.finished_at : null,
+      liveUpdates: !!(conn?.subscription_id && conn?.subscription_expires_at && new Date(conn.subscription_expires_at) > new Date()),
       agencyName: (ag as any)?.name ?? null,
       pendingJob,
       pushToOutlook: meta.push_to_outlook !== false,
@@ -135,6 +153,12 @@ export const saveMsCalendar = createServerFn({ method: "POST" })
     const token = await s.getAccessToken(admin, conn.id);
     const cal = await s.graphGet<any>(token, `/me/calendars/${encodeURIComponent(data.calendarId)}?$select=id,name,canEdit`);
     if (!cal?.canEdit) throw new Error("Dieser Kalender ist nicht beschreibbar.");
+    if (conn.selected_calendar_id && conn.selected_calendar_id !== cal.id) {
+      // Kalenderwechsel: alte Zuordnungen lösen (Termine bleiben im alten Kalender und im CRM; keine Löschungen, keine Duplikate)
+      await admin.from("calendar_sync_jobs").update({ status: "canceled", finished_at: new Date().toISOString() } as never).eq("connection_id", conn.id).eq("status", "queued");
+      await admin.from("calendar_event_links").update({ appointment_id: null, deleted_at: new Date().toISOString(), conflict_state: null } as never).eq("connection_id", conn.id).is("deleted_at", null);
+      await admin.from("calendar_busy_blocks").delete().eq("connection_id", conn.id);
+    }
     const { error } = await admin.from("calendar_connections").update({
       selected_calendar_id: cal.id, selected_calendar_name: cal.name, status: "connected",
       sync_enabled: true, delta_link: null, last_error_code: null, updated_at: new Date().toISOString(),
@@ -144,6 +168,8 @@ export const saveMsCalendar = createServerFn({ method: "POST" })
     if (error) throw new Error("Auswahl konnte nicht gespeichert werden.");
     await admin.from("calendar_sync_jobs").upsert({ agency_id: agencyId, connection_id: conn.id, job_type: "initial",
       idempotency_key: `initial:${cal.id}:${Date.now()}` } as never, { onConflict: "connection_id,idempotency_key" });
+    await admin.from("calendar_sync_jobs").insert({ agency_id: agencyId, connection_id: conn.id, job_type: "ensure_subscription",
+      idempotency_key: `sub:save:${Date.now()}` } as never);
     return { ok: true };
   });
 
@@ -153,11 +179,25 @@ export const disconnectMs = createServerFn({ method: "POST" })
     const agencyId = await activeAgency(context as Ctx);
     const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
     if (!conn) return { ok: true };
-    await admin.from("calendar_connection_tokens").delete().eq("connection_id", conn.id);
+    // 1) Sofort stoppen: laufende Jobs prüfen den Status vor jedem Graph-Schreibzugriff
+    await admin.from("calendar_connections").update({ status: "disconnected", sync_enabled: false, updated_at: new Date().toISOString() } as never).eq("id", conn.id);
     await admin.from("calendar_sync_jobs").update({ status: "canceled", finished_at: new Date().toISOString() } as never)
       .eq("connection_id", conn.id).in("status", ["queued", "running"]);
+    // 2) Microsoft-Subscription bestmöglich entfernen (solange Token noch vorhanden)
+    if (conn.subscription_id) {
+      try {
+        const s = await import("./ms-calendar.server");
+        const { removeSubscription } = await import("./ms-calendar-subscriptions.server");
+        await removeSubscription(conn.subscription_id, await s.getAccessToken(admin, conn.id));
+      } catch { /* best effort */ }
+    }
+    // 3) Tokens, OAuth-Zwischendaten und persönliche Belegungen löschen; CRM- und Outlook-Termine bleiben,
+    //    minimale Zuordnungen (calendar_event_links) bleiben für duplikatfreie Wiederverbindung.
+    await admin.from("calendar_connection_tokens").delete().eq("connection_id", conn.id);
+    await admin.from("calendar_oauth_attempts").delete().eq("agency_id", agencyId).eq("user_id", (context as Ctx).userId);
+    await admin.from("calendar_busy_blocks").delete().eq("connection_id", conn.id);
     await admin.from("calendar_connections").update({
-      status: "disconnected", sync_enabled: false, delta_link: null, subscription_id: null, updated_at: new Date().toISOString(),
+      delta_link: null, subscription_id: null, subscription_expires_at: null, subscription_client_state_hash: null,
     } as never).eq("id", conn.id);
     return { ok: true };
   });

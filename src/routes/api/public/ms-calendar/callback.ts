@@ -76,6 +76,12 @@ export const Route = createFileRoute("/api/public/ms-calendar/callback")({
           } as never, { onConflict: "agency_id,user_id,provider" }).select("id, ms_user_id, selected_calendar_id").single();
           if (error || !conn) return ret("error");
           await s.saveTokens(admin, (conn as any).id, t, cfg.encKey);
+          if (prev && !sameAccount) {
+            // Kontowechsel: alte Zuordnungen lösen – nie Termine im fremden Konto löschen oder duplizieren
+            await admin.from("calendar_event_links").update({ appointment_id: null, deleted_at: new Date().toISOString(), conflict_state: null } as never).eq("connection_id", (conn as any).id).is("deleted_at", null);
+            await admin.from("calendar_busy_blocks").delete().eq("connection_id", (conn as any).id);
+            await admin.from("calendar_connections").update({ subscription_id: null, subscription_client_state_hash: null, subscription_expires_at: null } as never).eq("id", (conn as any).id);
+          }
           // War bereits ein Kalender gewählt (Reconnect mit demselben Konto) → direkt wieder verbunden
           if ((conn as any).selected_calendar_id) {
             await admin.from("calendar_connections").update({ status: "connected", sync_enabled: true } as never).eq("id", (conn as any).id);

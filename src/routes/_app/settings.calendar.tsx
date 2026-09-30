@@ -88,7 +88,7 @@ function CalendarSettings() {
               {(st === "not_connected" || st === "disconnected") && <Button onClick={() => connect.mutate(false)} disabled={connect.isPending}>Mit Microsoft verbinden</Button>}
               {(st === "reconnect_required" || st === "admin_approval_required" || st === "error" || st === "connecting" || st === "connected") &&
                 <Button variant="outline" onClick={() => connect.mutate(true)} disabled={connect.isPending}>Erneut verbinden</Button>}
-              {status.data?.account && st !== "disconnected" && <Button variant="ghost" onClick={() => disc.mutate()} disabled={disc.isPending}>Verbindung trennen</Button>}
+              {status.data?.account && st !== "disconnected" && <Button variant="ghost" onClick={() => { if (window.confirm("Die Synchronisierung wird beendet. Bestehende Termine bleiben erhalten.\n\nHinweis: Das Trennen widerruft nicht automatisch die Zustimmung bei Microsoft (myapps.microsoft.com).")) disc.mutate(); }} disabled={disc.isPending}>Verbindung trennen</Button>}
             </div>
             <p className="text-xs text-muted-foreground">Die Verbindung gilt nur für dich und nur in der aktuell gewählten Firma. Andere Personen, auch Admins, sehen keine Zugangsdaten.</p>
           </>
