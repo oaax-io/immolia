@@ -2,6 +2,42 @@
 
 Alle nennenswerten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [2.0.0] – 30.09.2026 – Immolia SaaS, Commercial, Kalender & Stabilisierung
+
+### Hinzugefügt
+- **Immolia als White-Label-SaaS:** Mehrere Unternehmen arbeiten in strikt getrennten Bereichen mit eigener Marke, Domain, Mitgliedschaften und Modulen; ASIMO bleibt als Bestandsunternehmen erhalten.
+- **Plattform-Admin-Center:** Zentrale Verwaltung von Unternehmen, Benutzern, Domains, Modulen, Abrechnung, Feedback, Aktivitäten und Sicherheit bei strikter Trennung von Plattform- und Firmenrollen.
+- **Unternehmens- und Domainverwaltung:** Unternehmen atomar anlegen, verwalten oder sperren; Domains registrieren, prüfen, aktivieren und als bevorzugte Adresse festlegen.
+- **Modulverwaltung:** Produktzugang ist von Rollenrechten getrennt; fehlende Freigaben werden standardmässig abgewiesen.
+- **Einladungsbasierte Benutzeraufnahme:** Einmalige, an die E-Mail-Adresse gebundene Links für Inhaber, Mitarbeitende und Plattformbenutzer; offene Registrierung und temporäre Passwörter sind deaktiviert.
+- **Abonnemente und Credits:** Pläne, Add-ons, Testphasen, monatliche Kontingente, Credit-Pakete, Verbrauchsvorschau und Buchungshistorie auf der Seite «Abo & Credits».
+- **Flexible Abrechnung:** Stripe, Rechnung, Banküberweisung, individuelle Verträge und kostenlose Abonnemente verwenden dieselbe Abrechnungslogik.
+- **Provisionsverwaltung:** Gebuchte Provisionen, Potenzial, Aufteilungen, persönliche Ziele, Abschlussbuchungen und Provisionsabrechnungen.
+- **Videoanrufe:** Mitarbeitende können Anrufe direkt aus Immolia starten, annehmen und ablehnen; Klingeldauer und Signalisierung wurden gegen endlose Anrufzustände abgesichert.
+- **Erweiterte Immobilien-Stammdaten:** Zusätzliche Haupt-, Flächen-, Finanz-, Rendite-, Energie- und Schweizer Katasterangaben sowie eine konfigurierbare Ausstattungs- und Eigenschaftenliste.
+- **Immobilien-Bearbeitung:** Kompaktere, gegliederte Erfassung mit Adressvorschlägen sowie präziseren Parzellen- und Stockwerkangaben.
+- **Exposé-Anhänge:** Zusätzliche Dateien und Bilder per Drag-and-drop aufnehmen, sortieren und kontrolliert in die Ausgabe übernehmen.
+- **Aufgabenansichten:** Kompakte Liste, Karten und Kanban, Anpinnen, Detailfenster, durchsuchbare Zuweisungen und Wiederholungen mit Enddatum.
+- **Kalenderausbau:** Kombinierbare Ebenen für Feiertage, Geburtstage, Aufgaben, Termine und Online-Meetings; Tagessprung, Serien, getrennte Datums-/Zeitwahl, Adressvorschläge und Kollisionshinweise.
+- **Microsoft-365-Kalender:** Persönliche Verbindung im bestehenden Kalender und in den Einstellungen mit Kalenderwahl, getrenntem Verbindungs-/Synchronisationsstatus, Fehlerzuständen und sicherem Trennen.
+
+### Geändert
+- **Microsoft-Synchronisationsbetrieb vorbereitet:** Verschlüsselte Zugangsdaten, automatische Erneuerung, Live-Änderungsmeldungen, regelmässiger Sicherheitsabgleich, Wiederholungen bei Störungen und Konfliktbehandlung. Der vollständige Praxistest mit einem autorisierten Microsoft-Geschäftskonto ist noch ausstehend.
+- **Sicherer Firmenwechsel:** Aktive Firma wird serverseitig bestätigt; laufende Abfragen, Live-Verbindungen und Zwischenspeicher werden vor dem vollständigen Neuladen bereinigt.
+- **Strikte Kommunikationsisolation:** Benachrichtigungen, interne Nachrichten, Feedback und Anhänge sind immer an die aktive Firma gebunden.
+- **Credit-Verbrauch:** Credits werden nach Herkunft und Ablauf geführt, für kostenpflichtige Aktionen reserviert und bei technischen Fehlern automatisch freigegeben.
+- **Bank-Pakete:** ZIP-Dateien werden speicherschonend gestreamt; Grenzen von 25 MB pro Datei, 45 MB insgesamt und 150 Dateien verhindern Speicherabbrüche.
+- **Papierkorb:** Sicherung und endgültiges Löschen erfolgen atomar und unter den Berechtigungen der aktiven Firma.
+
+### Behoben
+- Veraltete Daten einer anderen Firma nach Firmenwechsel, Browser-Zurücknavigation oder parallelen Tabs werden durch eine serverseitig bestätigte Sperre und firmenbezogene Zwischenspeicher verhindert.
+- Mandate werden inklusive Aufteilung, Dokument und Verknüpfung vollständig oder gar nicht erstellt; ungültige Anteile hinterlassen keine halbfertigen Datensätze.
+- Löschvorgänge prüfen die tatsächlich gelöschten Datensätze; unzulässige Löschungen werden nicht mehr als erfolgreich gemeldet.
+- Abrechnungskatalog, Planwechsel und Credit-Käufe stabilisiert; fehlende Modulzeilen entziehen bestehenden Unternehmen keine Funktionen.
+- Termin-, Aufgaben-, Provisions- und Bank-Paket-Abläufe gegen doppelte Verarbeitung, unvollständige Datensätze und Speicherengpässe gehärtet.
+
+---
+
 ## [1.15.0] – 18.07.2026 – Exposé, Makrolage & Finanzierungs-Detailseite
 
 ### Hinzugefügt
