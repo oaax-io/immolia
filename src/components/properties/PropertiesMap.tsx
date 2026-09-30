@@ -14,15 +14,10 @@ import {
   propertyStatusLabels,
 } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
+import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
 
 interface Props {
   properties: any[];
-}
-
-function getMediaPublicUrl(path?: string | null) {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
 }
 
 // Switzerland bounding box / center
@@ -204,17 +199,7 @@ export function PropertiesMap({ properties }: Props) {
               params={{ id: selected.id }}
               className="block h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-muted"
             >
-              {selected.images?.[0] ? (
-                <img
-                  src={getMediaPublicUrl(selected.images[0])}
-                  alt={selected.title}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                  <MapPin className="h-5 w-5" />
-                </div>
-              )}
+              <PropertyPhoto sources={selected.images} alt={selected.title} />
             </Link>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
