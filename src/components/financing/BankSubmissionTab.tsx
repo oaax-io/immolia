@@ -26,6 +26,8 @@ import {
 import { generateBankCoverLetter } from "@/lib/bank-letter.functions";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useIsMasterDataAdmin } from "@/hooks/useIsMasterDataAdmin";
+import { useChecklistAutofill } from "@/hooks/useChecklistAutofill";
+import { ChecklistReadinessCard } from "@/components/financing/ChecklistReadinessCard";
 
 const SUBMISSION_STATUSES: DossierStatus[] = [
   "ready_for_bank", "submitted_to_bank", "documents_missing", "approved", "rejected",
@@ -35,6 +37,7 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
   const { canEdit: isAdmin } = useIsMasterDataAdmin();
   const genLetter = useServerFn(generateBankCoverLetter);
+  const readiness = useChecklistAutofill(dossierId);
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier_bank", dossierId],
@@ -108,6 +111,14 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
 
   return (
     <div className="space-y-4">
+      <ChecklistReadinessCard
+        isReady={readiness.isReady}
+        requiredPercent={readiness.stats.requiredPercent}
+        requiredPresent={readiness.stats.requiredPresent}
+        requiredTotal={readiness.stats.requiredTotal}
+        missingRequired={readiness.missingRequired}
+      />
+
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-4 w-4" />Bankangaben</h3>
