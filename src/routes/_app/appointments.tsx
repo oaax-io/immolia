@@ -939,7 +939,7 @@ function AssigneeMultiPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
+        <Button ref={triggerRef} type="button" variant="outline" className="h-auto min-h-9 w-full justify-between px-3 py-1.5 font-normal">
           {selectedEmps.length ? (
             <span className="flex flex-wrap items-center gap-1.5">
               {selectedEmps.map((e: any) => (
@@ -955,7 +955,7 @@ function AssigneeMultiPicker({
           <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent className="p-0" align="start" style={popStyle}>
         <Command>
           <CommandInput placeholder="Suchen…" />
           <CommandList className="max-h-64">
