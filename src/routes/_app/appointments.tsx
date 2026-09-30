@@ -1027,15 +1027,12 @@ function AppointmentForm({
       </div>
 
       {/* Right: location & assignment */}
-      <div className="space-y-4 md:border-l md:pl-6">
+      <div className="space-y-4 rounded-lg bg-muted/40 p-4">
         <Section title="Ort">
-          <div className="mb-3 flex items-center justify-between rounded-md border px-3 py-2">
+          <div className="mb-3 flex items-center justify-between rounded-md border bg-background px-3 py-2">
             <div className="flex items-center gap-2">
               <Video className="h-4 w-4 text-primary" />
-              <div>
-                <Label className="text-sm">Online-Meeting</Label>
-                <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
-              </div>
+              <p className="text-xs text-muted-foreground">Videoraum wird automatisch erstellt</p>
             </div>
             <Switch checked={!!form.is_online} onCheckedChange={(v) => setForm({ ...form, is_online: v })} />
           </div>
