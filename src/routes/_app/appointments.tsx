@@ -1076,13 +1076,7 @@ function AppointmentForm({
         </div>
 
         <Section title="Zeitpunkt">
-          <div className="mb-3 grid grid-cols-3 gap-1.5">
-            <Chip active={mode === "time"} onClick={() => setMode("time")}>Uhrzeit</Chip>
-            <Chip active={mode === "1d"} onClick={() => setMode("1d")}>1 Tag</Chip>
-            <Chip active={mode === "2d"} onClick={() => setMode("2d")}>2 Tage</Chip>
-          </div>
-          {mode === "time" ? (
-            <div className="space-y-3">
+          <div className="space-y-3">
               <div className="grid grid-cols-5 gap-2">
                 <div className="col-span-3">
                   <Label>{t("appointments.form.start")} *</Label>
