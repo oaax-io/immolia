@@ -334,6 +334,21 @@ function AppointmentsPage() {
       <Tabs value={view} onValueChange={changeView} className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 shadow-sm">
           {view !== "list" && <ToolbarNav view={view} anchor={anchor} setAnchor={setAnchor} />}
+          <div className="ml-auto flex items-center gap-2">
+            <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
+              <TabsTrigger value="month" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                <CalendarDays className="h-4 w-4" />{t("appointments.tabs.month", { defaultValue: "Monat" })}
+              </TabsTrigger>
+              <TabsTrigger value="week" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                <CalendarRange className="h-4 w-4" />{t("appointments.tabs.week", { defaultValue: "Woche" })}
+              </TabsTrigger>
+              <TabsTrigger value="day" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                <CalendarClock className="h-4 w-4" />Tag
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
+                <ListIcon className="h-4 w-4" />{t("appointments.tabs.list")}
+              </TabsTrigger>
+            </TabsList>
             <LayerPanel layers={layer.layers} toggle={layer.toggle} />
           </div>
         </div>
