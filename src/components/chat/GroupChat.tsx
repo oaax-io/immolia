@@ -314,6 +314,25 @@ export function GroupChatPanel({
     }
   };
 
+  /** Sprachnotiz sofort hochladen und in die Gruppe senden. */
+  const sendVoice = async (file: File) => {
+    if (!user?.id) return;
+    try {
+      const path = await tenantStoragePath(`${user.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-]/g, "_")}`);
+      const { error: upErr } = await supabase.storage.from("chat-attachments").upload(path, file);
+      if (upErr) throw upErr;
+      const att: ChatAttachment = { path, name: file.name, type: file.type, size: file.size };
+      const { error } = await supabase
+        .from("chat_group_messages")
+        .insert({ group_id: group.id, sender_id: user.id, body: "Sprachnotiz", attachments: [att] as unknown as never });
+      if (error) throw error;
+      qc.invalidateQueries({ queryKey: ["chat-group-messages", group.id] });
+      qc.invalidateQueries({ queryKey: ["chat-groups"] });
+    } catch {
+      toast.error("Sprachnotiz konnte nicht gesendet werden");
+    }
+  };
+
   const refreshMembers = () => {
     qc.invalidateQueries({ queryKey: ["chat-group-members", group.id] });
   };
