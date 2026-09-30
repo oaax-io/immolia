@@ -111,6 +111,14 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
 
   return (
     <div className="space-y-4">
+      <ChecklistReadinessCard
+        isReady={readiness.isReady}
+        requiredPercent={readiness.stats.requiredPercent}
+        requiredPresent={readiness.stats.requiredPresent}
+        requiredTotal={readiness.stats.requiredTotal}
+        missingRequired={readiness.missingRequired}
+      />
+
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold flex items-center gap-2"><Banknote className="h-4 w-4" />Bankangaben</h3>
