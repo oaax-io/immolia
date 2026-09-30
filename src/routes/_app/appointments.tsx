@@ -355,15 +355,15 @@ function AppointmentsPage() {
 
 
         <TabsContent value="month">
-          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <MonthView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="week">
-          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <WeekView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="day">
-          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} />
+          <DayView appts={visibleAppts} tasks={visibleTasks} employees={employees} holidays={calendarMarks} onOpen={setEditId} onCreateAt={(iso) => startNew({ starts_at: iso })} anchor={anchor} />
         </TabsContent>
 
         <TabsContent value="list">
