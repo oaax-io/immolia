@@ -711,6 +711,67 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                     Ausstattung anzeigen
                   </label>
                 </div>
+
+                {withFeatures && allFeatures.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Highlights mit Symbolen</Label>
+                      <span className="text-xs text-muted-foreground">{selectedHighlights.length} von max. 8</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {allFeatures.map((f) => {
+                        const active = selectedHighlights.includes(f);
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => toggleHighlight(f)}
+                            className={cn(
+                              "flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition",
+                              active ? "border-primary bg-primary/5 text-foreground" : "text-muted-foreground hover:border-primary/40",
+                            )}
+                          >
+                            <span
+                              className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}
+                              dangerouslySetInnerHTML={{ __html: exposeIconSvg(matchExposeIcon(f), "currentColor", 18) }}
+                            />
+                            <span className="truncate">{f}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-xl border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Label>Exposé-Check</Label>
+                    <span className={cn("text-xs font-medium", checkMissing.length ? "text-amber-600" : "text-emerald-600")}>
+                      {checkOk} von {checks.length} Punkten erfüllt
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checks.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setStep(c.step)}
+                        title={c.ok ? undefined : c.hint}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-xs transition",
+                          c.ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700" : "border-amber-500/50 bg-amber-500/10 text-amber-700",
+                        )}
+                      >
+                        {c.ok ? "✓" : "!"} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  {checkMissing.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Fehlende Punkte sind nur ein Hinweis – das Exposé kann trotzdem erstellt werden.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
