@@ -651,6 +651,60 @@ export type Database = {
           },
         ]
       }
+      calendar_busy_blocks: {
+        Row: {
+          agency_id: string
+          connection_id: string
+          ends_at: string
+          id: string
+          is_all_day: boolean
+          provider_event_id: string
+          show_as: string | null
+          starts_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agency_id: string
+          connection_id: string
+          ends_at: string
+          id?: string
+          is_all_day?: boolean
+          provider_event_id: string
+          show_as?: string | null
+          starts_at: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agency_id?: string
+          connection_id?: string
+          ends_at?: string
+          id?: string
+          is_all_day?: boolean
+          provider_event_id?: string
+          show_as?: string | null
+          starts_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_busy_blocks_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_busy_blocks_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_connection_tokens: {
         Row: {
           access_token_ct: string | null
@@ -783,45 +837,66 @@ export type Database = {
           agency_id: string
           appointment_id: string | null
           change_key: string | null
+          conflict_at: string | null
+          conflict_payload: Json | null
+          conflict_state: string | null
           connection_id: string
           created_at: string
           deleted_at: string | null
           ical_uid: string | null
           id: string
+          last_local_hash: string | null
+          last_remote_change_key: string | null
           last_synced_at: string | null
+          last_synced_state: Json | null
           origin: string
           origin_agency_id: string | null
           provider_event_id: string
+          transaction_id: string | null
           updated_at: string
         }
         Insert: {
           agency_id: string
           appointment_id?: string | null
           change_key?: string | null
+          conflict_at?: string | null
+          conflict_payload?: Json | null
+          conflict_state?: string | null
           connection_id: string
           created_at?: string
           deleted_at?: string | null
           ical_uid?: string | null
           id?: string
+          last_local_hash?: string | null
+          last_remote_change_key?: string | null
           last_synced_at?: string | null
+          last_synced_state?: Json | null
           origin: string
           origin_agency_id?: string | null
           provider_event_id: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Update: {
           agency_id?: string
           appointment_id?: string | null
           change_key?: string | null
+          conflict_at?: string | null
+          conflict_payload?: Json | null
+          conflict_state?: string | null
           connection_id?: string
           created_at?: string
           deleted_at?: string | null
           ical_uid?: string | null
           id?: string
+          last_local_hash?: string | null
+          last_remote_change_key?: string | null
           last_synced_at?: string | null
+          last_synced_state?: Json | null
           origin?: string
           origin_agency_id?: string | null
           provider_event_id?: string
+          transaction_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -917,6 +992,7 @@ export type Database = {
           id: string
           idempotency_key: string | null
           job_type: string
+          link_id: string | null
           max_attempts: number
           run_after: string
           started_at: string | null
@@ -934,6 +1010,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           job_type: string
+          link_id?: string | null
           max_attempts?: number
           run_after?: string
           started_at?: string | null
@@ -951,6 +1028,7 @@ export type Database = {
           id?: string
           idempotency_key?: string | null
           job_type?: string
+          link_id?: string | null
           max_attempts?: number
           run_after?: string
           started_at?: string | null
@@ -972,6 +1050,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      calendar_worker_config: {
+        Row: {
+          id: number
+          token: string
+          worker_url: string
+        }
+        Insert: {
+          id?: number
+          token?: string
+          worker_url?: string
+        }
+        Update: {
+          id?: number
+          token?: string
+          worker_url?: string
+        }
+        Relationships: []
       }
       chat_pins: {
         Row: {
@@ -6304,6 +6400,34 @@ export type Database = {
           status: string
         }[]
       }
+      calendar_jobs_claim: {
+        Args: { _limit?: number }
+        Returns: {
+          agency_id: string
+          appointment_id: string | null
+          attempts: number
+          connection_id: string
+          created_at: string
+          error_code: string | null
+          error_detail_sanitized: string | null
+          finished_at: string | null
+          id: string
+          idempotency_key: string | null
+          job_type: string
+          link_id: string | null
+          max_attempts: number
+          run_after: string
+          started_at: string | null
+          status: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "calendar_sync_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      calendar_kick_worker: { Args: never; Returns: undefined }
       calendar_membership_active: {
         Args: { _agency_id: string; _user_id: string }
         Returns: boolean
@@ -6332,6 +6456,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      calendar_periodic: { Args: never; Returns: undefined }
       calendar_token_try_lock: {
         Args: { _connection_id: string; _seconds?: number }
         Returns: boolean
