@@ -729,12 +729,12 @@ function TaskForm({
         <div>
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Wiederholung</p>
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-1.5">
               {RECURRENCES.map((r) => {
                 const active = (form.recurrence || "none") === r.value;
                 return (
                   <button key={r.value} type="button" onClick={() => setForm({ ...form, recurrence: r.value })}
-                    className={`rounded-md border px-2 py-1.5 text-xs transition ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
+                    className={`min-w-0 truncate rounded-md border px-2 py-1.5 text-center text-[11px] leading-tight transition ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
                     {r.label}
                   </button>
                 );
