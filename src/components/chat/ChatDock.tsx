@@ -610,7 +610,7 @@ export function ChatPanel({
     setTimeout(() => taRef.current?.focus(), 0);
   };
 
-  const handleFiles = async (files: FileList | null) => {
+  const handleFiles = async (files: FileList | File[] | null) => {
     if (!files?.length || !user?.id) return;
     setUploading(true);
     try {
