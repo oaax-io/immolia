@@ -50,6 +50,7 @@ import { PhoneOff } from "lucide-react";
 import { IncomingCallListener } from "@/components/video/IncomingCallListener";
 import { AddCallParticipant } from "@/components/video/AddCallParticipant";
 import { CALL_RING_MS, chatRoomName, setCallStatus, startCall, type CallRow } from "@/lib/calls";
+import { VoiceNotePlayer, VoiceRecorder } from "@/components/chat/VoiceNote";
 
 
 export type ChatAttachment = {
