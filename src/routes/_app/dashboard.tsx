@@ -593,6 +593,7 @@ function StatusStackCard({ title, icon: Icon, to, counts, rows, loading, footer,
   );
 }
 
+function CompactList({ title, icon: Icon, items, render, loading, empty, count, countHint, to }: {
   title: string; icon: any; items: any[]; render: (i: any) => React.ReactNode;
   loading?: boolean; empty: string; count?: number | null; countHint?: string; to: string;
 }) {
