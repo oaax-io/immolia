@@ -16,6 +16,7 @@ const TILES = [
   { to: "/settings/modules", icon: LayoutGrid, labelKey: "", label: "Module", desc: "Verfügbare Bereiche ein- und ausschalten" },
   { to: "/settings/billing", icon: Banknote, labelKey: "", label: "Abo & Credits", desc: "Abo, Credits kaufen, Rechnungen" },
   { to: "/settings/banks", icon: Banknote, labelKey: "settings.tabs.banks", desc: "Bankkonten und Zahlungsangaben" },
+  { to: "/settings/partners", icon: Handshake, labelKey: "", label: "Partner", desc: "Banken, Versicherungen, Handwerker und eigene Ansprechpartner" },
   { to: "/settings/categories", icon: Tags, labelKey: "settings.tabs.categories", desc: "Kategorien im Dokumentencenter" },
   { to: "/settings/video", icon: Video, labelKey: "", label: "Video", desc: "LiveKit für Video-Meetings" },
   { to: "/settings/calendar", icon: CalendarDays, labelKey: "", label: "Microsoft-Kalender", desc: "Persönlichen Microsoft-365-Kalender verbinden" },

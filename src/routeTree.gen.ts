@@ -65,6 +65,7 @@ import { Route as AppSettingsWhiteLabelRouteImport } from './routes/_app/setting
 import { Route as AppSettingsVideoRouteImport } from './routes/_app/settings.video'
 import { Route as AppSettingsTrashRouteImport } from './routes/_app/settings.trash'
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings.profile'
+import { Route as AppSettingsPartnersRouteImport } from './routes/_app/settings.partners'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings.notifications'
 import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.modules'
 import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
@@ -366,6 +367,11 @@ const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsPartnersRoute = AppSettingsPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsNotificationsRoute =
   AppSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -536,6 +542,7 @@ export interface FileRoutesByFullPath {
   '/settings/esign': typeof AppSettingsEsignRoute
   '/settings/modules': typeof AppSettingsModulesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/partners': typeof AppSettingsPartnersRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/trash': typeof AppSettingsTrashRoute
   '/settings/video': typeof AppSettingsVideoRoute
@@ -610,6 +617,7 @@ export interface FileRoutesByTo {
   '/settings/esign': typeof AppSettingsEsignRoute
   '/settings/modules': typeof AppSettingsModulesRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/settings/partners': typeof AppSettingsPartnersRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/trash': typeof AppSettingsTrashRoute
   '/settings/video': typeof AppSettingsVideoRoute
@@ -690,6 +698,7 @@ export interface FileRoutesById {
   '/_app/settings/esign': typeof AppSettingsEsignRoute
   '/_app/settings/modules': typeof AppSettingsModulesRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
+  '/_app/settings/partners': typeof AppSettingsPartnersRoute
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/trash': typeof AppSettingsTrashRoute
   '/_app/settings/video': typeof AppSettingsVideoRoute
@@ -770,6 +779,7 @@ export interface FileRouteTypes {
     | '/settings/esign'
     | '/settings/modules'
     | '/settings/notifications'
+    | '/settings/partners'
     | '/settings/profile'
     | '/settings/trash'
     | '/settings/video'
@@ -844,6 +854,7 @@ export interface FileRouteTypes {
     | '/settings/esign'
     | '/settings/modules'
     | '/settings/notifications'
+    | '/settings/partners'
     | '/settings/profile'
     | '/settings/trash'
     | '/settings/video'
@@ -923,6 +934,7 @@ export interface FileRouteTypes {
     | '/_app/settings/esign'
     | '/_app/settings/modules'
     | '/_app/settings/notifications'
+    | '/_app/settings/partners'
     | '/_app/settings/profile'
     | '/_app/settings/trash'
     | '/_app/settings/video'
@@ -1359,6 +1371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsProfileRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/partners': {
+      id: '/_app/settings/partners'
+      path: '/partners'
+      fullPath: '/settings/partners'
+      preLoaderRoute: typeof AppSettingsPartnersRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/notifications': {
       id: '/_app/settings/notifications'
       path: '/notifications'
@@ -1547,6 +1566,7 @@ interface AppSettingsRouteChildren {
   AppSettingsEsignRoute: typeof AppSettingsEsignRoute
   AppSettingsModulesRoute: typeof AppSettingsModulesRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
+  AppSettingsPartnersRoute: typeof AppSettingsPartnersRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsTrashRoute: typeof AppSettingsTrashRoute
   AppSettingsVideoRoute: typeof AppSettingsVideoRoute
@@ -1564,6 +1584,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsEsignRoute: AppSettingsEsignRoute,
   AppSettingsModulesRoute: AppSettingsModulesRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
+  AppSettingsPartnersRoute: AppSettingsPartnersRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsTrashRoute: AppSettingsTrashRoute,
   AppSettingsVideoRoute: AppSettingsVideoRoute,
