@@ -70,11 +70,17 @@ type Msg = {
 };
 type Member = { id: string; full_name: string | null; email: string | null; avatar_url: string | null; presence_status?: string | null; presence_updated_at?: string | null };
 
-export type OpenChatOptions = { call?: boolean; callId?: string; room?: string };
-type DockCtx = { openChat: (memberId: string, opts?: OpenChatOptions) => void };
-const Ctx = createContext<DockCtx>({ openChat: () => {} });
+export type OpenChatOptions = { call?: boolean; callId?: string; room?: string; minimized?: boolean };
+type DockCtx = {
+  openChat: (memberId: string, opts?: OpenChatOptions) => void;
+  /** Neue Nachricht: Chat als schwebende Blase anzeigen (ohne ihn zu öffnen). */
+  notifyChat: (memberId: string) => void;
+};
+const Ctx = createContext<DockCtx>({ openChat: () => {}, notifyChat: () => {} });
 export const useChatDock = () => useContext(Ctx);
 
+type ChatMode = "normal" | "minimized" | "maximized";
+type DockChat = { id: string; mode: ChatMode; autoCall: { callId?: string; room?: string; key: number } | null; unread: number };
 
 function initials(name?: string | null, fallback?: string | null) {
   const src = name || fallback || "?";
@@ -92,39 +98,155 @@ function timeLabel(iso: string) {
 const isImage = (a: ChatAttachment) => (a.type || "").startsWith("image/");
 
 export function ChatDockProvider({ children }: { children: ReactNode }) {
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [mode, setMode] = useState<"normal" | "minimized" | "maximized">("normal");
-  const [autoCall, setAutoCall] = useState<{ callId?: string; room?: string; key: number } | null>(null);
+  const [chats, setChats] = useState<DockChat[]>([]);
 
   const openChat = useCallback((memberId: string, opts?: OpenChatOptions) => {
-    setActiveId(memberId);
-    setMode("normal");
-    setAutoCall(opts?.call ? { callId: opts.callId, room: opts.room, key: Date.now() } : null);
+    setChats((prev) => {
+      const autoCall = opts?.call ? { callId: opts.callId, room: opts.room, key: Date.now() } : null;
+      const targetMode: ChatMode = opts?.minimized ? "minimized" : "normal";
+      const others = prev.map((c) =>
+        c.id !== memberId && !opts?.minimized && c.mode !== "minimized" ? { ...c, mode: "minimized" as ChatMode } : c,
+      );
+      const existing = others.find((c) => c.id === memberId);
+      if (existing) {
+        return others.map((c) =>
+          c.id === memberId
+            ? { ...c, mode: targetMode, autoCall: autoCall ?? c.autoCall, unread: targetMode === "minimized" ? c.unread : 0 }
+            : c,
+        );
+      }
+      return [...others, { id: memberId, mode: targetMode, autoCall, unread: 0 }];
+    });
   }, []);
 
+  const notifyChat = useCallback((memberId: string) => {
+    setChats((prev) => {
+      const existing = prev.find((c) => c.id === memberId);
+      if (existing) {
+        if (existing.mode !== "minimized") return prev;
+        return prev.map((c) => (c.id === memberId ? { ...c, unread: c.unread + 1 } : c));
+      }
+      return [...prev, { id: memberId, mode: "minimized", autoCall: null, unread: 1 }];
+    });
+  }, []);
+
+  const setMode = useCallback((id: string, mode: ChatMode) => {
+    setChats((prev) =>
+      prev.map((c) => {
+        if (c.id === id) return { ...c, mode, unread: mode === "minimized" ? c.unread : 0 };
+        if (mode !== "minimized" && c.mode !== "minimized") return { ...c, mode: "minimized" };
+        return c;
+      }),
+    );
+  }, []);
+
+  const closeChat = useCallback((id: string) => {
+    setChats((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const bubbles = chats.filter((c) => c.mode === "minimized");
+
   return (
-    <Ctx.Provider value={{ openChat }}>
+    <Ctx.Provider value={{ openChat, notifyChat }}>
       {children}
       <IncomingCallListener
         onAccept={(callerId, callId, room) => openChat(callerId, { call: true, callId, room })}
       />
 
-      {activeId && (
+      {chats.map((c) => (
         <ChatWindow
-          key={activeId}
-          memberId={activeId}
-          mode={mode}
-          setMode={setMode}
-          autoCall={autoCall}
-          onClose={() => {
-            setActiveId(null);
-            setAutoCall(null);
-          }}
+          key={c.id}
+          memberId={c.id}
+          mode={c.mode}
+          shifted={bubbles.length > 0}
+          setMode={(m) => setMode(c.id, m)}
+          autoCall={c.autoCall}
+          onClose={() => closeChat(c.id)}
         />
+      ))}
+
+      {bubbles.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col-reverse items-center gap-3">
+          {bubbles.map((c) => (
+            <ChatBubble
+              key={c.id}
+              memberId={c.id}
+              unread={c.unread}
+              onOpen={() => openChat(c.id)}
+              onClose={() => closeChat(c.id)}
+            />
+          ))}
+        </div>
       )}
     </Ctx.Provider>
   );
 }
+
+function ChatBubble({
+  memberId,
+  unread,
+  onOpen,
+  onClose,
+}: {
+  memberId: string;
+  unread: number;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  const { data: member } = useQuery({
+    queryKey: ["chat-member", memberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url, presence_status, presence_updated_at")
+        .eq("id", memberId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Member | null;
+    },
+  });
+  const name = member?.full_name ?? member?.email ?? "Chat";
+  return (
+    <div className="group relative animate-in fade-in zoom-in-75">
+      <button
+        type="button"
+        onClick={onOpen}
+        title={`Chat mit ${name} öffnen`}
+        aria-label={`Chat mit ${name} öffnen`}
+        className={cn(
+          "block rounded-full shadow-xl ring-2 ring-background transition-transform hover:scale-105 focus:outline-none focus-visible:ring-primary",
+          unread > 0 && "ring-primary",
+        )}
+      >
+        <Avatar className="h-14 w-14">
+          <AvatarImage src={member?.avatar_url ?? undefined} />
+          <AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">
+            {initials(member?.full_name, member?.email)}
+          </AvatarFallback>
+        </Avatar>
+      </button>
+      <PresenceDot status={member?.presence_status} updatedAt={member?.presence_updated_at} className="absolute bottom-0.5 right-0.5" />
+      {unread > 0 && (
+        <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+          {unread > 9 ? "9+" : unread}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        title="Chat schliessen"
+        aria-label={`Chat mit ${name} schliessen`}
+        className="absolute -right-1 -top-1 hidden h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow group-hover:flex focus-visible:flex"
+      >
+        <X className="h-3 w-3" />
+      </button>
+      <span className="pointer-events-none absolute right-full top-1/2 mr-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground shadow group-hover:block">
+        {name}
+      </span>
+    </div>
+  );
+}
+
 
 
 function AttachmentView({ att }: { att: ChatAttachment }) {
@@ -588,12 +710,14 @@ function ChatWindow({
   setMode,
   onClose,
   autoCall,
+  shifted,
 }: {
   memberId: string;
   mode: "normal" | "minimized" | "maximized";
   setMode: (m: "normal" | "minimized" | "maximized") => void;
   onClose: () => void;
   autoCall?: { callId?: string; room?: string; key: number } | null;
+  shifted?: boolean;
 }) {
   const { user } = useAuth();
   const { data: member } = useQuery({
@@ -699,14 +823,15 @@ function ChatWindow({
     };
   }, [callOpen, callRoom, title]);
 
+  const side = shifted ? "right-4 sm:right-24" : "right-4";
   const shell =
     mode === "maximized"
       ? "inset-4 md:inset-10"
       : mode === "minimized"
-        ? "bottom-4 right-4 w-[300px]"
+        ? "hidden"
         : callOpen
-          ? "bottom-4 right-4 w-[380px] h-[560px] max-h-[85dvh] md:w-[860px]"
-          : "bottom-4 right-4 w-[380px] h-[540px] max-h-[80dvh]";
+          ? `bottom-4 ${side} w-[min(380px,calc(100vw-2rem))] h-[560px] max-h-[85dvh] md:w-[860px]`
+          : `bottom-4 ${side} w-[min(380px,calc(100vw-2rem))] h-[540px] max-h-[80dvh]`;
 
   return (
     <div className={cn("fixed z-50 flex flex-col overflow-hidden rounded-xl border bg-background shadow-2xl", shell)}>
@@ -749,8 +874,8 @@ function ChatWindow({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          title={mode === "minimized" ? "Öffnen" : "Minimieren"}
-          onClick={() => setMode(mode === "minimized" ? "normal" : "minimized")}
+          title="Minimieren"
+          onClick={() => setMode("minimized")}
         >
           <Minus className="h-4 w-4" />
         </Button>

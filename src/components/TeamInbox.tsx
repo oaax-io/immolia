@@ -1,7 +1,7 @@
 import { useTenantConfig } from "@/lib/tenant-config";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video } from "lucide-react";
+import { Inbox, Search, Maximize2, Paperclip, Pin, PinOff, Video, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ function timeLabel(iso: string) {
 export function TeamInbox() {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { openChat } = useChatDock();
+  const { openChat, notifyChat } = useChatDock();
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [inlineId, setInlineId] = useState<string | null>(null);
@@ -140,6 +140,7 @@ export function TeamInbox() {
           if (row && row.agency_id && row.agency_id !== agencyId) return;
           qc.invalidateQueries({ queryKey: ["direct-messages", user.id, agencyId] });
           if (payload.eventType === "INSERT" && row?.recipient_id === user.id) {
+            notifyChat(row.sender_id);
             const from = members.find((m) => m.id === row.sender_id);
             toast.message(`Neue Nachricht von ${from?.full_name ?? "Kollege"}`, {
               description: row.body.slice(0, 80),
@@ -155,7 +156,7 @@ export function TeamInbox() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, agencyId, members, qc, openChat]);
+  }, [user?.id, agencyId, members, qc, openChat, notifyChat]);
 
   const unreadTotal = useMemo(
     () => messages.filter((m) => m.recipient_id === user?.id && !m.read_at).length,
@@ -383,6 +384,20 @@ export function TeamInbox() {
                     }}
                   >
                     <Video className="h-4 w-4" /> Videoanruf
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    title="Chat unten rechts minimieren"
+                    onClick={() => {
+                      const id = inlineId;
+                      setExpanded(false);
+                      setInlineId(null);
+                      openChat(id, { minimized: true });
+                    }}
+                  >
+                    <Minus className="h-4 w-4" /> Minimieren
                   </Button>
                 </div>
                 <ChatPanel key={inlineId} memberId={inlineId} />
