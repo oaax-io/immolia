@@ -23,48 +23,69 @@ export function IncomingCallListener({
   const qc = useQueryClient();
   const [call, setCall] = useState<CallRow | null>(null);
   const [caller, setCaller] = useState<Caller | null>(null);
+  // Zustandsmaschine: genau EIN klingelnder Anruf pro Client (idle | ringing).
+  // Alle Ressourcen (Ton, Timer, aktive ID) hängen an diesem einen Slot.
+  const activeIdRef = useRef<string | null>(null);
   const ringRef = useRef<ReturnType<typeof createRingtone> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Ring-Zustand vollständig beenden: Ton aus, Timer weg, UI weg. */
   const clear = useCallback(() => {
     ringRef.current?.stop();
     ringRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
+    activeIdRef.current = null;
     setCall(null);
     setCaller(null);
   }, []);
 
   useEffect(() => {
     if (!user?.id) return;
+    const me = user.id;
+    let disposed = false;
     const ch = supabase
-      .channel("incoming-calls")
+      .channel(`incoming-calls:${me}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "video_calls" },
         async (payload) => {
           const row = payload.new as CallRow;
           if (row.status !== "ringing") return;
-          if (row.created_by === user.id) return;
-          if (!(row.participants ?? []).includes(user.id)) return;
+          if (row.created_by === me) return;
+          if (!(row.participants ?? []).includes(me)) return;
           if (Date.now() - new Date(row.started_at).getTime() > CALL_RING_MS) return;
+
+          // Besetzt: während bereits ein Anruf klingelt, wird der zweite sofort als
+          // verpasst abgeschlossen (Anrufer erhält Meldung), der erste klingelt weiter.
+          if (activeIdRef.current && activeIdRef.current !== row.id) {
+            void setCallStatus(row.id, "missed").catch(() => {});
+            return;
+          }
+          activeIdRef.current = row.id;
 
           const { data } = await supabase
             .from("profiles")
             .select("full_name, email, avatar_url")
             .eq("id", row.created_by)
             .maybeSingle();
+          // Während des Profil-Ladens beendet/ersetzt/abgemeldet? Dann nichts starten.
+          if (disposed || activeIdRef.current !== row.id) return;
           setCaller((data as Caller | null) ?? null);
           setCall(row);
 
+          ringRef.current?.stop();
           ringRef.current = createRingtone();
           ringRef.current.start();
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          const remaining = Math.max(0, CALL_RING_MS - (Date.now() - new Date(row.started_at).getTime()));
           timeoutRef.current = setTimeout(() => {
-            void setCallStatus(row.id, "missed").catch(() => {});
+            if (activeIdRef.current !== row.id) return;
             clear();
+            void setCallStatus(row.id, "missed").catch(() => {});
             toast.error(`Verpasster Anruf von ${data?.full_name ?? data?.email ?? "Kollege"}`);
             qc.invalidateQueries({ queryKey: ["notifications"] });
-          }, CALL_RING_MS);
+          }, remaining);
         },
       )
       .on(
@@ -72,24 +93,16 @@ export function IncomingCallListener({
         { event: "UPDATE", schema: "public", table: "video_calls" },
         (payload) => {
           const row = payload.new as CallRow;
-          setCall((cur) => {
-            if (!cur || cur.id !== row.id) return cur;
-            if (row.status !== "ringing") {
-              ringRef.current?.stop();
-              ringRef.current = null;
-              if (timeoutRef.current) clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-              return null;
-            }
-            return cur;
-          });
+          // Anrufer hat aufgelegt / anderswo angenommen / Timeout: Ring-Zustand beenden.
+          if (row.id === activeIdRef.current && row.status !== "ringing") clear();
         },
       )
       .subscribe();
     return () => {
+      // Abmelden / Benutzerwechsel / Unmount: alles freigeben, nichts bleibt klingeln.
+      disposed = true;
       supabase.removeChannel(ch);
-      ringRef.current?.stop();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clear();
     };
   }, [user?.id, qc, clear]);
 
