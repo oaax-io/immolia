@@ -69,6 +69,7 @@ import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.m
 import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
 import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
 import { Route as AppSettingsCategoriesRouteImport } from './routes/_app/settings.categories'
+import { Route as AppSettingsCalendarRouteImport } from './routes/_app/settings.calendar'
 import { Route as AppSettingsBrandkitRouteImport } from './routes/_app/settings.brandkit'
 import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings.billing'
 import { Route as AppSettingsBanksRouteImport } from './routes/_app/settings.banks'
@@ -383,6 +384,11 @@ const AppSettingsCategoriesRoute = AppSettingsCategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => AppSettingsRoute,
 } as any)
+const AppSettingsCalendarRoute = AppSettingsCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
 const AppSettingsBrandkitRoute = AppSettingsBrandkitRouteImport.update({
   id: '/brandkit',
   path: '/brandkit',
@@ -503,6 +509,7 @@ export interface FileRoutesByFullPath {
   '/settings/banks': typeof AppSettingsBanksRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/settings/calendar': typeof AppSettingsCalendarRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/esign': typeof AppSettingsEsignRoute
@@ -573,6 +580,7 @@ export interface FileRoutesByTo {
   '/settings/banks': typeof AppSettingsBanksRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/settings/calendar': typeof AppSettingsCalendarRoute
   '/settings/categories': typeof AppSettingsCategoriesRoute
   '/settings/company': typeof AppSettingsCompanyRoute
   '/settings/esign': typeof AppSettingsEsignRoute
@@ -649,6 +657,7 @@ export interface FileRoutesById {
   '/_app/settings/banks': typeof AppSettingsBanksRoute
   '/_app/settings/billing': typeof AppSettingsBillingRoute
   '/_app/settings/brandkit': typeof AppSettingsBrandkitRoute
+  '/_app/settings/calendar': typeof AppSettingsCalendarRoute
   '/_app/settings/categories': typeof AppSettingsCategoriesRoute
   '/_app/settings/company': typeof AppSettingsCompanyRoute
   '/_app/settings/esign': typeof AppSettingsEsignRoute
@@ -725,6 +734,7 @@ export interface FileRouteTypes {
     | '/settings/banks'
     | '/settings/billing'
     | '/settings/brandkit'
+    | '/settings/calendar'
     | '/settings/categories'
     | '/settings/company'
     | '/settings/esign'
@@ -795,6 +805,7 @@ export interface FileRouteTypes {
     | '/settings/banks'
     | '/settings/billing'
     | '/settings/brandkit'
+    | '/settings/calendar'
     | '/settings/categories'
     | '/settings/company'
     | '/settings/esign'
@@ -870,6 +881,7 @@ export interface FileRouteTypes {
     | '/_app/settings/banks'
     | '/_app/settings/billing'
     | '/_app/settings/brandkit'
+    | '/_app/settings/calendar'
     | '/_app/settings/categories'
     | '/_app/settings/company'
     | '/_app/settings/esign'
@@ -1335,6 +1347,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsCategoriesRouteImport
       parentRoute: typeof AppSettingsRoute
     }
+    '/_app/settings/calendar': {
+      id: '/_app/settings/calendar'
+      path: '/calendar'
+      fullPath: '/settings/calendar'
+      preLoaderRoute: typeof AppSettingsCalendarRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
     '/_app/settings/brandkit': {
       id: '/_app/settings/brandkit'
       path: '/brandkit'
@@ -1461,6 +1480,7 @@ interface AppSettingsRouteChildren {
   AppSettingsBanksRoute: typeof AppSettingsBanksRoute
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
   AppSettingsBrandkitRoute: typeof AppSettingsBrandkitRoute
+  AppSettingsCalendarRoute: typeof AppSettingsCalendarRoute
   AppSettingsCategoriesRoute: typeof AppSettingsCategoriesRoute
   AppSettingsCompanyRoute: typeof AppSettingsCompanyRoute
   AppSettingsEsignRoute: typeof AppSettingsEsignRoute
@@ -1477,6 +1497,7 @@ const AppSettingsRouteChildren: AppSettingsRouteChildren = {
   AppSettingsBanksRoute: AppSettingsBanksRoute,
   AppSettingsBillingRoute: AppSettingsBillingRoute,
   AppSettingsBrandkitRoute: AppSettingsBrandkitRoute,
+  AppSettingsCalendarRoute: AppSettingsCalendarRoute,
   AppSettingsCategoriesRoute: AppSettingsCategoriesRoute,
   AppSettingsCompanyRoute: AppSettingsCompanyRoute,
   AppSettingsEsignRoute: AppSettingsEsignRoute,
