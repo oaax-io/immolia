@@ -42,6 +42,7 @@ import { useLivekitToken } from "@/components/video/useLivekitToken";
 import { VideoStage } from "@/components/video/VideoStage";
 import { PhoneOff } from "lucide-react";
 import { IncomingCallListener } from "@/components/video/IncomingCallListener";
+import { AddCallParticipant } from "@/components/video/AddCallParticipant";
 import { CALL_RING_MS, chatRoomName, setCallStatus, startCall, type CallRow } from "@/lib/calls";
 
 
@@ -68,7 +69,7 @@ type Msg = {
 };
 type Member = { id: string; full_name: string | null; email: string | null; avatar_url: string | null; presence_status?: string | null; presence_updated_at?: string | null };
 
-export type OpenChatOptions = { call?: boolean; callId?: string };
+export type OpenChatOptions = { call?: boolean; callId?: string; room?: string };
 type DockCtx = { openChat: (memberId: string, opts?: OpenChatOptions) => void };
 const Ctx = createContext<DockCtx>({ openChat: () => {} });
 export const useChatDock = () => useContext(Ctx);
@@ -92,19 +93,19 @@ const isImage = (a: ChatAttachment) => (a.type || "").startsWith("image/");
 export function ChatDockProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mode, setMode] = useState<"normal" | "minimized" | "maximized">("normal");
-  const [autoCall, setAutoCall] = useState<{ callId?: string; key: number } | null>(null);
+  const [autoCall, setAutoCall] = useState<{ callId?: string; room?: string; key: number } | null>(null);
 
   const openChat = useCallback((memberId: string, opts?: OpenChatOptions) => {
     setActiveId(memberId);
     setMode("normal");
-    setAutoCall(opts?.call ? { callId: opts.callId, key: Date.now() } : null);
+    setAutoCall(opts?.call ? { callId: opts.callId, room: opts.room, key: Date.now() } : null);
   }, []);
 
   return (
     <Ctx.Provider value={{ openChat }}>
       {children}
       <IncomingCallListener
-        onAccept={(callerId, callId) => openChat(callerId, { call: true, callId })}
+        onAccept={(callerId, callId, room) => openChat(callerId, { call: true, callId, room })}
       />
 
       {activeId && (
@@ -584,7 +585,7 @@ function ChatWindow({
   mode: "normal" | "minimized" | "maximized";
   setMode: (m: "normal" | "minimized" | "maximized") => void;
   onClose: () => void;
-  autoCall?: { callId?: string; key: number } | null;
+  autoCall?: { callId?: string; room?: string; key: number } | null;
 }) {
   const { user } = useAuth();
   const { data: member } = useQuery({
@@ -603,7 +604,8 @@ function ChatWindow({
   const [callOpen, setCallOpen] = useState(false);
   const [calling, setCalling] = useState(false);
   const callIdRef = useRef<string | null>(null);
-  const callRoom = user?.id ? chatRoomName(user.id, memberId) : `chat-${memberId}`;
+  const [roomOverride, setRoomOverride] = useState<string | null>(null);
+  const callRoom = roomOverride ?? (user?.id ? chatRoomName(user.id, memberId) : `chat-${memberId}`);
 
   const callState = useLivekitToken(callRoom, callOpen);
 
@@ -652,6 +654,7 @@ function ChatWindow({
   useEffect(() => {
     if (!autoCall) return;
     callIdRef.current = autoCall.callId ?? null;
+    setRoomOverride(autoCall.room ?? null);
     setCallOpen(true);
     setCalling(false);
   }, [autoCall]);
@@ -715,6 +718,9 @@ function ChatWindow({
           <span className="truncate text-sm font-semibold leading-tight">{title}</span>
           <PresenceLabel status={member?.presence_status} updatedAt={member?.presence_updated_at} className="text-[10px]" />
         </span>
+        {callOpen && user?.id && (
+          <AddCallParticipant room={callRoom} callerId={user.id} exclude={[user.id, memberId]} title={title} />
+        )}
         {callOpen && calling && (
           <span className="mr-1 animate-pulse text-[10px] font-medium text-primary">klingelt…</span>
         )}
