@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePartnerCatalog, usePartnerContacts, partnerDisplayName } from "@/lib/partners";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BankPicker } from "@/components/financing/BankPicker";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2 } from "lucide-react";
+import { Save, Banknote, Package, Download, Copy, Loader2, FileArchive, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { DOSSIER_STATUS_LABELS, type DossierStatus } from "@/lib/financing";
 import {
   buildBankPackage,
@@ -84,8 +84,7 @@ const SUBMISSION_STATUSES: DossierStatus[] = [
 
 export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
-  const bankCatalog = usePartnerCatalog("bank");
-  const bankContacts = usePartnerContacts("bank");
+
 
 
   const { data: dossier, isLoading } = useQuery({
