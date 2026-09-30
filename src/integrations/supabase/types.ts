@@ -376,6 +376,8 @@ export type Database = {
           client_id: string | null
           created_at: string
           ends_at: string
+          external_invitees: string[] | null
+          extra_assignee_ids: string[] | null
           id: string
           is_online: boolean
           lead_id: string | null
@@ -396,6 +398,8 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           ends_at: string
+          external_invitees?: string[] | null
+          extra_assignee_ids?: string[] | null
           id?: string
           is_online?: boolean
           lead_id?: string | null
@@ -416,6 +420,8 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           ends_at?: string
+          external_invitees?: string[] | null
+          extra_assignee_ids?: string[] | null
           id?: string
           is_online?: boolean
           lead_id?: string | null
