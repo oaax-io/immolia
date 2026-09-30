@@ -106,6 +106,24 @@ export const setPlatformPartnerActive = (id: string, active: boolean) =>
 
 export const removePlatformPartner = (id: string) => rpc<void>("platform_remove_partner", { _id: id });
 
+/**
+ * Logo-Upload für den zentralen Katalog.
+ * Liegt im öffentlichen Marken-Speicher unter «partner-logos/»; schreiben
+ * dürfen laut Storage-Policy nur Plattform-Admins.
+ */
+export async function uploadPartnerLogo(file: File): Promise<string> {
+  const ext = (file.name.split(".").pop() ?? "png").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const path = `partner-logos/${crypto.randomUUID()}.${ext || "png"}`;
+  const { error } = await supabase.storage.from("brand-assets").upload(path, file, {
+    upsert: false,
+    contentType: file.type || undefined,
+    cacheControl: "31536000",
+  });
+  if (error) throw error;
+  return supabase.storage.from("brand-assets").getPublicUrl(path).data.publicUrl;
+}
+
+
 // ---------- Tenant ----------
 /** Zentraler Katalog, wie ihn eine Firma sieht (nur aktive Einträge, RLS). */
 export function usePartnerCatalog(category?: string) {
