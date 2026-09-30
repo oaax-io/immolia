@@ -42,7 +42,7 @@ import { useLivekitToken } from "@/components/video/useLivekitToken";
 import { VideoStage } from "@/components/video/VideoStage";
 import { PhoneOff } from "lucide-react";
 import { IncomingCallListener } from "@/components/video/IncomingCallListener";
-import { chatRoomName, setCallStatus, startCall, type CallRow } from "@/lib/calls";
+import { CALL_RING_MS, chatRoomName, setCallStatus, startCall, type CallRow } from "@/lib/calls";
 
 
 export type ChatAttachment = {
@@ -391,6 +391,21 @@ function ChatWindow({
     }
   }, [user?.id, callRoom, memberId, member?.full_name, member?.email, title]);
 
+  // Anrufer-seitiger Klingel-Timeout: auch wenn die Gegenseite die App geschlossen hat,
+  // klingelt ein Anruf nie länger als CALL_RING_MS. Danach verpasst + Video-Stage schliessen.
+  useEffect(() => {
+    if (!callOpen || !calling) return;
+    const t = setTimeout(() => {
+      const id = callIdRef.current;
+      callIdRef.current = null;
+      setCallOpen(false);
+      setCalling(false);
+      if (id) void setCallStatus(id, "missed").catch(() => {});
+      toast.error(`${title} hat nicht geantwortet`);
+    }, CALL_RING_MS);
+    return () => clearTimeout(t);
+  }, [callOpen, calling, title]);
+
   // Angenommener eingehender Anruf: direkt verbinden
   useEffect(() => {
     if (!autoCall) return;
@@ -418,6 +433,7 @@ function ChatWindow({
             setCalling(false);
           }
           if (row.status === "missed" || row.status === "ended") {
+            if (row.status === "missed") toast.error(`${title} hat nicht geantwortet`);
             callIdRef.current = null;
             setCallOpen(false);
             setCalling(false);
