@@ -90,10 +90,10 @@ export function PartnerContactsManager() {
         if (error) throw error;
         if (!data?.length) throw new Error("Keine Berechtigung zum Ändern.");
       } else {
-        // agency_id wird serverseitig gesetzt (Trigger), nie aus dem Browser.
+        // agency_id wird zusätzlich serverseitig gesetzt (Trigger + Zugriffsregel).
         const { data, error } = await supabase
           .from("agency_partner_contacts")
-          .insert({ ...payload, agency_id: "00000000-0000-0000-0000-000000000000" })
+          .insert({ ...payload, agency_id: agencyId! })
           .select("id");
         if (error) throw error;
         if (!data?.length) throw new Error("Keine Berechtigung zum Erfassen.");
