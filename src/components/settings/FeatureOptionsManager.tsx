@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -148,13 +148,10 @@ export function FeatureOptionsManager({ canEdit }: { canEdit: boolean }) {
                   update.mutate({ id: row.id, patch: { category: e.target.value.trim() || null } })
                 }
               />
-              <Input
-                type="number"
+              <SortOrderInput
                 value={row.sort_order}
                 disabled={!canEdit}
-                onChange={(e) =>
-                  update.mutate({ id: row.id, patch: { sort_order: Number(e.target.value) || 0 } })
-                }
+                onCommit={(v) => update.mutate({ id: row.id, patch: { sort_order: v } })}
               />
               <div className="flex items-center gap-2">
                 <Switch
@@ -194,5 +191,52 @@ export function FeatureOptionsManager({ canEdit }: { canEdit: boolean }) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Sortierung mit lokalem Entwurf: speichert erst bei Verlassen des Feldes oder Enter,
+ * nie pro Tastendruck. Leere/ungültige Eingaben werden verworfen (kein Speichern als 0).
+ */
+function SortOrderInput({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value: number;
+  disabled?: boolean;
+  onCommit: (v: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    if (!editing) setDraft(String(value));
+  }, [value, editing]);
+  const commit = () => {
+    setEditing(false);
+    const t = draft.trim();
+    const n = Number(t);
+    if (t === "" || !Number.isFinite(n) || !Number.isInteger(n)) {
+      setDraft(String(value));
+      return;
+    }
+    if (n !== value) onCommit(n);
+  };
+  return (
+    <Input
+      type="number"
+      step={1}
+      value={draft}
+      disabled={disabled}
+      onFocus={() => setEditing(true)}
+      onChange={(e) => {
+        setEditing(true);
+        setDraft(e.target.value);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+    />
   );
 }

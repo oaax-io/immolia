@@ -53,7 +53,11 @@ export async function setCallStatus(
   if (status === "ended" || status === "declined" || status === "missed") {
     patch.ended_at = new Date().toISOString();
   }
-  await supabase.from("video_calls").update(patch as never).eq("id", id);
+  let q = supabase.from("video_calls").update(patch as never).eq("id", id);
+  // Klingel-Endzustände nur aus "ringing" heraus setzen: ein später Timeout überschreibt
+  // nie ein bereits angenommenes/beendetes Gespräch (Rennen Anrufer ↔ Empfänger).
+  if (status === "missed" || status === "declined" || status === "accepted") q = q.eq("status", "ringing");
+  await q;
 }
 
 /** Kurzer, wiederholter Klingelton ohne Audiodatei. */
