@@ -287,7 +287,18 @@ function TasksPage() {
             {t("pages.tasks.title")}
           </span>
         }
-        action={<Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.new")}</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <Tabs value={view} onValueChange={(v) => changeView(v as "cards" | "kanban" | "list")}>
+              <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
+                <TabsTrigger value="cards" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><LayoutGrid className="h-4 w-4" />Karten</TabsTrigger>
+                <TabsTrigger value="kanban" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><Columns3 className="h-4 w-4" />Kanban</TabsTrigger>
+                <TabsTrigger value="list" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><List className="h-4 w-4" />Liste</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button onClick={() => setOpen(true)}><Plus className="mr-1 h-4 w-4" />{t("tasks.new")}</Button>
+          </div>
+        }
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
