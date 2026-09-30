@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Star, Mail, Phone, Building2 } from "lucide-react";
 import { useIsMasterDataAdmin } from "@/hooks/useIsMasterDataAdmin";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
 import {
   PARTNER_CATEGORIES, PARTNER_CATEGORY_LABEL, PARTNER_CATEGORY_SINGULAR,
   usePartnerCatalog, usePartnerContacts, partnerDisplayName, type AgencyPartnerContact,
