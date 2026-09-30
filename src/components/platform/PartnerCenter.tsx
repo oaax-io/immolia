@@ -175,7 +175,30 @@ export function PartnerCenter() {
               <div className="space-y-1.5"><Label>Name</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Firmenname (optional)</Label><Input value={edit.legal_name ?? ""} onChange={(e) => setEdit({ ...edit, legal_name: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Website</Label><Input value={edit.website ?? ""} onChange={(e) => setEdit({ ...edit, website: e.target.value })} placeholder="https://" /></div>
-              <div className="space-y-1.5"><Label>Logo-URL (optional)</Label><Input value={edit.logo_url ?? ""} onChange={(e) => setEdit({ ...edit, logo_url: e.target.value })} /></div>
+              <div className="space-y-1.5">
+                <Label>Logo</Label>
+                <div className="flex items-center gap-3">
+                  <PartnerLogo name={edit.name || "?"} url={edit.logo_url} size={56} />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
+                        <label className="cursor-pointer">
+                          {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                          {uploading ? "Wird geladen …" : "Logo hochladen"}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { pickLogo(e.target.files?.[0]); e.target.value = ""; }} />
+                        </label>
+                      </Button>
+                      {edit.logo_url && (
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setEdit({ ...edit, logo_url: null })}>
+                          <X className="mr-1 h-4 w-4" />Entfernen
+                        </Button>
+                      )}
+                    </div>
+                    <Input value={edit.logo_url ?? ""} onChange={(e) => setEdit({ ...edit, logo_url: e.target.value })} placeholder="oder Bild-URL einfügen" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">PNG, JPG oder SVG, höchstens 2 MB.</p>
+              </div>
               <div className="space-y-1.5"><Label>Beschreibung</Label><Textarea rows={2} value={edit.description ?? ""} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></div>
               <div className="grid grid-cols-2 items-end gap-3">
                 <div className="space-y-1.5"><Label>Sortierung</Label><Input type="number" value={edit.sort_order ?? 0} onChange={(e) => setEdit({ ...edit, sort_order: Number(e.target.value) })} /></div>
