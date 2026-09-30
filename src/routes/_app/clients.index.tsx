@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Mail, Phone, Target, LayoutGrid, List as ListIcon, Archive, ArchiveRestore, Trash2, UserCog, MoreHorizontal, X, Link2, CornerDownRight, Users, ShoppingBag, Home, Banknote, CheckCircle2, Ban, Crown, Check, ChevronDown } from "lucide-react";
+import { Plus, Search, Mail, Phone, Target, LayoutGrid, List as ListIcon, Columns3, Archive, ArchiveRestore, Trash2, UserCog, MoreHorizontal, X, Link2, CornerDownRight, Users, ShoppingBag, Home, Banknote, CheckCircle2, Ban, Crown, Check, ChevronDown } from "lucide-react";
+import { ClientKanban } from "@/components/clients/ClientKanban";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
@@ -126,7 +127,7 @@ function usePersistedState<T>(key: string, initial: T) {
 }
 
 
-type ViewMode = "grid" | "list";
+type ViewMode = "grid" | "list" | "kanban";
 
 function ClientsPage() {
   const { t } = useTranslation();
@@ -409,6 +410,7 @@ function ClientsPage() {
               <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
                 <TabsTrigger value="grid" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><LayoutGrid className="h-4 w-4" />{t("clients.tabs.grid")}</TabsTrigger>
                 <TabsTrigger value="list" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><ListIcon className="h-4 w-4" />{t("clients.tabs.list")}</TabsTrigger>
+                <TabsTrigger value="kanban" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"><Columns3 className="h-4 w-4" />Kanban</TabsTrigger>
               </TabsList>
 
             </Tabs>
@@ -556,6 +558,8 @@ function ClientsPage() {
 
       {filtered.length === 0 && !clientsQuery.error && !clientsQuery.isLoading ? (
         <EmptyState title={t("clients.emptyTitle")} description={t("clients.emptyDescription")} />
+      ) : view === "kanban" ? (
+        <ClientKanban clients={filtered} onOpen={setDetailId} />
       ) : view === "grid" ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {paginated.map((c: any) => {
