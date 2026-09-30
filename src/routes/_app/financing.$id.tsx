@@ -14,8 +14,9 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowLeft, User, Building2, Banknote, RotateCcw, ArrowUp, ArrowDown, Trash2, FileText, ChevronRight, ClipboardCheck, Calculator, LineChart } from "lucide-react";
+import { ArrowLeft, User, Building2, Banknote, RotateCcw, ArrowUp, ArrowDown, Trash2, FileText, ChevronRight, ClipboardCheck, Calculator, LineChart, Sparkles } from "lucide-react";
 import { ClientDetailDialog } from "@/components/clients/ClientDetailDialog";
+import { PropertySwitchDialog } from "@/components/financing/PropertySwitchDialog";
 import { formatCurrency } from "@/lib/format";
 import { expenseFields, expenseLabels } from "@/lib/self-disclosure";
 import {
@@ -49,6 +50,7 @@ function FinancingDetailPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [openClientId, setOpenClientId] = useState<string | null>(null);
+  const [switchOpen, setSwitchOpen] = useState(false);
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier", id],
@@ -293,7 +295,13 @@ function FinancingDetailPage() {
             </Card>
             <Card>
               <CardContent className="p-4 space-y-2">
-                <h3 className="font-semibold flex items-center gap-2"><Building2 className="h-4 w-4" />{t("financing.detail.overview.property")}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold flex items-center gap-2"><Building2 className="h-4 w-4" />{t("financing.detail.overview.property")}</h3>
+                  <Button size="sm" variant="outline" onClick={() => setSwitchOpen(true)}>
+                    <Sparkles className="mr-1 h-4 w-4" />
+                    {dossier.properties ? "Immobilie wechseln" : "Immobilie wählen"}
+                  </Button>
+                </div>
                 {dossier.properties ? (
                   <Link to="/properties/$id" params={{ id: dossier.properties.id }} className="text-sm text-primary hover:underline">
                     {dossier.properties.title}
@@ -302,6 +310,7 @@ function FinancingDetailPage() {
                 {dossier.properties?.city && <p className="text-xs text-muted-foreground">{dossier.properties.city}</p>}
               </CardContent>
             </Card>
+            <PropertySwitchDialog open={switchOpen} onOpenChange={setSwitchOpen} dossier={dossier} />
           </div>
 
 
