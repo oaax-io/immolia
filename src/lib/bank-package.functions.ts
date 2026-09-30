@@ -6,14 +6,13 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { zipSync, strToU8, type Zippable } from "fflate";
+import { strToU8 } from "fflate";
 import { buildBankPackageHtml, type BankPackageInput, type PackageLocale } from "./bank-package-report";
 
 const BANK_PACKAGES_BUCKET = "bank-packages";
 const PDF_TIMEOUT_MS = 60_000;
-// Server-Arbeitsspeicher ist begrenzt (~128 MB): Anhänge + ZIP liegen gleichzeitig im Speicher.
-const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024; // 15 MB pro Datei
-const MAX_TOTAL_ATTACHMENT_BYTES = 40 * 1024 * 1024; // 40 MB total
+// Step 7: Anhänge werden nicht mehr gesammelt, sondern einzeln als Stream ins ZIP geschrieben
+// (siehe bank-package-zip.server.ts). Grenzen dort zentral.
 const MAX_PROXY_DOWNLOAD_BYTES = 8 * 1024 * 1024; // grössere ZIPs per signiertem Link
 
 // ---------- helpers ----------
@@ -53,49 +52,6 @@ function dedupeFileName(set: Set<string>, name: string): string {
   return name;
 }
 
-// Versucht, eine Datei aus Storage zu laden. file_url kann sein:
-// - voll-qualifizierte http(s)-URL (signed / public)
-// - Storage-Pfad (z.B. "client/<uuid>/foo.pdf") in einem unbekannten Bucket
-async function fetchAttachment(
-  fileUrl: string,
-  supabaseAdmin: unknown,
-): Promise<{ bytes: Uint8Array; size: number } | null> {
-  if (!fileUrl) return null;
-  const admin = supabaseAdmin as {
-    storage: {
-      from: (b: string) => {
-        download: (p: string) => Promise<{ data: Blob | null; error: { message: string } | null }>;
-      };
-    };
-  };
-
-  if (/^https?:\/\//i.test(fileUrl)) {
-    try {
-      const res = await fetch(fileUrl);
-      if (!res.ok) return null;
-      const buf = new Uint8Array(await res.arrayBuffer());
-      return { bytes: buf, size: buf.byteLength };
-    } catch {
-      return null;
-    }
-  }
-
-  // Storage-Pfad: durchprobieren der bekannten Buckets
-  const candidates = ["documents", "generated-documents", "media", "brand-assets"];
-  for (const bucket of candidates) {
-    try {
-      const { data, error } = await admin.storage.from(bucket).download(fileUrl);
-      if (!error && data) {
-        const buf = new Uint8Array(await data.arrayBuffer());
-        return { bytes: buf, size: buf.byteLength };
-      }
-    } catch {
-      // weiter mit nächstem Bucket
-    }
-  }
-  return null;
-}
-
 // ---------- Zugriffsprüfung (RLS als angemeldeter Benutzer) ----------
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type UserClient = any;
@@ -131,8 +87,30 @@ export const buildBankPackage = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
+    try {
+      return await buildBankPackageInner(data, context);
+    } catch (err) {
+      // Nie als 502 enden lassen: jede unerwartete Ausnahme als klare Meldung zurückgeben.
+      console.error("[bank-package] build failed", err);
+      const msg = (err as Error)?.message ?? "";
+      return {
+        ok: false as const,
+        reason: "build_failed" as const,
+        message: msg.startsWith("Kein Zugriff") ? msg : "Bank-Paket konnte nicht erstellt werden. Bitte erneut versuchen.",
+        filePath: null as string | null,
+        fileUrl: null as string | null,
+        generatedDocumentId: null as string | null,
+      };
+    }
+  });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function buildBankPackageInner(data: { dossierId: string; locale: PackageLocale }, context: any) {
     await assertDossierAccess(context.supabase, data.dossierId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveAttachment, streamZipToStorage, PackageBuildError, MAX_ATTACHMENT_BYTES, MAX_TOTAL_ATTACHMENT_BYTES, MAX_ATTACHMENT_COUNT } =
+      await import("./bank-package-zip.server");
+    const storageOrigin = new URL(process.env.SUPABASE_URL!).origin;
     const serviceUrl = process.env.PDF_SERVICE_URL;
     const serviceToken = process.env.PDF_SERVICE_TOKEN;
 
@@ -310,12 +288,14 @@ export const buildBankPackage = createServerFn({ method: "POST" })
     const { data: documents } = await supabaseAdmin
       .from("documents")
       .select("id, file_name, file_url, document_type, related_type, related_id, mime_type, size_bytes, created_at")
+      .eq("agency_id", (dossier as { agency_id?: string | null }).agency_id ?? "00000000-0000-0000-0000-000000000000")
       .or(orParts.join(","));
 
     // Generierte Dokumente (Mandate, Reservation, Quick-Check-PDFs etc.) - aber bereits erstellte Bank-Pakete ausschliessen
     const { data: generated } = await supabaseAdmin
       .from("generated_documents")
       .select("id, title, file_url, document_type, related_type, related_id, created_at")
+      .eq("agency_id", (dossier as { agency_id?: string | null }).agency_id ?? "00000000-0000-0000-0000-000000000000")
       .or(orParts.join(","));
 
     // 7) Brand + Agent
@@ -327,10 +307,12 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
-    // 8) Dokumente herunterladen und ZIP-Inventar zusammenstellen
-    const zipEntries: Zippable = {};
+    // 8) Anhänge planen (nur Grösse per HEAD, kein Download) und ZIP-Inventar zusammenstellen
+    type PlannedEntry = import("./bank-package-zip.server").ZipEntry;
+    const zipPlan: PlannedEntry[] = [];
     const usedNames = new Set<string>();
     const inventory: BankPackageInput["documents"] = [];
+    const skipped: Array<{ name: string; reason: "zu_gross" | "paketgrenze" | "nicht_gefunden" }> = [];
     let totalBytes = 0;
 
     type DocSource = {
@@ -357,39 +339,58 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       return { folder: "05_Sonstige", label: "Sonstige" };
     };
 
-    const addToZipBytes = (folder: string, filename: string, bytes: Uint8Array, sourceText: string) => {
+    const planPath = (folder: string, filename: string) => {
       const cleaned = safeFileName(filename, "datei.bin");
       const targetFolder = safeFolderName(folder);
       const fullPath = `${targetFolder}/${dedupeFileName(usedNames, cleaned)}`;
-      zipEntries[fullPath] = bytes;
-      totalBytes += bytes.byteLength;
-      inventory.push({
-        folder: targetFolder,
-        filename: fullPath.split("/").pop() ?? cleaned,
-        source: sourceText,
-        size_bytes: bytes.byteLength,
-      });
+      return { fullPath, targetFolder, name: fullPath.split("/").pop() ?? cleaned };
+    };
+
+    const addBytes = (folder: string, filename: string, bytes: Uint8Array, sourceText: string) => {
+      const { fullPath, targetFolder, name } = planPath(folder, filename);
+      zipPlan.push({ path: fullPath, bytes });
+      inventory.push({ folder: targetFolder, filename: name, source: sourceText, size_bytes: bytes.byteLength });
+    };
+
+    const planFile = async (fileUrl: string, folder: string, filename: string, sourceText: string) => {
+      const display = safeFileName(filename, "datei.bin");
+      // Nur Dateien aus dem eigenen Speicher (keine fremden Adressen abrufen)
+      if (/^https?:\/\//i.test(fileUrl) && new URL(fileUrl).origin !== storageOrigin) {
+        skipped.push({ name: display, reason: "nicht_gefunden" });
+        return;
+      }
+      if (zipPlan.length >= MAX_ATTACHMENT_COUNT) {
+        skipped.push({ name: display, reason: "paketgrenze" });
+        return;
+      }
+      const resolved = await resolveAttachment(fileUrl, supabaseAdmin);
+      if (!resolved) {
+        skipped.push({ name: display, reason: "nicht_gefunden" });
+        return;
+      }
+      // Unbekannte Grösse: mit Obergrenze einplanen; beim Lesen hart geprüft.
+      const size = resolved.size ?? MAX_ATTACHMENT_BYTES;
+      if (size > MAX_ATTACHMENT_BYTES) {
+        skipped.push({ name: display, reason: "zu_gross" });
+        return;
+      }
+      if (totalBytes + size > MAX_TOTAL_ATTACHMENT_BYTES) {
+        skipped.push({ name: display, reason: "paketgrenze" });
+        return;
+      }
+      totalBytes += size;
+      const { fullPath, targetFolder, name } = planPath(folder, filename);
+      zipPlan.push({ path: fullPath, url: resolved.url, expectedSize: resolved.size, label: name });
+      inventory.push({ folder: targetFolder, filename: name, source: sourceText, size_bytes: size });
     };
 
     const addToZip = async (d: DocSource, isGenerated: boolean) => {
       if (!d.file_url) return;
-      if (totalBytes >= MAX_TOTAL_ATTACHMENT_BYTES) return;
-
-      const fetched = await fetchAttachment(d.file_url, supabaseAdmin);
-      if (!fetched) return;
-      if (fetched.size > MAX_ATTACHMENT_BYTES) return;
-      if (totalBytes + fetched.size > MAX_TOTAL_ATTACHMENT_BYTES) return;
-
       const baseName = isGenerated
         ? (d.title ?? d.file_name ?? `generiert_${d.related_id ?? "datei"}.pdf`)
         : (d.file_name ?? `datei_${d.related_id ?? "x"}`);
       const { folder, label } = sourceLabel(d);
-      addToZipBytes(
-        isGenerated ? "06_Generiert" : folder,
-        baseName,
-        fetched.bytes,
-        isGenerated ? "Generiert" : label,
-      );
+      await planFile(d.file_url, isGenerated ? "06_Generiert" : folder, baseName, isGenerated ? "Generiert" : label);
     };
 
     for (const d of documents ?? []) await addToZip(d as DocSource, false);
@@ -401,13 +402,8 @@ export const buildBankPackage = createServerFn({ method: "POST" })
 
     // Objekt-Bilder (Cover zuerst) als eigenständige Anhänge unter 03_Immobilie/Bilder
     for (let i = 0; i < propertyMedia.length; i++) {
-      if (totalBytes >= MAX_TOTAL_ATTACHMENT_BYTES) break;
       const m = propertyMedia[i];
       if (!m.file_url) continue;
-      const fetched = await fetchAttachment(m.file_url, supabaseAdmin);
-      if (!fetched) continue;
-      if (fetched.size > MAX_ATTACHMENT_BYTES) continue;
-      if (totalBytes + fetched.size > MAX_TOTAL_ATTACHMENT_BYTES) break;
       const ext = (() => {
         const raw = m.file_url.split("?")[0].split(".").pop();
         return raw && raw.length <= 5 ? `.${raw.toLowerCase()}` : "";
@@ -416,7 +412,7 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       const name = m.is_cover
         ? `Cover${ext}`
         : (m.file_name ? safeFileName(m.file_name, `Bild_${idx}${ext}`) : `Bild_${idx}${ext}`);
-      addToZipBytes("03_Immobilie/Bilder", name, fetched.bytes, "Immobilie-Bild");
+      await planFile(m.file_url, "03_Immobilie/Bilder", name, "Immobilie-Bild");
     }
 
     // Immobilie-Zusammenfassung als Textdatei — sorgt dafür, dass der Ordner
@@ -444,7 +440,7 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       push("Energieklasse", property.energy_class);
       push("Heizung", property.heating_type);
       push("Zustand", property.condition);
-      addToZipBytes("03_Immobilie", "Immobilie.txt", strToU8(lines.join("\n")), "Immobilie-Zusammenfassung");
+      addBytes("03_Immobilie", "Immobilie.txt", strToU8(lines.join("\n")), "Immobilie-Zusammenfassung");
     }
 
 
@@ -572,8 +568,8 @@ export const buildBankPackage = createServerFn({ method: "POST" })
 
     // 10) ZIP bauen
     const clientSlug = safeFileName(mainClient?.full_name ?? "Kunde", "Kunde").replace(/[ .]+$/, "");
-    zipEntries[`00_Dossier_${clientSlug}.pdf`] = pdfBytes;
-    zipEntries["README.txt"] = strToU8(
+    const skippedLabel = { zu_gross: "zu gross", paketgrenze: "Paketgrösse erreicht", nicht_gefunden: "nicht gefunden" } as const;
+    const readme = strToU8(
       [
         `Bank-Paket - ${mainClient?.full_name ?? ""}`,
         `Dossier-ID: ${dossier.id}`,
@@ -589,28 +585,15 @@ export const buildBankPackage = createServerFn({ method: "POST" })
         property ? `- 03_Immobilie/: Unterlagen zur Immobilie (inkl. Bilder unter 03_Immobilie/Bilder/)` : null,
         `- 04_Finanzierung/: Unterlagen zur Finanzierung`,
         `- 06_Generiert/: Generierte Dokumente (Quick-Check PDF etc.)`,
+        skipped.length ? `` : null,
+        skipped.length ? `Nicht enthalten (${skipped.length}):` : null,
+        ...skipped.map((x) => `- ${x.name} (${skippedLabel[x.reason]})`),
       ]
         .filter(Boolean)
         .join("\n"),
     );
 
-    let zipBytes: Uint8Array;
-    try {
-      // level 0 (Speichern): PDFs/Bilder sind bereits komprimiert; spart Speicher und CPU
-      zipBytes = zipSync(zipEntries, { level: 0 });
-      for (const k of Object.keys(zipEntries)) delete zipEntries[k];
-    } catch (err) {
-      return {
-        ok: false as const,
-        reason: "zip_failed" as const,
-        message: `ZIP konnte nicht erstellt werden: ${(err as Error).message}`,
-        filePath: null,
-        fileUrl: null,
-        generatedDocumentId: null,
-      };
-    }
-
-    // 11) Upload
+    // 11) ZIP als Stream bauen und direkt hochladen (nie das ganze Paket im Speicher)
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const zipFileName = `Bank-Paket_${clientSlug}_${timestamp.slice(0, 19)}.zip`;
     const dossierAgency = (dossier as { agency_id?: string | null }).agency_id ?? null;
@@ -618,22 +601,31 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       ? `agency/${dossierAgency}/${data.dossierId}/${zipFileName}`
       : `${data.dossierId}/${zipFileName}`;
 
-    const { error: upErr } = await supabaseAdmin.storage
-      .from(BANK_PACKAGES_BUCKET)
-      .upload(storagePath, zipBytes, {
-        contentType: "application/zip",
-        upsert: false,
+    let zipSize: number;
+    try {
+      const res = await streamZipToStorage({
+        admin: supabaseAdmin,
+        bucket: BANK_PACKAGES_BUCKET,
+        path: storagePath,
+        entries: [
+          { path: `00_Dossier_${clientSlug}.pdf`, bytes: pdfBytes },
+          { path: "README.txt", bytes: readme },
+          ...zipPlan,
+        ],
       });
-    if (upErr) {
+      zipSize = res.bytes;
+    } catch (err) {
+      const known = err instanceof PackageBuildError;
       return {
         ok: false as const,
-        reason: "storage_upload_failed" as const,
-        message: `Upload fehlgeschlagen: ${upErr.message}`,
+        reason: (known ? err.reason : "zip_failed") as string,
+        message: known ? err.message : `ZIP konnte nicht erstellt werden: ${(err as Error).message}`,
         filePath: null,
         fileUrl: null,
         generatedDocumentId: null,
       };
     }
+    const zipBytes = { byteLength: zipSize };
 
     // 12) generated_documents Eintrag (Historie)
     const insertRow = {
@@ -647,6 +639,7 @@ export const buildBankPackage = createServerFn({ method: "POST" })
         bytes: zipBytes.byteLength,
         attachments: inventory.length,
         attachment_bytes: totalBytes,
+        skipped,
       } as Record<string, unknown>,
     };
     const { data: createdRow, error: insertErr } = await supabaseAdmin
@@ -686,9 +679,10 @@ export const buildBankPackage = createServerFn({ method: "POST" })
       fileName: zipFileName,
       sizeBytes: zipBytes.byteLength,
       attachmentCount: inventory.length,
+      skipped,
       generatedDocumentId: createdRow?.id ?? null,
     };
-  });
+}
 
 // ---------- listBankPackages ----------
 
@@ -757,16 +751,22 @@ export const fetchBankPackageBytes = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertPackagePathAccess(context.supabase, data.path);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: file, error } = await supabaseAdmin.storage
+    // Grösse zuerst per HEAD prüfen – grosse Pakete nie in den Server-Speicher laden.
+    const { data: signed, error } = await supabaseAdmin.storage
       .from(BANK_PACKAGES_BUCKET)
-      .download(data.path);
-    if (error || !file) {
+      .createSignedUrl(data.path, 60);
+    if (error || !signed?.signedUrl) {
       return { ok: false as const, base64: null as string | null, message: error?.message ?? "not_found" };
     }
-    if (file.size > MAX_PROXY_DOWNLOAD_BYTES) {
+    const head = await fetch(signed.signedUrl, { method: "HEAD" });
+    const len = Number(head.headers.get("content-length"));
+    if (!head.ok) return { ok: false as const, base64: null as string | null, message: "not_found" };
+    if (!Number.isFinite(len) || len > MAX_PROXY_DOWNLOAD_BYTES) {
       return { ok: false as const, base64: null as string | null, message: "too_large_use_signed_url" };
     }
-    const buf = new Uint8Array(await file.arrayBuffer());
+    const res = await fetch(signed.signedUrl);
+    if (!res.ok) return { ok: false as const, base64: null as string | null, message: "not_found" };
+    const buf = new Uint8Array(await res.arrayBuffer());
     let binary = "";
     const chunkSize = 0x8000;
     for (let i = 0; i < buf.length; i += chunkSize) {

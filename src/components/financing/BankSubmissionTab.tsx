@@ -241,6 +241,14 @@ function BankPackageCard({ dossierId }: { dossierId: string }) {
         return;
       }
       toast.success(`Bank-Paket erstellt (${formatBytes(res.sizeBytes)}, ${res.attachmentCount} Anhänge)`);
+      const sk = (res as { skipped?: Array<{ name: string; reason: string }> }).skipped ?? [];
+      if (sk.length) {
+        const why: Record<string, string> = { zu_gross: "über 25 MB", paketgrenze: "Paketgrösse von 45 MB erreicht", nicht_gefunden: "Datei nicht gefunden" };
+        toast.warning(`${sk.length} Datei(en) nicht im Paket`, {
+          description: sk.slice(0, 5).map((x) => `${x.name} (${why[x.reason] ?? x.reason})`).join(", ") + (sk.length > 5 ? " …" : ""),
+          duration: 12000,
+        });
+      }
       qc.invalidateQueries({ queryKey: ["bank_packages", dossierId] });
       if (res.fileUrl) downloadViaProxy(res.filePath ?? "", res.fileUrl);
     },
