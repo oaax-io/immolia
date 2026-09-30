@@ -21,7 +21,7 @@ import { logActivity } from "@/components/ActivityTab";
 import { toast } from "sonner";
 import { ArrowRight, Building2, Search, Sparkles } from "lucide-react";
 
-const OPEN_STATUSES = ["available", "draft", "preparation", "reserved"];
+const OPEN_STATUSES = ["available", "draft", "preparation", "reserved"] as const;
 
 function num(v: unknown, fallback = 0): number {
   const n = typeof v === "string" ? parseFloat(v) : (v as number);
@@ -132,7 +132,7 @@ export function PropertySwitchDialog({
         update.quick_check_status = sim.status;
         update.quick_check_reasons = sim.reasons;
       }
-      const { error } = await supabase.from("financing_dossiers").update(update).eq("id", dossier.id);
+      const { error } = await supabase.from("financing_dossiers").update(update as never).eq("id", dossier.id);
       if (error) throw error;
       await logActivity({
         relatedType: "financing_dossier",
