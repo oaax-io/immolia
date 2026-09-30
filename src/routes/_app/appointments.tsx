@@ -153,6 +153,8 @@ function AppointmentsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<any>({ ...emptyForm });
   const [view, setView] = useState<"month" | "week" | "day" | "list">("month");
+  const [anchor, setAnchor] = useState(() => new Date());
+  const changeView = (v: string) => { setView(v as any); setAnchor(new Date()); };
   const holidays = useHolidays();
   const layer = useLayers();
 
@@ -329,14 +331,14 @@ function AppointmentsPage() {
         submitting={create.isPending}
       />
 
-      <Tabs value={view} onValueChange={(v) => setView(v as any)} className="space-y-4">
+      <Tabs value={view} onValueChange={changeView} className="space-y-4">
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 shadow-sm">
           <TabsList className="h-9 rounded-lg bg-primary/15 p-1">
             <TabsTrigger value="month" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
               <CalendarDays className="h-4 w-4" />{t("appointments.tabs.month", { defaultValue: "Monat" })}
             </TabsTrigger>
             <TabsTrigger value="week" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
-              <CalendarRange className="h-4 w-4" />{t("appointments.tabs.week")}
+              <CalendarRange className="h-4 w-4" />{t("appointments.tabs.week", { defaultValue: "Woche" })}
             </TabsTrigger>
             <TabsTrigger value="day" className="gap-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
               <CalendarClock className="h-4 w-4" />Tag
