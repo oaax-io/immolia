@@ -13,6 +13,8 @@
  * Pure function: no React. Reusable by server-side PDF renderers.
  */
 
+import { matchExposeIcon, exposeIconSvg } from "@/lib/expose-icons";
+
 export type ExposeFamily = "classic" | "modern" | "luxury";
 
 export interface ExposeData {
@@ -37,8 +39,14 @@ export interface ExposeData {
   extra_sections?: ExposeExtraSection[];
   section_order?: string[];
 
+  /** Visuelle Ausstattungs-Highlights (max. ~8), werden mit Icons dargestellt. */
+  highlights?: string[] | null;
+
   agency_name?: string | null;
+  agency_logo_url?: string | null;
   contact_name?: string | null;
+  contact_role?: string | null;
+  contact_photo_url?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;
   generated_on?: string;
@@ -130,8 +138,55 @@ function pageWrapStart(t: ExposeTheme): string {
   .footer { position: absolute; left: 16mm; right: 16mm; bottom: 8mm;
             display: flex; justify-content: space-between; font-size: 9px;
             opacity: 0.55; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* --- Ausstattungs-Highlights mit Icons (alle Vorlagen) --- */
+  .hl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm 4mm; margin-top: 4mm; }
+  .hl-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2mm;
+             break-inside: avoid; }
+  .hl-ico { width: 13mm; height: 13mm; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid ${t.accent}; background: ${t.accent}14; }
+  .hl-ico svg { width: 7mm; height: 7mm; }
+  .hl-label { font-size: 8.5pt; line-height: 1.25; font-weight: 600; letter-spacing: 0.01em; }
+
+  /* --- Ansprechperson mit Portrait (alle Vorlagen) --- */
+  .c-person { display: flex; align-items: center; gap: 7mm; }
+  .c-portrait { width: 34mm; height: 34mm; border-radius: 999px; overflow: hidden; flex: 0 0 auto;
+                border: 2px solid ${t.accent}; background: ${t.accent}22; }
+  .c-portrait img { width: 100%; height: 100%; object-fit: cover; }
+  .c-initials { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+                font-family: ${t.titleFont}; font-size: 20pt; font-weight: 700; }
+  .c-role { font-size: 10pt; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 1mm; }
+  .c-logo { max-height: 14mm; max-width: 48mm; object-fit: contain; margin-top: 6mm; }
   `;
 
+}
+
+/** Initialen als Fallback, wenn kein Portrait hinterlegt ist. */
+function initials(name?: string | null): string {
+  return (name ?? "")
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "").join("") || "–";
+}
+
+/** Rundes Portrait der Ansprechperson – nie ein kaputtes Bild. */
+function portrait(d: ExposeData): string {
+  const inner = isPh(d.contact_photo_url)
+    ? `<div class="c-initials">${esc(initials(d.contact_name))}</div>`
+    : `<img src="${esc(d.contact_photo_url!)}" alt="${esc(d.contact_name ?? "")}"/>`;
+  return `<div class="c-portrait">${inner}</div>`;
+}
+
+/** Icon-Leiste der wichtigsten Ausstattungsmerkmale. */
+function highlightsBlock(d: ExposeData, t: ExposeTheme): string {
+  const list = (d.highlights ?? []).filter(Boolean).slice(0, 8);
+  if (!list.length) return "";
+  return `<div class="hl-grid">${list
+    .map(
+      (h) =>
+        `<div class="hl-item"><div class="hl-ico">${exposeIconSvg(matchExposeIcon(h), t.primary, 26)}</div>` +
+        `<div class="hl-label">${esc(h)}</div></div>`,
+    )
+    .join("")}</div>`;
 }
 
 function footer(d: ExposeData, t: ExposeTheme, _page?: number, _total?: number): string {
@@ -371,6 +426,7 @@ function renderClassic(d: ExposeData, t: ExposeTheme): string {
       </tbody>
     </table>
     ${d.description ? `<h2 class="section-title mt">Objektbeschreibung</h2><p class="prose">${esc(d.description)}</p>` : ""}
+    ${(d.highlights ?? []).length ? `<h2 class="section-title mt">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="section-title mt">Ausstattung</h2><ul class="bullets">${(d.features ?? []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${footer(d, t, 2, 0)}
   </div>`);
@@ -416,13 +472,20 @@ function renderClassic(d: ExposeData, t: ExposeTheme): string {
       <header class="ph"><div class="ph-l">${esc(d.title)}</div><div class="ph-r">Kontakt</div></header>
       <h2 class="section-title">Kontakt</h2>
       <div class="contact-card">
-        ${d.agency_name ? `<div class="c-agency">${esc(d.agency_name)}</div>` : ""}
-        ${d.contact_name ? `<div class="c-name">${esc(d.contact_name)}</div>` : ""}
-        <div class="c-meta">
-          ${d.contact_email ? `<span>✉ ${esc(d.contact_email)}</span>` : ""}
-          ${d.contact_phone ? `<span>☎ ${esc(d.contact_phone)}</span>` : ""}
+        <div class="c-person">
+          ${portrait(d)}
+          <div>
+            ${d.agency_name ? `<div class="c-agency">${esc(d.agency_name)}</div>` : ""}
+            ${d.contact_name ? `<div class="c-name">${esc(d.contact_name)}</div>` : ""}
+            ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+            <div class="c-meta">
+              ${d.contact_email ? `<span>✉ ${esc(d.contact_email)}</span>` : ""}
+              ${d.contact_phone ? `<span>☎ ${esc(d.contact_phone)}</span>` : ""}
+            </div>
+          </div>
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }
@@ -517,6 +580,7 @@ function renderModern(d: ExposeData, t: ExposeTheme): string {
       ${facts.slice(0, kpiCols * 2).map((f) => `<div class="kpi"><div class="kpi-v">${esc(f.value)}</div><div class="kpi-l">${esc(f.label)}</div></div>`).join("")}
     </div>` : ""}
     ${d.description ? `<h2 class="sec">Über das Objekt</h2><p class="lead">${esc(d.description)}</p>` : ""}
+    ${(d.highlights ?? []).length ? `<h2 class="sec">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="sec">Ausstattung</h2><div class="chips">${(d.features ?? []).map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>` : ""}
     ${footer(d, t, 2, 0)}
   </div>`);
@@ -558,14 +622,21 @@ function renderModern(d: ExposeData, t: ExposeTheme): string {
       <h2 class="sec">Ihr Ansprechpartner</h2>
       <div class="m-contact">
         <div class="m-contact-l">
-          ${d.contact_name ? `<div class="m-contact-name">${esc(d.contact_name)}</div>` : ""}
-          ${d.agency_name ? `<div class="m-contact-ag">${esc(d.agency_name)}</div>` : ""}
+          <div class="c-person">
+            ${portrait(d)}
+            <div>
+              ${d.contact_name ? `<div class="m-contact-name">${esc(d.contact_name)}</div>` : ""}
+              ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+              ${d.agency_name ? `<div class="m-contact-ag">${esc(d.agency_name)}</div>` : ""}
+            </div>
+          </div>
         </div>
         <div class="m-contact-r">
           ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
           ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }
@@ -669,6 +740,7 @@ function renderLuxury(d: ExposeData, t: ExposeTheme): string {
         </dl>
       </aside>
     </div>
+    ${(d.highlights ?? []).length ? `<h2 class="lx-h2 mt">Highlights</h2>${highlightsBlock(d, t)}` : ""}
     ${(d.features ?? []).length ? `<h2 class="lx-h2 mt">Ausstattung</h2>
       <ul class="lx-features">${(d.features ?? []).map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${footer(d, t, 2, 0)}
@@ -714,13 +786,20 @@ function renderLuxury(d: ExposeData, t: ExposeTheme): string {
       <div class="lx-rule double"></div>
       <h2 class="lx-h2">Kontakt</h2>
       <div class="lx-contact">
-        ${d.agency_name ? `<div class="lx-c-ag">${esc(d.agency_name)}</div>` : ""}
-        ${d.contact_name ? `<div class="lx-c-name">${esc(d.contact_name)}</div>` : ""}
-        <div class="lx-c-meta">
-          ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
-          ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
+        <div class="c-person">
+          ${portrait(d)}
+          <div>
+            ${d.agency_name ? `<div class="lx-c-ag">${esc(d.agency_name)}</div>` : ""}
+            ${d.contact_name ? `<div class="lx-c-name">${esc(d.contact_name)}</div>` : ""}
+            ${d.contact_role ? `<div class="c-role">${esc(d.contact_role)}</div>` : ""}
+            <div class="lx-c-meta">
+              ${d.contact_email ? `<div>${esc(d.contact_email)}</div>` : ""}
+              ${d.contact_phone ? `<div>${esc(d.contact_phone)}</div>` : ""}
+            </div>
+          </div>
         </div>
       </div>
+      ${!isPh(d.agency_logo_url) ? `<img class="c-logo" src="${esc(d.agency_logo_url!)}" alt=""/>` : ""}
       ${footer(d, t)}
     </div>`);
   }

@@ -30,6 +30,7 @@ import {
 } from "@/lib/expose-template";
 import { renderDocumentPdf, fetchDocumentPdfBytes } from "@/lib/documents.functions";
 import { TEMPLATES, type TemplateMeta, type GalerieLayout } from "@/components/expose/TemplatePreview";
+import { exposeIconSvg, matchExposeIcon } from "@/lib/expose-icons";
 
 type Props = {
   propertyId: string;
@@ -178,6 +179,8 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [contactMode, setContactMode] = useState<"employee" | "custom">("employee");
   const [contactUserId, setContactUserId] = useState<string | null>(null);
   const [customContact, setCustomContact] = useState({ name: "", email: "", phone: "", role: "" });
+  const [employeeRole, setEmployeeRole] = useState("");
+  const [highlights, setHighlights] = useState<string[] | null>(null);
 
   const renderPdf = useServerFn(renderDocumentPdf);
   const fetchBytes = useServerFn(fetchDocumentPdfBytes);
@@ -251,12 +254,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   });
 
   const contact = useMemo(() => {
-    if (!withContact) return { name: null, email: null, phone: null };
+    if (!withContact) return { name: null, email: null, phone: null, role: null, photo: null };
     if (contactMode === "custom") {
       return {
-        name: [customContact.name, customContact.role].filter(Boolean).join(" · ") || null,
+        name: customContact.name || null,
         email: customContact.email || null,
         phone: customContact.phone || null,
+        role: customContact.role || null,
+        photo: null,
       };
     }
     const emp = (employees as any[]).find((e) => e.id === contactUserId) ?? (profile as any);
@@ -264,8 +269,10 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       name: emp?.full_name ?? null,
       email: emp?.email ?? null,
       phone: emp?.phone ?? null,
+      role: employeeRole || null,
+      photo: emp?.avatar_url ?? null,
     };
-  }, [withContact, contactMode, customContact, employees, contactUserId, profile]);
+  }, [withContact, contactMode, customContact, employees, contactUserId, profile, employeeRole]);
 
   const imagePool = useMemo(() => {
     const fromMedia = (media as any[])
@@ -289,6 +296,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     setSectionOrder([...EXPOSE_SECTION_KEYS]);
     setTitle(property?.title ?? "");
     setDescription(property?.description ?? "");
+    setHighlights(null);
   }, [open, property]);
 
   useEffect(() => {
@@ -318,6 +326,61 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       .filter((f) => visibleFacts.has(f.key) && map[f.key] && map[f.key] !== "—")
       .map((f) => ({ label: f.label, value: map[f.key] }));
   }, [property, visibleFacts]);
+
+  const allFeatures: string[] = useMemo(
+    () => (Array.isArray(property?.features) ? (property!.features as string[]).filter(Boolean) : []),
+    [property],
+  );
+
+  // Standard: die ersten acht Ausstattungen werden automatisch als Highlights vorgeschlagen.
+  const selectedHighlights = useMemo(
+    () => (highlights ?? allFeatures.slice(0, 8)).filter((f) => allFeatures.includes(f)),
+    [highlights, allFeatures],
+  );
+
+  const toggleHighlight = (f: string) =>
+    setHighlights((prev) => {
+      const base = prev ?? allFeatures.slice(0, 8);
+      if (base.includes(f)) return base.filter((x) => x !== f);
+      if (base.length >= 8) return base;
+      return [...base, f];
+    });
+
+  // Exposé-Check: Qualitätsprüfung vor dem Erstellen.
+  const checks = useMemo(() => {
+    const p: any = property ?? {};
+    return [
+      { key: "cover", label: "Titelbild", ok: !!coverUrl, hint: "Im Schritt «Galerie» ein Titelbild wählen.", step: 2 },
+      { key: "title", label: "Titel", ok: !!(title || p.title), hint: "Im Schritt «Inhalte» einen Titel erfassen.", step: 1 },
+      {
+        key: "price",
+        label: p.listing_type === "rent" ? "Mietzins" : "Kaufpreis",
+        ok: p.listing_type === "rent" ? !!p.rent : !!p.price,
+        hint: "Preis beim Objekt hinterlegen.",
+        step: 1,
+      },
+      { key: "address", label: "Adresse", ok: !!(p.address || p.city), hint: "Adresse beim Objekt ergänzen.", step: 1 },
+      {
+        key: "facts",
+        label: "Eckdaten",
+        ok: facts.length >= 3,
+        hint: "Mindestens drei Eckdaten auswählen.",
+        step: 1,
+      },
+      {
+        key: "description",
+        label: "Beschreibung",
+        ok: withDescription && (description ?? "").trim().length >= 80,
+        hint: "Aussagekräftige Beschreibung (min. 80 Zeichen) erfassen.",
+        step: 1,
+      },
+      { key: "gallery", label: "Bilderstrecke", ok: galleryUrls.filter((u) => u !== coverUrl).length >= 3, hint: "Mindestens drei Galeriebilder wählen.", step: 2 },
+      { key: "contact", label: "Ansprechperson", ok: !withContact || !!contact.name, hint: "Ansprechperson auswählen.", step: 4 },
+    ];
+  }, [property, coverUrl, title, facts, withDescription, description, galleryUrls, withContact, contact]);
+
+  const checkOk = checks.filter((c) => c.ok).length;
+  const checkMissing = checks.filter((c) => !c.ok);
 
   const macro = (property as any)?.macro_location as any | null;
   const marketSections = (marketAnalysis as any)?.sections as any | null;
@@ -383,7 +446,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     return out;
   }, [withMacro, withMarket, macro, marketSections]);
 
-  const buildHtml = (cover: string | null, gallery: string[]) => {
+  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null) => {
     const p = property ?? {};
     const cols = GALLERY_OPTIONS.find((o) => o.id === galleryLayout)?.cols ?? 2;
     return renderExposeHTML(
@@ -398,6 +461,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         price: visibleFacts.has("price") && p.price ? Number(p.price) : null,
         rent: visibleFacts.has("rent") && p.rent ? Number(p.rent) : null,
         features: withFeatures ? (p.features ?? []) : [],
+        highlights: withFeatures ? selectedHighlights : [],
         facts,
         cover_url: cover,
         gallery_urls: gallery.filter((u) => u !== cover),
@@ -408,7 +472,10 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         section_order: sectionOrder,
         gallery_cols: cols,
         agency_name: company?.name ?? _tb.companyName,
+        agency_logo_url: logoSrc ?? _tb.logoUrl ?? null,
         contact_name: contact.name,
+        contact_role: contact.role,
+        contact_photo_url: portraitSrc ?? contact.photo ?? null,
         contact_email: contact.email,
         contact_phone: contact.phone,
         generated_on: new Date().toLocaleDateString("de-CH"),
@@ -429,7 +496,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const previewHtml = useMemo(
     () => (step === 2 || step === 3 || step === 5 || step === 6 ? buildHtml(coverUrl, galleryUrls) : ""),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [step, coverUrl, galleryUrls, galleryLayout, template, title, description, withDescription, withFeatures, withContact, contact, facts, company, profile, attachmentIds, documents, extraSections, sectionOrder],
+    [step, coverUrl, galleryUrls, galleryLayout, template, title, description, withDescription, withFeatures, selectedHighlights, withContact, contact, facts, company, profile, attachmentIds, documents, extraSections, sectionOrder],
   );
 
   function moveSection(key: ExposeSectionKey, dir: -1 | 1) {
@@ -458,12 +525,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     setGenerating(true);
     try {
       const gallerySources = galleryUrls.filter((u) => u !== coverUrl);
+      const portraitSrc = contact.photo ? await urlToDataUri(contact.photo, 320, 0.85) : null;
+      const logoSrc = _tb.logoUrl ? await urlToDataUri(_tb.logoUrl, 480, 0.9) : null;
       const embed = async (maxSide: number, quality: number) => {
         const cover = coverUrl ? await urlToDataUri(coverUrl, maxSide, quality) : null;
         const gallery = (
           await Promise.all(gallerySources.map((u) => urlToDataUri(u, maxSide, quality)))
         ).filter((u): u is string => !!u);
-        return buildHtml(cover, gallery);
+        return buildHtml(cover, gallery, portraitSrc, logoSrc);
       };
 
       let html = await embed(1600, 0.82);
@@ -642,6 +711,67 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                     <Checkbox checked={withFeatures} onCheckedChange={() => setWithFeatures((v) => !v)} />
                     Ausstattung anzeigen
                   </label>
+                </div>
+
+                {withFeatures && allFeatures.length > 0 && (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <Label>Highlights mit Symbolen</Label>
+                      <span className="text-xs text-muted-foreground">{selectedHighlights.length} von max. 8</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {allFeatures.map((f) => {
+                        const active = selectedHighlights.includes(f);
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => toggleHighlight(f)}
+                            className={cn(
+                              "flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition",
+                              active ? "border-primary bg-primary/5 text-foreground" : "text-muted-foreground hover:border-primary/40",
+                            )}
+                          >
+                            <span
+                              className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}
+                              dangerouslySetInnerHTML={{ __html: exposeIconSvg(matchExposeIcon(f), "currentColor", 18) }}
+                            />
+                            <span className="truncate">{f}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-xl border p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <Label>Exposé-Check</Label>
+                    <span className={cn("text-xs font-medium", checkMissing.length ? "text-amber-600" : "text-emerald-600")}>
+                      {checkOk} von {checks.length} Punkten erfüllt
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {checks.map((c) => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setStep(c.step)}
+                        title={c.ok ? undefined : c.hint}
+                        className={cn(
+                          "rounded-full border px-2.5 py-1 text-xs transition",
+                          c.ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700" : "border-amber-500/50 bg-amber-500/10 text-amber-700",
+                        )}
+                      >
+                        {c.ok ? "✓" : "!"} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  {checkMissing.length > 0 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Fehlende Punkte sind nur ein Hinweis – das Exposé kann trotzdem erstellt werden.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -898,6 +1028,10 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                           </button>
                         );
                       })}
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Funktion (optional)</Label>
+                        <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
+                      </div>
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
