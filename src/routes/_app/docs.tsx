@@ -4,7 +4,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Rocket, Sparkles, LifeBuoy, ChevronRight } from "lucide-react";
 
-export const Route = createFileRoute("/_app/docs")({ component: DocsPage });
+export const Route = createFileRoute("/_app/docs")({
+  head: () => ({
+    meta: [
+      { title: "Dokumentation & Changelog – Immolia" },
+      { name: "description", content: "Neuigkeiten, Anleitungen, Roadmap und Hilfe für Immolia." },
+      { property: "og:title", content: "Dokumentation & Changelog – Immolia" },
+      { property: "og:description", content: "Neuigkeiten, Anleitungen, Roadmap und Hilfe für Immolia." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: DocsPage,
+});
 
 type ChangeType = "feature" | "improvement" | "fix";
 
@@ -15,6 +27,35 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "2.0.0",
+    date: "30.09.2026",
+    changes: [
+      { type: "feature", text: "Immolia ist neu als White-Label-SaaS für mehrere Unternehmen aufgebaut: Jede Firma arbeitet in einem vollständig getrennten Bereich mit eigener Marke, Domain, Mitgliedschaften und Modulen; ASIMO bleibt als bestehendes Unternehmen erhalten." },
+      { type: "feature", text: "Neues Plattform-Admin-Center für Unternehmen, Benutzer, Domains, Module, Abrechnung, Feedback, Aktivitäten und Sicherheit – Plattformrollen und Firmenrollen sind strikt getrennt." },
+      { type: "feature", text: "Unternehmen lassen sich zentral und vollständig anlegen, sperren und verwalten; eigene Domains können registriert, geprüft, aktiviert und als bevorzugte Adresse festgelegt werden." },
+      { type: "feature", text: "Zentrale Modulverwaltung: Produktzugang und Rollenrechte sind getrennt. Firmen können nur freigeschaltete Module nutzen; fehlende Freigaben werden sicher abgewiesen." },
+      { type: "feature", text: "Neues Einladungssystem für Inhaber, Mitarbeitende und Plattformbenutzer: Konten werden ausschliesslich über einen einmaligen, an die E-Mail-Adresse gebundenen Einladungslink aufgenommen; die offene Registrierung und temporäre Passwörter entfallen." },
+      { type: "feature", text: "Abonnemente und Credits: Pläne, Add-ons, Testphasen, monatliche Kontingente, Credit-Pakete und Verbrauchshistorie sind in der neuen Seite «Abo & Credits» sichtbar." },
+      { type: "feature", text: "Stripe-Zahlungen sowie Rechnungs-, Banküberweisungs-, individuelle und kostenlose Abonnemente verwenden dieselbe Abrechnungslogik; bezahlte Pläne und Credit-Pakete werden erst nach bestätigter Zahlung gutgeschrieben." },
+      { type: "feature", text: "Credits werden nach Herkunft und Ablaufdatum geführt. Kostenpflichtige Aktionen zeigen ihre voraussichtlichen Kosten, reservieren Credits sicher und geben sie bei technischen Fehlern automatisch wieder frei." },
+      { type: "feature", text: "Neue Provisionsverwaltung mit gebuchten Provisionen, Potenzial, Aufteilungen nach beteiligten Personen, Zielwerten, Abschlussbuchung und Provisionsabrechnung." },
+      { type: "feature", text: "Aufgaben neu in kompakter Liste, Kartenansicht oder Kanban; Aufgaben lassen sich anpinnen und per Klick in einem übersichtlichen Detailfenster öffnen. Zuweisungen sind durchsuchbar, Wiederholungen können mit Enddatum erstellt werden." },
+      { type: "feature", text: "Kalender erweitert: frei kombinierbare Ebenen für Feiertage, Geburtstage, Aufgaben, alle/eigene Termine und Online-Meetings; direkter Tagessprung, Serien täglich bis monatlich, getrennte Datums- und Zeitwahl, Adressvorschläge und Kollisionshinweise." },
+      { type: "feature", text: "Persönliche Microsoft-365-Kalenderverbindung direkt im bestehenden Kalender und unter Einstellungen: Kalenderwahl, getrennte Anzeige von Verbindung und Synchronisationsstatus, letzter erfolgreicher Abgleich, verständliche Fehlerzustände und sicheres Trennen." },
+      { type: "improvement", text: "Microsoft-365-Synchronisation technisch für den dauerhaften beidseitigen Betrieb vorbereitet: verschlüsselte Zugangsdaten, automatische Erneuerung, Live-Änderungsmeldungen, stündlicher Sicherheitsabgleich, Wiederholungen bei Störungen und Konfliktbehandlung." },
+      { type: "improvement", text: "Wichtig: Die Microsoft-Verbindung und der Terminabgleich sind bereitgestellt, benötigen aber noch den vollständigen Praxistest mit einem autorisierten Microsoft-Geschäftskonto, bevor die Synchronisation als abschliessend bestätigt gilt." },
+      { type: "improvement", text: "Firmenwechsel vollständig abgesichert: Die aktive Firma wird serverseitig bestätigt, laufende Abfragen und Live-Verbindungen werden beendet und alte Zwischenspeicher geleert; Daten einer anderen Firma werden nie unter dem falschen Branding angezeigt." },
+      { type: "improvement", text: "Kommunikation und Dateien weiter isoliert: Benachrichtigungen, interne Nachrichten, Feedback und Anhänge gehören immer zur aktiven Firma; Plattformadministratoren erhalten keinen direkten Zugriff auf CRM-Inhalte." },
+      { type: "improvement", text: "Bank-Pakete werden speicherschonend als Datenstrom erstellt. Klare Grenzen von 25 MB pro Datei, 45 MB insgesamt und 150 Dateien verhindern Abbrüche bei grossen Dossiers." },
+      { type: "improvement", text: "Papierkorb und endgültiges Löschen arbeiten atomar: Sicherung und Löschung gelingen gemeinsam oder gar nicht; Wiederherstellung und Berechtigungen bleiben firmenbezogen." },
+      { type: "fix", text: "Kritischer Schutz gegen veraltete Firmendaten nach Firmenwechsel, Browser-Zurücknavigation oder parallelen Tabs ergänzt; bei einer fehlgeschlagenen Firmenprüfung erscheint eine neutrale Sperransicht statt fremder Inhalte." },
+      { type: "fix", text: "Mandate werden inklusive Aufteilung, Dokument und Verknüpfung in einem einzigen sicheren Vorgang erstellt; ungültige Anteile können keine halbfertigen Mandate mehr hinterlassen." },
+      { type: "fix", text: "Löschvorgänge prüfen neu, ob tatsächlich ein Datensatz entfernt wurde; unzulässige Löschungen über Firmen- oder Rollengrenzen werden nicht mehr irrtümlich als erfolgreich angezeigt." },
+      { type: "fix", text: "Abrechnungskatalog, Planwechsel und Credit-Käufe stabilisiert; Firmen verlieren bei fehlenden Modulzeilen keine bestehenden Funktionen, während neue Freigaben weiterhin standardmässig gesperrt bleiben." },
+      { type: "fix", text: "Termin-, Aufgaben-, Provisions- und Bank-Paket-Abläufe wurden gegen doppelte Verarbeitung, unvollständige Datensätze und Speicherengpässe gehärtet." },
+    ],
+  },
   {
     version: "1.16.0",
     date: "21.08.2026",
@@ -255,7 +296,8 @@ const CHANGELOG: ChangelogEntry[] = [
 
 const ROADMAP = [
   { title: "Digitale Signatur direkt im Dossier", status: "in Arbeit" },
-  { title: "Kalender-Sync mit Outlook & Google", status: "in Arbeit" },
+  { title: "Microsoft-365-Kalender: vollständiger Praxistest", status: "in Prüfung" },
+  { title: "Google-Kalender-Synchronisation", status: "geplant" },
   { title: "Bank-API-Anbindung fuer direkten Dossier-Versand", status: "in Arbeit" },
   { title: "Mehrsprachigkeit (FR / IT / EN)", status: "geplant" },
   { title: "KI-Assistent fuer E-Mail-Entwuerfe", status: "geplant" },
@@ -267,8 +309,8 @@ const ROADMAP = [
 
 const FAQS = [
   {
-    q: "Wie lege ich einen neuen Mitarbeiter an?",
-    a: "Administration → Mitarbeiter → 'Mitarbeiter hinzufuegen'. Du kannst direkt ein Passwort vergeben oder generieren — keine Einladung noetig.",
+    q: "Wie lade ich einen neuen Mitarbeiter ein?",
+    a: "Öffne Mitarbeitende und erstelle eine Einladung mit E-Mail-Adresse und Rolle. Der einmalig angezeigte Link wird der eingeladenen Person sicher zugestellt; offene Registrierungen und temporäre Passwörter sind deaktiviert.",
   },
   {
     q: "Warum kann sich ein Makler nicht einloggen?",
@@ -289,6 +331,18 @@ const FAQS = [
   {
     q: "PDF-Generierung funktioniert nicht (404)",
     a: "Der externe PDF-Service ist nicht erreichbar. Administrator muss die URL in den Cloud-Secrets pruefen.",
+  },
+  {
+    q: "Wie wechsle ich zwischen mehreren Unternehmen?",
+    a: "Verwende den Firmenwechsel in der Navigation. Immolia bestätigt die neue Firma, leert alte Ansichten und lädt den Arbeitsbereich vollständig neu. Bei einer fehlgeschlagenen Prüfung bleiben Firmendaten verborgen.",
+  },
+  {
+    q: "Wo sehe ich mein Abonnement und meine Credits?",
+    a: "Unter Einstellungen → Abo & Credits findest du Plan, Zahlungsweg, Kontingente, Credit-Guthaben und Verbrauchshistorie. Firmeninhaber und Administratoren können dort verfügbare Pläne oder Credit-Pakete wählen.",
+  },
+  {
+    q: "Wie verbinde ich meinen Microsoft-365-Kalender?",
+    a: "Öffne den Kalender und wähle «Microsoft Sync» oder gehe zu Einstellungen → Microsoft-365-Kalender. Die Verbindung gilt nur für dich in der aktuell gewählten Firma. Der vollständige Praxistest der Synchronisation ist noch ausstehend.",
   },
 ];
 
@@ -367,10 +421,18 @@ function DocsPage() {
                 <h3 className="mb-2 font-display text-base font-semibold">Erste Schritte</h3>
                 <ol className="ml-5 list-decimal space-y-1 text-muted-foreground">
                   <li>Firmenprofil und White Label unter <strong>Einstellungen</strong> hinterlegen.</li>
-                  <li>Mitarbeiter unter <strong>Administration → Mitarbeiter</strong> anlegen.</li>
+                  <li>Mitarbeitende über <strong>Mitarbeitende → Einladen</strong> aufnehmen und Rollen vergeben.</li>
                   <li>Bankkonten und Dokumentvorlagen konfigurieren.</li>
                   <li>Erste Leads / Kunden erfassen und Suchprofile pflegen.</li>
                 </ol>
+              </section>
+              <section>
+                <h3 className="mb-2 font-display text-base font-semibold">Unternehmen wechseln</h3>
+                <p className="text-muted-foreground">
+                  Wenn du Mitglied mehrerer Unternehmen bist, wechselst du über die Firmenauswahl in der Navigation.
+                  Immolia lädt danach den Arbeitsbereich der gewählten Firma vollständig neu. Daten, Branding und
+                  Live-Meldungen bleiben strikt voneinander getrennt.
+                </p>
               </section>
               <section>
                 <h3 className="mb-2 font-display text-base font-semibold">Kunden & Matching</h3>
@@ -401,6 +463,23 @@ function DocsPage() {
                 <p className="text-muted-foreground">
                   Quick-Check direkt im Kundenprofil starten, Selbstauskunft per Link einholen,
                   PDF-Dossier fuer Banken generieren.
+                </p>
+              </section>
+              <section>
+                <h3 className="mb-2 font-display text-base font-semibold">Abo & Credits</h3>
+                <p className="text-muted-foreground">
+                  Unter <strong>Einstellungen → Abo & Credits</strong> siehst du deinen Plan, den Zahlungsweg,
+                  enthaltene Kontingente, das verfügbare Credit-Guthaben und alle Buchungen. Vor einer gezählten
+                  Zusatzleistung zeigt Immolia die voraussichtlichen Credit-Kosten an.
+                </p>
+              </section>
+              <section>
+                <h3 className="mb-2 font-display text-base font-semibold">Microsoft-365-Kalender</h3>
+                <p className="text-muted-foreground">
+                  Verbinde deinen persönlichen Microsoft-Kalender direkt im Kalender oder unter
+                  <strong> Einstellungen → Microsoft-365-Kalender</strong>. Die Verbindung gilt ausschliesslich
+                  für dein Benutzerkonto in der aktiven Firma. Der vollständige Praxistest des beidseitigen
+                  Terminabgleichs ist noch ausstehend.
                 </p>
               </section>
             </CardContent>
