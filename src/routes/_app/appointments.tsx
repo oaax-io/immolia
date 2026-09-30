@@ -432,7 +432,6 @@ function HolidayList({ canton, showUnpaid }: { canton: string; showUnpaid: boole
                   {new Intl.DateTimeFormat("de-CH", { weekday: "short", day: "2-digit", month: "long" }).format(new Date(h.date))}
                 </p>
               </div>
-              <Badge variant={h.paid ? "default" : "outline"} className="shrink-0 text-[10px]">{h.paid ? "bezahlt" : "unbezahlt"}</Badge>
             </div>
           ))}
         </div>
