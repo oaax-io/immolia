@@ -388,14 +388,16 @@ function TasksPage() {
         </div>
       )}
 
-      <TaskEditDrawer
-        task={editing}
-        open={!!editId}
-        onClose={() => setEditId(null)}
+      <TaskDetailDialog
+        task={detailTask}
+        open={!!detailId}
+        mode={mode}
+        setMode={setMode}
+        onClose={() => setDetailId(null)}
         employees={employees}
         optionsFor={optionsFor}
-        onSave={(patch) => update.mutate({ id: editing!.id, patch }, { onSuccess: () => { toast.success(t("tasks.toasts.updated")); setEditId(null); } })}
-        onDelete={async () => { if (await confirm({ title: t("tasks.confirmDelete.title"), confirmText: t("tasks.confirmDelete.confirm") })) remove.mutate(editing!.id); }}
+        onSave={(patch) => update.mutate({ id: detailTask!.id, patch }, { onSuccess: () => { toast.success(t("tasks.toasts.updated")); setDetailId(null); } })}
+        onDelete={async () => { if (await confirm({ title: t("tasks.confirmDelete.title"), confirmText: t("tasks.confirmDelete.confirm") })) remove.mutate(detailTask!.id); }}
         onRequestWaiting={(task) => { setWaitingComment(""); setWaitingFor({ id: task.id, title: task.title }); }}
       />
 
@@ -513,16 +515,17 @@ function TaskForm({
   );
 }
 
-function TaskEditDrawer({
-  task, open, onClose, employees, optionsFor, onSave, onDelete, onRequestWaiting,
+function TaskDetailDialog({
+  task, open, mode, setMode, onClose, employees, optionsFor, onSave, onDelete, onRequestWaiting,
 }: {
-  task: any; open: boolean; onClose: () => void;
+  task: any; open: boolean; mode: "view" | "edit"; setMode: (m: "view" | "edit") => void;
+  onClose: () => void;
   employees: any[]; optionsFor: (t: string) => { id: string; label: string }[];
   onSave: (patch: any) => void; onDelete: () => void;
   onRequestWaiting: (task: any) => void;
 }) {
-
   const { t } = useTranslation();
+  const labels = useTaskLabels();
   const [form, setForm] = useState<any>({ ...emptyForm });
 
   useEffect(() => {
@@ -548,45 +551,100 @@ function TaskEditDrawer({
     return null;
   }, [task]);
 
-  return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>{t("tasks.edit")}</SheetTitle>
-          <SheetDescription>{t("tasks.editDescription")}</SheetDescription>
-        </SheetHeader>
-        <div className="my-4">
-          <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
-        </div>
-        {relatedHref && (
-          <Button variant="outline" asChild className="mb-4 w-full">
-            <Link to={relatedHref as any}><ExternalLink className="mr-1 h-4 w-4" />{t("tasks.openRelated")}</Link>
-          </Button>
-        )}
-        <SheetFooter className="flex-row justify-between gap-2">
-          <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("tasks.actions.delete")}</Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onClose}>{t("tasks.actions.close")}</Button>
-            <Button onClick={() => {
-              if (form.status === "waiting" && task?.status !== "waiting") {
-                onRequestWaiting(task);
-                return;
-              }
-              onSave({
-                title: form.title.trim(),
-                description: form.description.trim() || null,
-                status: form.status,
-                priority: form.priority,
-                due_date: form.due_date ? new Date(`${form.due_date}T12:00:00`).toISOString() : null,
-                assigned_to: form.assigned_to || null,
-                related_type: form.related_type !== "none" ? form.related_type : null,
-                related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
-              });
-            }} disabled={!form.title.trim()}>{t("tasks.actions.save")}</Button>
+  const assignee = employees.find((e: any) => e.id === task?.assigned_to);
+  const assigneeName = (assignee as any)?.full_name || (assignee as any)?.email;
+  const relatedLabel = task?.related_id ? optionsFor(task?.related_type ?? "none").find(o => o.id === task.related_id)?.label : null;
+  const sStyle = STATUS_STYLES[task?.status] ?? STATUS_STYLES.open;
+  const overdue = !!task?.due_date && new Date(task.due_date).getTime() < Date.now() && task?.status !== "done" && task?.status !== "cancelled";
 
-          </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        {mode === "view" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${sStyle.dot}`} />
+                {task?.title}
+              </DialogTitle>
+              <DialogDescription>
+                {overdue ? `${t("tasks.overdue")} · ` : ""}
+                {labels.status[task?.status] ?? task?.status} · {labels.priority[task?.priority] ?? task?.priority}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.status")}</Label>
+                  <p>{labels.status[task?.status] ?? task?.status ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.priority")}</Label>
+                  <p>{labels.priority[task?.priority] ?? task?.priority ?? "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.dueDate")}</Label>
+                  <p className={overdue ? "font-medium text-destructive" : ""}>{task?.due_date ? formatDate(task.due_date) : "—"}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.assignee")}</Label>
+                  <p>{assigneeName ?? "—"}</p>
+                </div>
+                {task?.related_type && (
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
+                    <p>{labels.related[task.related_type] ?? task.related_type}: {relatedLabel ?? "—"}</p>
+                  </div>
+                )}
+              </div>
+              {task?.description && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">{t("tasks.form.description")}</Label>
+                  <p className="whitespace-pre-wrap rounded-md bg-muted/40 p-3">{task.description}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="flex-row justify-between gap-2">
+              <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("tasks.actions.delete")}</Button>
+              <div className="flex gap-2">
+                {relatedHref && (
+                  <Button variant="outline" asChild>
+                    <Link to={relatedHref as any}><ExternalLink className="mr-1 h-4 w-4" />{t("tasks.openRelated")}</Link>
+                  </Button>
+                )}
+                <Button onClick={() => setMode("edit")}>{t("tasks.edit")}</Button>
+              </div>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>{t("tasks.edit")}</DialogTitle>
+              <DialogDescription>{t("tasks.editDescription")}</DialogDescription>
+            </DialogHeader>
+            <TaskForm form={form} setForm={setForm} employees={employees} optionsFor={optionsFor} />
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setMode("view")}>{t("tasks.actions.cancel")}</Button>
+              <Button onClick={() => {
+                if (form.status === "waiting" && task?.status !== "waiting") {
+                  onRequestWaiting(task);
+                  return;
+                }
+                onSave({
+                  title: form.title.trim(),
+                  description: form.description.trim() || null,
+                  status: form.status,
+                  priority: form.priority,
+                  due_date: form.due_date ? new Date(`${form.due_date}T12:00:00`).toISOString() : null,
+                  assigned_to: form.assigned_to || null,
+                  related_type: form.related_type !== "none" ? form.related_type : null,
+                  related_id: form.related_type !== "none" && form.related_id ? form.related_id : null,
+                });
+              }} disabled={!form.title.trim()}>{t("tasks.actions.save")}</Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
