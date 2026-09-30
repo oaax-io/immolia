@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -404,7 +403,7 @@ function AppointmentsPage() {
         </TabsContent>
       </Tabs>
 
-      <AppointmentEditDrawer
+      <AppointmentEditDialog
         appt={editing}
         appts={appts}
         currentUserId={user?.id}
@@ -1396,7 +1395,7 @@ function AppointmentDialog({
   );
 }
 
-function AppointmentEditDrawer({
+function AppointmentEditDialog({
   appt, open, onClose, clients, properties, employees, onSave, onDelete, appts, currentUserId,
 }: any) {
   const { t } = useTranslation();
@@ -1426,12 +1425,13 @@ function AppointmentEditDrawer({
   }, [appt]);
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-3xl">
-        <SheetHeader>
-          <SheetTitle>{t("appointments.edit")}</SheetTitle>
-          <SheetDescription>{t("appointments.editDescription")}</SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="flex max-h-[92vh] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-4 py-4 pr-12 sm:px-6">
+          <DialogTitle>{t("appointments.edit")}</DialogTitle>
+          <DialogDescription>{t("appointments.editDescription")}</DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
         {appt?.is_online && (
           <>
             <VideoCallDialog open={callOpen} onOpenChange={setCallOpen} room={roomOf(appt)} title={appt.title} />
@@ -1446,7 +1446,8 @@ function AppointmentEditDrawer({
         <div className="my-4">
           <AppointmentForm form={form} setForm={setForm} clients={clients} properties={properties} employees={employees} appts={appts} currentUserId={currentUserId} selfId={appt?.id} />
         </div>
-        <SheetFooter className="flex-row justify-between gap-2">
+        </div>
+        <DialogFooter className="shrink-0 flex-row flex-wrap items-center justify-between gap-2 border-t px-4 py-4 sm:px-6">
           <Button variant="outline" onClick={onDelete}><Trash2 className="mr-1 h-4 w-4" />{t("appointments.actions.delete")}</Button>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose}>{t("appointments.actions.close")}</Button>
@@ -1467,8 +1468,8 @@ function AppointmentEditDrawer({
               meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
             })} disabled={!form.title.trim() || !form.starts_at}>{t("appointments.actions.save")}</Button>
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
