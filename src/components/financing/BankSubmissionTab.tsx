@@ -37,6 +37,7 @@ export function BankSubmissionTab({ dossierId }: { dossierId: string }) {
   const qc = useQueryClient();
   const { canEdit: isAdmin } = useIsMasterDataAdmin();
   const genLetter = useServerFn(generateBankCoverLetter);
+  const readiness = useChecklistAutofill(dossierId);
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ["financing_dossier_bank", dossierId],
