@@ -149,20 +149,50 @@ const COMMANDS: Command[] = [
   { keywords: ["einstellung", "profil"], to: "/settings", say: "Ich öffne die Einstellungen." },
 ];
 
-function speak(text: string) {
-  try {
-    const synth = window.speechSynthesis;
-    if (!synth) return;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "de-CH";
-    u.rate = 1.02;
-    const voice = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith("de"));
-    if (voice) u.voice = voice;
-    synth.speak(u);
-  } catch {
-    /* Sprachausgabe ist optional */
-  }
+/** Spricht Text und löst erst aus, wenn die Stimme fertig ist (mit Sicherheits-Timeout). */
+function speak(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return finish();
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "de-CH";
+      u.rate = 1.02;
+      const voice = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith("de"));
+      if (voice) u.voice = voice;
+      u.onend = finish;
+      u.onerror = finish;
+      synth.speak(u);
+      window.setTimeout(finish, Math.max(2500, text.length * 90));
+    } catch {
+      finish();
+    }
+  });
+}
+
+/* ---------------- Tipp-Effekt ---------------- */
+
+function useTypewriter(lines: string[]) {
+  const [idx, setIdx] = useState(0);
+  const [text, setText] = useState("");
+  useEffect(() => {
+    const full = lines[idx % lines.length] ?? "";
+    let i = 0;
+    let t: number;
+    const type = () => {
+      i++;
+      setText(full.slice(0, i));
+      if (i < full.length) t = window.setTimeout(type, 22 + Math.random() * 40);
+      else t = window.setTimeout(() => setIdx((n) => n + 1), 9000);
+    };
+    setText("");
+    t = window.setTimeout(type, 300);
+    return () => window.clearTimeout(t);
+  }, [idx, lines]);
+  return text;
 }
 
 function matchCommand(text: string): Command | null {
@@ -180,8 +210,12 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
   const weather = useWeather();
   const [phase, setPhase] = useState<Phase>(() => currentPhase());
   const [listening, setListening] = useState(false);
+  const [greeting, setGreeting] = useState(false);
   const [heard, setHeard] = useState("");
   const recRef = useRef<any>(null);
+  const silenceRef = useRef<number | null>(null);
+  const handledRef = useRef(false);
+  const activeRef = useRef(false);
 
   useEffect(() => {
     const id = window.setInterval(() => setPhase(currentPhase()), 60_000);
@@ -189,21 +223,53 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
   }, []);
 
   const night = phase === "night" || phase === "evening";
-  const subline = useMemo(() => {
+  const lines = useMemo(() => {
     const list = SUBLINE[phase];
-    return list[new Date().getDate() % list.length];
+    const start = new Date().getDate() % list.length;
+    return [...list.slice(start), ...list.slice(0, start)];
   }, [phase]);
+  const typed = useTypewriter(lines);
 
   const WIcon = weather ? weatherIcon(weather.code, night) : null;
 
-  useEffect(() => () => { try { recRef.current?.stop?.(); } catch { /* egal */ } }, []);
-
-  const stopListening = () => {
-    try { recRef.current?.stop?.(); } catch { /* egal */ }
-    setListening(false);
+  const clearSilence = () => {
+    if (silenceRef.current) window.clearTimeout(silenceRef.current);
+    silenceRef.current = null;
   };
 
-  const startListening = () => {
+  useEffect(() => () => {
+    activeRef.current = false;
+    clearSilence();
+    try { recRef.current?.abort?.(); } catch { /* egal */ }
+    try { window.speechSynthesis?.cancel(); } catch { /* egal */ }
+  }, []);
+
+  const stopListening = () => {
+    activeRef.current = false;
+    clearSilence();
+    try { recRef.current?.stop?.(); } catch { /* egal */ }
+    try { window.speechSynthesis?.cancel(); } catch { /* egal */ }
+    setListening(false);
+    setGreeting(false);
+  };
+
+  const handleText = (text: string) => {
+    if (handledRef.current || !text.trim()) return;
+    handledRef.current = true;
+    stopListening();
+    const cmd = matchCommand(text);
+    if (cmd) {
+      void speak(cmd.say);
+      toast.success(cmd.say, { description: `Verstanden: „${text.trim()}“` });
+      void navigate({ to: cmd.to as never });
+    } else {
+      void speak("Das habe ich leider nicht verstanden. Sag zum Beispiel: neuer Lead oder neue Immobilie.");
+      toast("Befehl nicht erkannt", { description: `Verstanden: „${text.trim()}“` });
+    }
+    window.setTimeout(() => setHeard(""), 4000);
+  };
+
+  const startListening = async () => {
     const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!SR) {
       toast.error("Spracheingabe wird von diesem Browser nicht unterstützt.", {
@@ -211,42 +277,71 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
       });
       return;
     }
-    speak(`Hallo ${displayName || "zusammen"}, wie kann ich dir helfen?`);
+    // Mikrofon früh freigeben lassen, damit kein Dialog die Aufnahme abbricht
+    try {
+      const s = await navigator.mediaDevices?.getUserMedia?.({ audio: true });
+      s?.getTracks().forEach((t) => t.stop());
+    } catch {
+      toast.error("Kein Zugriff auf das Mikrofon.", { description: "Bitte im Browser erlauben." });
+      return;
+    }
+
+    activeRef.current = true;
+    handledRef.current = false;
+    setHeard("");
+    setGreeting(true);
+    setListening(true);
+    await speak(`Hallo ${displayName || "zusammen"}, wie kann ich dir helfen?`);
+    if (!activeRef.current) return;
+    setGreeting(false);
+
     const rec = new SR();
     recRef.current = rec;
     rec.lang = "de-CH";
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
     rec.maxAlternatives = 1;
+    let latest = "";
 
-    rec.onstart = () => { setListening(true); setHeard(""); };
+    const armSilence = (ms: number) => {
+      clearSilence();
+      silenceRef.current = window.setTimeout(() => {
+        if (latest.trim()) handleText(latest);
+        else {
+          stopListening();
+          toast("Ich habe nichts gehört", { description: "Tippe nochmals aufs Mikrofon und sprich deinen Befehl." });
+        }
+      }, ms);
+    };
+
+    rec.onstart = () => armSilence(10000); // 10 s Zeit zum Anfangen
     rec.onerror = (e: any) => {
-      setListening(false);
+      if (e?.error === "no-speech" || e?.error === "aborted") return;
+      stopListening();
       if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
         toast.error("Kein Zugriff auf das Mikrofon.", { description: "Bitte im Browser erlauben." });
       }
     };
-    rec.onend = () => setListening(false);
+    rec.onend = () => {
+      // Browser beendet manchmal früh – solange aktiv, neu starten
+      if (activeRef.current && !handledRef.current) {
+        try { rec.start(); } catch { /* egal */ }
+      }
+    };
     rec.onresult = (event: any) => {
       let text = "";
-      for (let i = 0; i < event.results.length; i++) text += event.results[i][0].transcript;
-      setHeard(text);
-      const final = event.results[event.results.length - 1]?.isFinal;
-      if (!final) return;
-      const cmd = matchCommand(text);
-      if (cmd) {
-        speak(cmd.say);
-        toast.success(cmd.say, { description: `Verstanden: „${text.trim()}“` });
-        void navigate({ to: cmd.to as never });
-      } else {
-        speak("Das habe ich leider nicht verstanden. Sag zum Beispiel: neuer Lead oder neue Immobilie.");
-        toast("Befehl nicht erkannt", { description: `Verstanden: „${text.trim()}“` });
+      let final = false;
+      for (let i = 0; i < event.results.length; i++) {
+        text += event.results[i][0].transcript;
+        if (event.results[i].isFinal) final = true;
       }
-      window.setTimeout(() => setHeard(""), 4000);
+      latest = text;
+      setHeard(text);
+      if (final && matchCommand(text)) { clearSilence(); handleText(text); return; }
+      armSilence(2200); // nach kurzer Sprechpause auswerten
     };
 
-    // Kurz warten, damit die Begrüssung nicht ins Mikrofon spricht
-    window.setTimeout(() => { try { rec.start(); } catch { /* bereits aktiv */ } }, 1400);
+    try { rec.start(); } catch { /* bereits aktiv */ }
   };
 
   return (
@@ -290,23 +385,29 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
               {phase === "night" ? "🌙" : "👋"}
             </span>
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{subline}</p>
+          <p className="mt-1 min-h-[2.5rem] max-w-2xl text-sm text-muted-foreground">
+            {typed}
+            <span className="ml-0.5 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-foreground/60" />
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" })}
           </p>
-          {listening && (
-            <div className="mt-2 flex items-center gap-2 rounded-full bg-background/70 px-3 py-1.5 text-xs shadow-sm backdrop-blur">
-              <span className="flex items-end gap-0.5">
-                {[0, 1, 2, 3].map((i) => (
+          {(listening || heard) && (
+            <div className="mt-2 flex items-center gap-2 rounded-full bg-background/70 px-3 py-1.5 text-xs shadow-sm backdrop-blur animate-fade-in">
+              <span className="flex h-4 items-end gap-0.5">
+                {[0, 1, 2, 3, 4].map((i) => (
                   <span
                     key={i}
-                    className="w-0.5 animate-pulse rounded bg-primary"
-                    style={{ height: `${6 + ((i % 3) * 5)}px`, animationDelay: `${i * 0.15}s` }}
+                    className="w-0.5 rounded bg-primary"
+                    style={{
+                      height: listening ? undefined : "4px",
+                      animation: listening ? `voicebar 0.9s ease-in-out ${i * 0.12}s infinite` : undefined,
+                    }}
                   />
                 ))}
               </span>
               <span className="truncate text-muted-foreground">
-                {heard ? `„${heard}“` : "Ich höre zu …"}
+                {greeting ? "Ich spreche …" : heard ? `„${heard}“` : "Ich höre zu – sprich jetzt …"}
               </span>
             </div>
           )}
@@ -321,16 +422,24 @@ export function DashboardHero({ displayName }: { displayName?: string }) {
             </div>
           )}
 
-          <Button
-            size="sm"
-            variant={listening ? "default" : "outline"}
-            className="shrink-0 rounded-full"
-            onClick={listening ? stopListening : startListening}
-            aria-label={listening ? "Spracheingabe beenden" : "Spracheingabe starten"}
-            title={listening ? "Zuhören beenden" : "Sprich mit Immolia"}
-          >
-            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </Button>
+          <span className="relative inline-flex">
+            {listening && (
+              <>
+                <span className="absolute inset-0 animate-ping rounded-full bg-primary/40" />
+                <span className="absolute -inset-1 animate-pulse rounded-full bg-primary/20" />
+              </>
+            )}
+            <Button
+              size="sm"
+              variant={listening ? "default" : "outline"}
+              className="relative shrink-0 rounded-full"
+              onClick={listening ? stopListening : () => void startListening()}
+              aria-label={listening ? "Spracheingabe beenden" : "Spracheingabe starten"}
+              title={listening ? "Zuhören beenden" : "Sprich mit Immolia"}
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          </span>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
