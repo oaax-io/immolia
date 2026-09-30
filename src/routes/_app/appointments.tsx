@@ -1121,20 +1121,24 @@ function AppointmentForm({
                 {endInvalid && <p className="mt-1 text-xs text-destructive">Ende muss nach dem Beginn liegen.</p>}
               </div>
             </div>
-          ) : (
             <div>
-              <Label>{mode === "1d" ? "Datum" : "Erster Tag"} *</Label>
-              <DatePickerField
-                value={form.starts_at ? form.starts_at.slice(0, 10) : ""}
-                onChange={(d) => d && setDay(d)}
-              />
-              {form.starts_at && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Ganztägig {mode === "2d" ? `bis ${new Date(new Date(form.ends_at).getTime() - 1).toLocaleDateString("de-CH")}` : ""}
-                </p>
+              <Label>Serientermin</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {REPEATS.map((r) => (
+                  <Chip key={r.v} active={(form.repeat ?? "none") === r.v} onClick={() => setForm({ ...form, repeat: r.v, repeat_until: r.v === "none" ? "" : form.repeat_until })}>{r.l}</Chip>
+                ))}
+              </div>
+              {form.repeat && form.repeat !== "none" && (
+                <div className="mt-2">
+                  <Label>Wiederholen bis</Label>
+                  <DatePickerField
+                    value={form.repeat_until || ""}
+                    onChange={(d) => setForm({ ...form, repeat_until: d })}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Es werden alle Termine der Serie bis zu diesem Datum erstellt (max. 52).</p>
+                </div>
               )}
             </div>
-          )}
           {conflicts.length > 0 && (
             <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs">
               <p className="flex items-center gap-1.5 font-semibold text-destructive">
