@@ -1,0 +1,2 @@
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS pipeline_stage text NULL;
+ALTER TABLE public.clients ADD CONSTRAINT clients_pipeline_stage_check CHECK (pipeline_stage IS NULL OR pipeline_stage IN ('expose_sent','viewed','self_disclosure','financing','notary','sold'));

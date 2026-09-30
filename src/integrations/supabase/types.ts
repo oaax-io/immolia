@@ -2201,6 +2201,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          pipeline_stage: string | null
           postal_code: string | null
           preferred_cities: string[] | null
           preferred_listing: Database["public"]["Enums"]["listing_type"] | null
@@ -2240,6 +2241,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          pipeline_stage?: string | null
           postal_code?: string | null
           preferred_cities?: string[] | null
           preferred_listing?: Database["public"]["Enums"]["listing_type"] | null
@@ -2281,6 +2283,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          pipeline_stage?: string | null
           postal_code?: string | null
           preferred_cities?: string[] | null
           preferred_listing?: Database["public"]["Enums"]["listing_type"] | null
