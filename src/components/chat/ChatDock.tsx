@@ -876,6 +876,7 @@ export function ChatPanel({
                   >
                     {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                   </Button>
+                  <VoiceRecorder onRecorded={sendVoice} />
                   <Button
                     variant="ghost"
                     size="icon"
