@@ -1284,6 +1284,8 @@ function AppointmentEditDrawer({
         client_id: appt.client_id ?? "",
         property_id: appt.property_id ?? "",
         assigned_to: appt.assigned_to ?? "",
+        extra_assignee_ids: appt.extra_assignee_ids ?? [],
+        external_invitees: appt.external_invitees ?? [],
         is_online: !!appt.is_online,
         meeting_url: appt.meeting_url ?? "",
         ...deriveTiming(appt.starts_at ? localInput(new Date(appt.starts_at)) : "", appt.ends_at ? localInput(new Date(appt.ends_at)) : ""),
@@ -1327,6 +1329,8 @@ function AppointmentEditDrawer({
               client_id: form.client_id || null,
               property_id: form.property_id || null,
               assigned_to: form.assigned_to || null,
+              extra_assignee_ids: form.extra_assignee_ids?.length ? form.extra_assignee_ids : null,
+              external_invitees: form.external_invitees?.length ? form.external_invitees : null,
               is_online: form.is_online,
               meeting_url: form.is_online ? (form.meeting_url || `meet-${Math.random().toString(36).slice(2, 10)}`) : null,
             })} disabled={!form.title.trim() || !form.starts_at}>{t("appointments.actions.save")}</Button>
