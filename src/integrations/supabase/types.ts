@@ -6690,6 +6690,11 @@ export type Database = {
         Returns: string
       }
       calendar_dismiss_suggestion: { Args: { _id: string }; Returns: undefined }
+      calendar_event_detail: {
+        Args: { _provider_event_id: string }
+        Returns: Json
+      }
+      calendar_event_seq: { Args: { _prefix: string }; Returns: number }
       calendar_jobs_claim: {
         Args: { _limit?: number }
         Returns: {
@@ -6737,6 +6742,10 @@ export type Database = {
       calendar_membership_active: {
         Args: { _agency_id: string; _user_id: string }
         Returns: boolean
+      }
+      calendar_neutralize_notifications: {
+        Args: { _related_id: string; _users: string[] }
+        Returns: undefined
       }
       calendar_norm_phone: { Args: { _p: string }; Returns: string }
       calendar_notify: {

@@ -122,12 +122,15 @@ async function deleteRemote(admin: Admin, token: string, linkId: string) {
   await admin.from("calendar_event_links").update({ deleted_at: new Date().toISOString() } as never).eq("id", link.id);
 }
 
+// Erhöhen erzwingt einmaligen Vollabgleich (Upsert über Microsoft-ID, keine Duplikate)
+const FIELDS_VERSION = 2;
+
 async function deltaSync(admin: Admin, conn: any, token: string, initial: boolean) {
   const meta = (conn.sync_metadata ?? {}) as Record<string, any>;
   const showBusy = meta.show_busy !== false;
   let windowStart = meta.window_start ? new Date(meta.window_start) : null;
   let url: string | null = conn.delta_link;
-  if (!url || !windowStart || Date.now() - windowStart.getTime() > (WINDOW_BACK_DAYS + WINDOW_RENEW_DAYS) * 86400_000) {
+  if (!url || !windowStart || meta.fields_version !== FIELDS_VERSION || Date.now() - windowStart.getTime() > (WINDOW_BACK_DAYS + WINDOW_RENEW_DAYS) * 86400_000) {
     // (Neu-)Abgleich mit fortgeschriebenem Fenster; Zuordnungen verhindern Duplikate
     windowStart = new Date(Date.now() - WINDOW_BACK_DAYS * 86400_000);
     const end = new Date(Date.now() + WINDOW_FWD_DAYS * 86400_000);
@@ -164,7 +167,7 @@ async function deltaSync(admin: Admin, conn: any, token: string, initial: boolea
     if (meta.push_to_outlook !== false) for (const a of appts ?? []) await pushAppointment(admin, conn, token, a.id);
   }
   await admin.from("calendar_connections").update({
-    delta_link: deltaLink, sync_metadata: { ...meta, window_start: windowStart.toISOString() },
+    delta_link: deltaLink, sync_metadata: { ...meta, window_start: windowStart.toISOString(), fields_version: FIELDS_VERSION },
     last_synced_at: new Date().toISOString(), last_error_code: null, status: "connected",
   } as never).eq("id", conn.id);
 }
