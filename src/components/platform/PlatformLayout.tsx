@@ -19,6 +19,9 @@ const NAV = [
     { to: "/platform/modules", label: "Module", icon: Blocks },
     { to: "/platform/commercial", label: "Commercial", icon: CreditCard },
   ] },
+  { section: "Katalog", items: [
+    { to: "/platform/partners", label: "Partner", icon: Handshake },
+  ] },
   { section: "System", items: [
     { to: "/platform/feedback", label: "Feedback", icon: MessageSquare },
     { to: "/platform/activity", label: "Aktivität", icon: Activity },
