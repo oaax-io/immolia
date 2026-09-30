@@ -10,7 +10,6 @@ import { useAuth } from "@/lib/auth";
 import {
   Building2, Users, UserPlus, CheckSquare, CalendarDays, FileSignature,
   ArrowRight, Plus, Upload, Sparkles, AlertTriangle, Clock, ChevronDown,
-  CheckCircle2, XCircle, Wallet,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -18,9 +17,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   formatCurrency, formatDateTime, formatDate,
-  propertyStatusLabels, propertyTypeLabels, leadStatusLabels,
 } from "@/lib/format";
 import { isBackendUnavailableError } from "@/lib/backend-errors";
+import { StatusDonutGrid } from "@/components/dashboard/StatusDonutCards";
 
 import { useTranslation } from "react-i18next";
 
