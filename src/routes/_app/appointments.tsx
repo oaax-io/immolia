@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { MicrosoftSyncButton } from "@/components/appointments/MicrosoftSyncDialog";
+import { OutlookEventDialog } from "@/components/appointments/OutlookEventDialog";
 import { formatDateTime } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
@@ -263,7 +264,7 @@ function AppointmentsPage() {
   const { data: busyBlocks = [] } = useQuery({
     queryKey: ["calendar-busy-blocks"],
     enabled: layer.has("busy"),
-    queryFn: async () => (await supabase.from("calendar_busy_blocks").select("id, user_id, starts_at, ends_at, is_all_day")
+    queryFn: async () => (await supabase.from("calendar_busy_blocks").select("id, user_id, provider_event_id, subject, is_private, is_cancelled, starts_at, ends_at, is_all_day")
       .gte("ends_at", new Date(Date.now() - 45 * 86400_000).toISOString()).order("starts_at").limit(2000)).data ?? [],
   });
   const visibleAppts = useMemo(() => {
@@ -272,11 +273,16 @@ function AppointmentsPage() {
       (layer.has("online") && a.is_online));
     if (!layer.has("busy")) return base;
     // Externe Outlook-Termine nur als „Beschäftigt“, ohne Inhalte
-    const busy = (busyBlocks as any[]).map((b) => ({ id: `busy:${b.id}`, title: "Beschäftigt (Outlook)", starts_at: b.starts_at, ends_at: b.ends_at,
+    const busy = (busyBlocks as any[]).map((b) => ({ id: `busy:${b.id}`, title: b.is_private || !b.subject ? "Beschäftigt (Outlook)" : `${b.is_cancelled ? "Abgesagt: " : ""}${b.subject}`, _pe: b.provider_event_id, starts_at: b.starts_at, ends_at: b.ends_at,
       owner_id: b.user_id, assigned_to: b.user_id, status: "scheduled", appointment_type: "other", location: null, _busy: true }));
     return [...base, ...busy];
   }, [appts, layer.layers, user, busyBlocks]);
-  const openAppt = (id: string) => { if (!id.startsWith("busy:")) setEditId(id); };
+  const [outlookId, setOutlookId] = useState<string | null>(null);
+  const openAppt = (id: string) => {
+    if (!id.startsWith("busy:")) return setEditId(id);
+    const b = (busyBlocks as any[]).find((x) => `busy:${x.id}` === id);
+    if (b && b.user_id === user?.id) setOutlookId(b.provider_event_id);
+  };
   const visibleTasks = layer.has("tasks") ? tasks : [];
 
   const calendarMarks = useMemo(() => {
@@ -329,6 +335,7 @@ function AppointmentsPage() {
         }
       />
 
+      <OutlookEventDialog providerEventId={outlookId} onClose={() => setOutlookId(null)} employees={employees as any} currentUserId={user?.id} />
       <AppointmentDialog
         open={open}
         onOpenChange={setOpen}
