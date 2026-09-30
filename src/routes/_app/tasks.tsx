@@ -4,14 +4,18 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List} from "lucide-react";
+import { Plus, CheckCircle2, Circle, Clock, AlertCircle, Search, Trash2, ExternalLink, CheckSquare, Pin, LayoutGrid, Columns3, List, X, User, Home, UserPlus, FileSignature, Bookmark, ChevronsUpDown, Check, Sparkles, Loader2, SlidersHorizontal, Link2, Repeat } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useServerFn } from "@tanstack/react-start";
+import { improveTaskText } from "@/lib/task-ai.functions";
 import { useConfirm } from "@/components/confirm/ConfirmProvider";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -544,74 +548,217 @@ function TaskCard({
   );
 }
 
+const RECURRENCES: { value: string; label: string }[] = [
+  { value: "none", label: "Keine" },
+  { value: "daily", label: "Täglich" },
+  { value: "weekly", label: "Wöchentlich" },
+  { value: "biweekly", label: "Alle 2 Wochen" },
+  { value: "monthly", label: "Monatlich" },
+  { value: "quarterly", label: "Quartalsweise" },
+  { value: "yearly", label: "Jährlich" },
+];
+
+const RELATED_ICONS: Record<string, any> = { none: X, client: User, property: Home, lead: UserPlus, mandate: FileSignature, reservation: Bookmark };
+
+function SearchPicker({
+  value, onChange, options, placeholder, emptyLabel, disabled,
+}: { value: string; onChange: (v: string) => void; options: { id: string; label: string }[]; placeholder: string; emptyLabel: string; disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.id === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled} className="h-9 w-full justify-between px-3 font-normal">
+          <span className={`truncate ${current ? "" : "text-muted-foreground"}`}>{current?.label ?? placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Suchen…" />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Keine Treffer</CommandEmpty>
+            <CommandGroup>
+              <CommandItem value="__none__" onSelect={() => { onChange(""); setOpen(false); }}>
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              </CommandItem>
+              {options.map((o) => (
+                <CommandItem key={o.id} value={`${o.label} ${o.id}`} onSelect={() => { onChange(o.id); setOpen(false); }}>
+                  <Check className={`mr-2 h-3.5 w-3.5 ${o.id === value ? "opacity-100" : "opacity-0"}`} />
+                  <span className="truncate">{o.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TaskForm({
   form, setForm, employees, optionsFor,
 }: { form: any; setForm: (f: any) => void; employees: any[]; optionsFor: (t: string) => { id: string; label: string }[] }) {
   const { t } = useTranslation();
   const labels = useTaskLabels();
+  const improve = useServerFn(improveTaskText);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [tab, setTab] = useState("details");
+  const relOptions = optionsFor(form.related_type);
+  const relLabel = form.related_id ? relOptions.find((o) => o.id === form.related_id)?.label : undefined;
+  const empOptions = employees.map((e: any) => ({ id: e.id, label: e.full_name || e.email }));
+
+  const runAi = async () => {
+    if (!form.title.trim()) { toast.error("Bitte zuerst einen Titel eingeben."); return; }
+    setAiBusy(true);
+    try {
+      const res = await improve({ data: { title: form.title, description: form.description ?? "", context: relLabel ? `${labels.related[form.related_type]}: ${relLabel}` : undefined } });
+      setForm({ ...form, title: res.title, description: res.description || form.description });
+      toast.success("Text optimiert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "KI-Fehler");
+    } finally { setAiBusy(false); }
+  };
+
+  const quickDue = (days: number) => {
+    const d = new Date(); d.setDate(d.getDate() + days);
+    setForm({ ...form, due_date: d.toISOString().slice(0, 10) });
+  };
+
   return (
-    <div className="space-y-3">
-      <div>
-        <Label>Betreff-Vorlage</Label>
-        <Select value={SUBJECT_PRESETS.includes(form.title) ? form.title : ""} onValueChange={(v) => setForm({ ...form, title: v })}>
-          <SelectTrigger><SelectValue placeholder="Vorlage auswählen (optional)" /></SelectTrigger>
-          <SelectContent className="max-h-72">
-            {SUBJECT_PRESETS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div><Label>{t("tasks.form.title")} *</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-      <div><Label>{t("tasks.form.description")}</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label>{t("tasks.form.status")}</Label>
-          <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.status[s]}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("tasks.form.priority")}</Label>
-          <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{PRIORITIES.map(p => <SelectItem key={p} value={p}>{labels.priority[p]}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("tasks.form.dueDate")}</Label>
-          <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Input
+          autoFocus
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="Was ist zu tun?"
+          className="h-11 border-0 border-b-2 border-border bg-transparent px-0 text-base font-semibold shadow-none focus-visible:border-primary focus-visible:ring-0"
+        />
+        <div className="relative">
+          <Textarea
+            rows={3}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Beschreibung, nächste Schritte, Notizen…"
+            className="resize-none bg-muted/40 pb-9"
+          />
+          <Button type="button" size="sm" variant="secondary" onClick={runAi} disabled={aiBusy}
+            className="absolute bottom-1.5 right-1.5 h-7 gap-1.5 bg-primary/10 px-2 text-xs text-primary hover:bg-primary/20">
+            {aiBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Mit KI optimieren
+          </Button>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label>{t("tasks.form.assignee")}</Label>
-          <Select value={form.assigned_to || "none"} onValueChange={(v) => setForm({ ...form, assigned_to: v === "none" ? "" : v })}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("tasks.form.noAssignee")}</SelectItem>
-              {employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("tasks.form.relation")}</Label>
-          <Select value={form.related_type} onValueChange={(v) => setForm({ ...form, related_type: v, related_id: "" })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("tasks.form.noRelation")}</SelectItem>
-              {RELATED_TYPES.map(r => <SelectItem key={r} value={r}>{labels.related[r]}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>{t("tasks.form.linkTo")}</Label>
-          <Select value={form.related_id || "none"} onValueChange={(v) => setForm({ ...form, related_id: v === "none" ? "" : v })} disabled={form.related_type === "none"}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">—</SelectItem>
-              {optionsFor(form.related_type).map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="grid h-9 w-full grid-cols-3 rounded-md bg-muted p-1">
+          <TabsTrigger value="details" className="gap-1.5 text-xs data-[state=active]:bg-background"><SlidersHorizontal className="h-3.5 w-3.5" />Details</TabsTrigger>
+          <TabsTrigger value="link" className="gap-1.5 text-xs data-[state=active]:bg-background">
+            <Link2 className="h-3.5 w-3.5" />Zuweisung{(form.related_id || form.assigned_to) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          </TabsTrigger>
+          <TabsTrigger value="repeat" className="gap-1.5 text-xs data-[state=active]:bg-background">
+            <Repeat className="h-3.5 w-3.5" />Wiederholung{form.recurrence && form.recurrence !== "none" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="mt-3 space-y-3">
+          <div>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.priority")}</Label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {PRIORITIES.map((p) => (
+                <button key={p} type="button" onClick={() => setForm({ ...form, priority: p })}
+                  className={`rounded-md border px-2 py-1.5 text-xs font-medium transition ${form.priority === p
+                    ? (p === "urgent" || p === "high" ? "border-destructive bg-destructive text-destructive-foreground" : "border-primary bg-primary text-primary-foreground")
+                    : "bg-background hover:bg-muted"}`}>
+                  {labels.priority[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.status")}</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{labels.status[s]}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.dueDate")}</Label>
+              <Input type="date" className="h-9" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[["Heute", 0], ["Morgen", 1], ["In 1 Woche", 7], ["In 1 Monat", 30]].map(([l, d]) => (
+              <button key={l as string} type="button" onClick={() => quickDue(d as number)}
+                className="rounded border border-dashed px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary">{l}</button>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="link" className="mt-3 space-y-3">
+          <div>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.assignee")}</Label>
+            <SearchPicker value={form.assigned_to} onChange={(v) => setForm({ ...form, assigned_to: v })} options={empOptions} placeholder="Mitarbeitende suchen…" emptyLabel={t("tasks.form.noAssignee")} />
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">{t("tasks.form.relation")}</Label>
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+              {(["none", ...RELATED_TYPES] as string[]).map((r) => {
+                const Icon = RELATED_ICONS[r];
+                const active = form.related_type === r;
+                return (
+                  <button key={r} type="button" onClick={() => setForm({ ...form, related_type: r, related_id: "" })}
+                    className={`flex flex-col items-center gap-1 rounded-md border px-1 py-2 text-[11px] transition ${active ? "border-primary bg-primary/10 font-medium text-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
+                    <Icon className="h-4 w-4" />
+                    <span className="truncate">{r === "none" ? "Keiner" : labels.related[r]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {form.related_type !== "none" && (
+            <div>
+              <Label className="mb-1.5 block text-xs text-muted-foreground">{labels.related[form.related_type]} auswählen</Label>
+              <SearchPicker value={form.related_id} onChange={(v) => setForm({ ...form, related_id: v })} options={relOptions} placeholder={`${labels.related[form.related_type]} suchen…`} emptyLabel="— keine Auswahl —" />
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="repeat" className="mt-3 space-y-3">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+            {RECURRENCES.map((r) => {
+              const active = (form.recurrence || "none") === r.value;
+              return (
+                <button key={r.value} type="button" onClick={() => setForm({ ...form, recurrence: r.value })}
+                  className={`rounded-md border px-2 py-1.5 text-xs transition ${active ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted"}`}>
+                  {r.label}
+                </button>
+              );
+            })}
+          </div>
+          {form.recurrence && form.recurrence !== "none" && (
+            <div className="grid grid-cols-2 items-end gap-3">
+              <div>
+                <Label className="mb-1.5 block text-xs text-muted-foreground">Wiederholen bis (optional)</Label>
+                <Input type="date" className="h-9" value={form.recurrence_until ?? ""} onChange={(e) => setForm({ ...form, recurrence_until: e.target.value })} />
+              </div>
+              <p className="text-xs text-muted-foreground">Sobald die Aufgabe erledigt ist, wird automatisch die nächste mit neuer Frist erstellt.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <div className="border-t pt-3">
+        <Label className="mb-1.5 block text-xs text-muted-foreground">Betreff-Vorlage</Label>
+        <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
+          {SUBJECT_PRESETS.map((s) => (
+            <button key={s} type="button" onClick={() => setForm({ ...form, title: s })}
+              className={`rounded border px-2 py-0.5 text-[11px] transition ${form.title === s ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
+              {s}
+            </button>
+          ))}
         </div>
       </div>
     </div>
