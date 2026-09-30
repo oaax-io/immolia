@@ -1024,22 +1024,13 @@ function AppointmentForm({
   const setDuration = (m: number) => {
     setForm({ ...form, duration: m, ends_at: form.starts_at && m > 0 ? addMin(form.starts_at, m) : form.ends_at });
   };
-  const setMode = (m: string) => {
-    if (m === "time") {
-      const base = form.starts_at ? form.starts_at.slice(0, 10) + "T09:00" : "";
-      setForm({ ...form, mode: m, duration: 60, starts_at: base, ends_at: base ? addMin(base, 60) : "" });
-    } else {
-      const days = m === "1d" ? 1 : 2;
-      const date = (form.starts_at || localInput(new Date())).slice(0, 10);
-      const s = `${date}T00:00`;
-      setForm({ ...form, mode: m, duration: days * 1440, starts_at: s, ends_at: addMin(s, days * 1440) });
-    }
-  };
-  const setDay = (date: string) => {
-    if (!date) return;
-    const s = `${date}T00:00`;
-    setForm({ ...form, starts_at: s, ends_at: addMin(s, duration) });
-  };
+  const REPEATS = [
+    { v: "none", l: "Keine" },
+    { v: "daily", l: "Täglich" },
+    { v: "weekly", l: "Wöchentlich" },
+    { v: "biweekly", l: "2-wöchentlich" },
+    { v: "monthly", l: "Monatlich" },
+  ];
 
   const conflicts = useMemo(() => {
     if (!form.starts_at) return [];
