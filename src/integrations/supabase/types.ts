@@ -310,6 +310,81 @@ export type Database = {
           },
         ]
       }
+      agency_partner_contacts: {
+        Row: {
+          agency_id: string
+          branch_name: string | null
+          category: string
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          custom_partner_name: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          is_favorite: boolean
+          notes: string | null
+          phone: string | null
+          platform_partner_id: string | null
+          role_title: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          agency_id: string
+          branch_name?: string | null
+          category: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_partner_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          is_favorite?: boolean
+          notes?: string | null
+          phone?: string | null
+          platform_partner_id?: string | null
+          role_title?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          agency_id?: string
+          branch_name?: string | null
+          category?: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_partner_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          is_favorite?: boolean
+          notes?: string | null
+          phone?: string | null
+          platform_partner_id?: string | null
+          role_title?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_partner_contacts_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_partner_contacts_platform_partner_id_fkey"
+            columns: ["platform_partner_id"]
+            isOneToOne: false
+            referencedRelation: "platform_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agency_trials: {
         Row: {
           agency_id: string
@@ -4939,6 +5014,54 @@ export type Database = {
           },
         ]
       }
+      platform_partners: {
+        Row: {
+          category: string
+          country: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          legal_name: string | null
+          logo_url: string | null
+          metadata: Json
+          name: string
+          sort_order: number
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          category: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          logo_url?: string | null
+          metadata?: Json
+          name: string
+          sort_order?: number
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          category?: string
+          country?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          legal_name?: string | null
+          logo_url?: string | null
+          metadata?: Json
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       portal_event_log: {
         Row: {
           action: string | null
@@ -7483,6 +7606,24 @@ export type Database = {
           status: string
         }[]
       }
+      platform_list_partners: {
+        Args: { _category?: string }
+        Returns: {
+          category: string
+          country: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          legal_name: string
+          logo_url: string
+          name: string
+          sort_order: number
+          tenant_contacts: number
+          updated_at: string
+          website: string
+        }[]
+      }
       platform_list_platform_users: {
         Args: never
         Returns: {
@@ -7525,11 +7666,27 @@ export type Database = {
         Returns: Json
       }
       platform_remove_domain: { Args: { _id: string }; Returns: undefined }
+      platform_remove_partner: { Args: { _id: string }; Returns: undefined }
       platform_remove_user_access: {
         Args: { _user_id: string }
         Returns: undefined
       }
       platform_role: { Args: never; Returns: string }
+      platform_save_partner: {
+        Args: {
+          _category: string
+          _country?: string
+          _description?: string
+          _id: string
+          _is_active?: boolean
+          _legal_name?: string
+          _logo_url?: string
+          _name: string
+          _sort_order?: number
+          _website?: string
+        }
+        Returns: string
+      }
       platform_set_agency_addon: {
         Args: {
           _active: boolean
@@ -7557,6 +7714,10 @@ export type Database = {
       platform_set_module_entitlement: {
         Args: { _agency_id: string; _entitled: boolean; _module: string }
         Returns: undefined
+      }
+      platform_set_partner_active: {
+        Args: { _active: boolean; _id: string }
+        Returns: boolean
       }
       platform_set_plan_allowance: {
         Args: {
