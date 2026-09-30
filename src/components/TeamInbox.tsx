@@ -432,7 +432,7 @@ export function TeamInbox() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {inlineId?.startsWith("g:") ? (
               activeGroup ? (
-                <div className="flex min-h-0 flex-1 flex-col pr-10 md:pr-0">
+                <div className="flex min-h-0 flex-1 flex-col">
                   <GroupChatPanel key={activeGroup.id} group={activeGroup} allMembers={members} onLeft={() => setInlineId(null)} />
                 </div>
               ) : (
