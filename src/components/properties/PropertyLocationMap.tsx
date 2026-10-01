@@ -64,6 +64,57 @@ export function PropertyLocationMap({ property }: { property: any }) {
   const [showDetails, setShowDetails] = useState(false);
   const [analysing, setAnalysing] = useState(false);
   const [mapReady, setMapReady] = useState<mapboxgl.Map | null>(null);
+  const [isFs, setIsFs] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>(property.id);
+  const [cantonFilter, setCantonFilter] = useState("all");
+  const [yieldRange, setYieldRange] = useState<[number, number]>([YIELD_MIN, YIELD_MAX]);
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const fittedRef = useRef(false);
+
+  // All tenant properties – loaded only in fullscreen (RLS keeps it to the active firm)
+  const { data: allProps = [] } = useQuery({
+    queryKey: ["location-map-all-properties"],
+    enabled: isFs,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("properties")
+        .select("id, title, address, postal_code, city, country, price, rent, listing_type, status")
+        .is("deleted_at" as any, null);
+      if (error) {
+        const retry = await supabase.from("properties").select("id, title, address, postal_code, city, country, price, rent, listing_type, status");
+        return (retry.data ?? []) as any[];
+      }
+      return (data ?? []) as any[];
+    },
+  });
+  const geoItems = useMemo(
+    () => allProps.filter((p) => p.id !== property.id && (p.address || p.city))
+      .map((p) => ({ id: p.id, query: [p.address, p.postal_code, p.city, p.country || "Schweiz"].filter(Boolean).join(", ") })),
+    [allProps, property.id],
+  );
+  const { data: allPoints = [] } = useQuery({
+    queryKey: ["location-map-geocode", geoItems.map((i) => `${i.id}:${i.query}`).join("|")],
+    enabled: isFs && geoItems.length > 0,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const out: GeocodedPoint[] = [];
+      for (let i = 0; i < geoItems.length; i += 50) out.push(...(await geocodeFn({ data: { items: geoItems.slice(i, i + 50) } })));
+      return out;
+    },
+  });
+  const { data: analysesById = new Map<string, Sections>() } = useQuery({
+    queryKey: ["location-map-analyses"],
+    enabled: isFs,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("property_market_analyses").select("property_id, sections, created_at").order("created_at", { ascending: false });
+      const m = new Map<string, Sections>();
+      for (const row of data ?? []) if (!m.has(row.property_id as string)) m.set(row.property_id as string, row.sections as Sections);
+      return m;
+    },
+  });
 
   const query = [property.address, property.postal_code, property.city, property.country || "Schweiz"].filter(Boolean).join(", ");
 
@@ -132,7 +183,12 @@ export function PropertyLocationMap({ property }: { property: any }) {
     });
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container.current);
-    const onFs = () => map.resize();
+    const onFs = () => {
+      const fs = !!document.fullscreenElement && document.fullscreenElement === wrapper.current;
+      setIsFs(fs);
+      if (!fs) { setSelectedId(property.id); fittedRef.current = false; map.flyTo({ center: [point.longitude, point.latitude], zoom: 17 }); }
+      setTimeout(() => map.resize(), 50);
+    };
     document.addEventListener("fullscreenchange", onFs);
     return () => { ro.disconnect(); document.removeEventListener("fullscreenchange", onFs); setMapReady(null); map.remove(); };
   }, [token, point, isSwiss]);
