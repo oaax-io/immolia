@@ -353,8 +353,8 @@ export function PropertiesMap({ properties }: Props) {
   return (
     <div ref={wrapperRef} className={isFs ? "relative h-full bg-background" : "relative"}>
       <div className="absolute left-3 right-16 top-3 z-20 flex flex-col items-start gap-2">
-        <div className="flex w-full max-w-md items-center gap-2">
-          <div className="relative flex-1">
+        <div className="flex w-full items-center gap-2">
+          <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/95 pl-9 pr-8 shadow-soft backdrop-blur" />
             {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
@@ -367,7 +367,7 @@ export function PropertiesMap({ properties }: Props) {
           </span>
         </div>
       {filtersOpen && (
-      <div className="flex max-w-full flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-2 shadow-soft backdrop-blur">
+      <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-2 shadow-soft backdrop-blur">
         <Select value={listingFilter} onValueChange={setListingFilter}>
           <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent container={isFs ? wrapperRef.current : undefined}>
@@ -383,7 +383,7 @@ export function PropertiesMap({ properties }: Props) {
             {Object.entries(propertyStatusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <div className="order-last flex w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1 lg:order-none lg:w-auto lg:flex-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
+        <div className="order-last flex w-full flex-wrap gap-1.5">
           {cantons.map(([canton, count]) => {
             const active = cantonFilter.length === 0 || cantonFilter.includes(canton);
             return (
@@ -402,7 +402,7 @@ export function PropertiesMap({ properties }: Props) {
             );
           })}
         </div>
-        <div className="flex w-full flex-wrap items-center gap-4 border-t pt-2 lg:w-auto lg:border-0 lg:pt-0">
+        <div className="flex flex-wrap items-center gap-4 px-2">
           <div className="w-44 space-y-0.5">
             <div className="flex justify-between text-[11px]"><span className="text-muted-foreground">Rendite</span><span className="font-semibold">{yieldRange[0].toFixed(1)}–{yieldRange[1].toFixed(1)}{yieldRange[1] >= 10 ? "+" : ""} %</span></div>
             <RangeSlider value={yieldRange} min={0} max={10} step={0.1} onChange={setYieldRange} />
