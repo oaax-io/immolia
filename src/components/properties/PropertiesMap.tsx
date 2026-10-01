@@ -497,7 +497,7 @@ export function PropertiesMap({ properties }: Props) {
           <div className="border-t bg-muted/20 p-3">
             {selectedAnalysis?.sections ? (
               <div className="space-y-2">
-              <div className="grid items-center gap-3 sm:grid-cols-[180px_1fr]">
+              <div className="space-y-2">
                 <YieldGauge min={selectedAnalysis.sections.rental?.gross_yield_min} max={selectedAnalysis.sections.rental?.gross_yield_max} />
                 <MarketScale comparison={selectedAnalysis.sections.purchase_price?.comparison} />
               </div>
