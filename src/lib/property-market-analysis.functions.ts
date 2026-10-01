@@ -83,7 +83,7 @@ export const generatePropertyMarketAnalysis = createServerFn({ method: "POST" })
       const facts = {
         titel: property.title, typ: property.property_type, vermarktung: property.listing_type,
         adresse: [property.address, property.postal_code, property.city, property.country].filter(Boolean).join(", "),
-        wohnflaeche_m2: property.living_area, grundstueck_m2: property.plot_area ?? property.land_area,
+        wohnflaeche_m2: property.living_area, grundstueck_m2: property.plot_area,
         zimmer: property.rooms, badezimmer: property.bathrooms, baujahr: property.year_built,
         renovationsjahr: property.renovated_at, zustand: property.condition, energieklasse: property.energy_class,
         kaufpreis: property.price, monatsmiete: property.rent, bruttorendite: property.gross_yield,
