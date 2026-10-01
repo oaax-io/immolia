@@ -146,3 +146,26 @@ export const lookupSwissParcel = createServerFn({ method: "POST" })
     }
     throw new Error("Für diese Adresse wurde keine amtliche Parzelle gefunden.");
   });
+export const getSwissParcelGeometry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((value: unknown) => z.object({
+    latitude: z.number().min(45).max(48),
+    longitude: z.number().min(5).max(11),
+  }).parse(value))
+  .handler(async ({ data }): Promise<{ parcel_no: string; e_grid: string; canton: string; geometry: unknown } | null> => {
+    const { latitude: lat, longitude: lng } = data;
+    const identify = new URL("https://api3.geo.admin.ch/rest/services/api/MapServer/identify");
+    identify.search = new URLSearchParams({
+      geometry: `${lng},${lat}`, geometryType: "esriGeometryPoint",
+      layers: "all:ch.kantone.cadastralwebmap-farbe", tolerance: "2",
+      mapExtent: `${lng - 0.01},${lat - 0.01},${lng + 0.01},${lat + 0.01}`,
+      imageDisplay: "800,600,96", sr: "4326", lang: "de",
+      returnGeometry: "true", geometryFormat: "geojson",
+    }).toString();
+    const res = await fetch(identify);
+    if (!res.ok) return null;
+    const json = await res.json() as { results?: Array<{ geometry?: unknown; properties?: { number?: string; egris_egrid?: string; ak?: string } }> };
+    const hit = json.results?.find((r) => r.geometry);
+    if (!hit) return null;
+    return { parcel_no: hit.properties?.number ?? "", e_grid: hit.properties?.egris_egrid ?? "", canton: hit.properties?.ak ?? "", geometry: hit.geometry };
+  });
