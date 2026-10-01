@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { matchClientToProperties, buildCityPostalIndex, type PropertyMatch, type FinancialCapacity, type CheckStatus } from "@/lib/matching";
 import { formatCurrency, clientTypeLabels, propertyTypeLabels } from "@/lib/format";
-import { ExternalLink, Users, Search, Target, Plus, Pencil, Bell, BellRing, ImageOff, TrendingUp } from "lucide-react";
+import { ExternalLink, Users, Search, Target, Plus, Pencil, Bell, BellRing, TrendingUp, CalendarPlus, Send, Sparkles, Bookmark, Copy, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SearchProfileDialog, type SearchProfile } from "@/components/matching/SearchProfileDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -51,6 +52,8 @@ function MatchingPage() {
   const [filter, setFilter] = useState<FilterValue>("all");
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [editProfile, setEditProfile] = useState<SearchProfile | null>(null);
+  const [disclosureClient, setDisclosureClient] = useState<Client | null>(null);
+  const [apptTarget, setApptTarget] = useState<{ client: Client; property: Property } | null>(null);
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients"],
@@ -352,15 +355,17 @@ function MatchingPage() {
       ) : (
         <>
           {/* KPI-Leiste */}
-          <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <DisclosureDialog client={disclosureClient} userId={user?.id} onClose={() => setDisclosureClient(null)} />
+          <AppointmentDialog target={apptTarget} userId={user?.id} onClose={() => setApptTarget(null)} />
+          <div className="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <Card>
-              <CardContent className="flex items-center gap-4 p-4">
+              <CardContent className="flex items-center gap-2.5 p-2.5">
                 <MatchDonut top={kpis.top} good={kpis.good} rest={kpis.rest} />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Matches gesamt</p>
-                  <p className="font-display text-2xl font-bold tabular-nums">{kpis.total}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    <span className="font-medium" style={{ color: "var(--chart-2)" }}>{kpis.top} Volltreffer</span> · {kpis.good} gut
+                  <p className="text-[11px] text-muted-foreground">Matches</p>
+                  <p className="font-display text-lg font-bold leading-tight tabular-nums">
+                    {kpis.total}
+                    <span className="ml-1.5 text-[11px] font-medium" style={{ color: "var(--chart-2)" }}>{kpis.top} Volltreffer</span>
                   </p>
                 </div>
               </CardContent>
@@ -501,13 +506,16 @@ function MatchingPage() {
                       description="Kauf/Miete, Verfügbarkeit oder Budget (max. +10 %) schliessen alle Objekte aus. Senke den Mindestwert oder passe die Kriterien an."
                     />
                   ) : (
-                    <div className="grid gap-3 xl:grid-cols-2">
+                    <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
                       {selectedMatches.map((m) => (
                         <MatchCard
                           key={m.property.id}
                           match={m}
-                          coverUrl={coverByProperty.get(m.property.id)}
+                          hasDisclosure={capacityMap.has(selectedSeeker.client.id)}
                           onSave={() => save.mutate({ client_id: selectedSeeker.client.id, property_id: m.property.id, score: m.score, reasons: m.reasons })}
+                          onAppointment={() => setApptTarget({ client: selectedSeeker.client, property: m.property })}
+                          onDisclosure={() => setDisclosureClient(selectedSeeker.client)}
+                          onImprove={() => { setEditProfile(selectedSeeker.profile); setProfileDialogOpen(true); }}
                         />
                       ))}
                     </div>
@@ -544,15 +552,14 @@ const scoreColor = (v: number) => (v >= 80 ? "var(--chart-2)" : v >= 65 ? "var(-
 
 function KpiCard({ icon: Icon, label, value, hint }: { icon: typeof Users; label: string; value: string; hint: string }) {
   return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="h-5 w-5" />
+    <Card title={hint}>
+      <CardContent className="flex items-center gap-2.5 p-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="font-display text-2xl font-bold tabular-nums">{value}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{hint}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{label}</p>
+          <p className="font-display text-lg font-bold leading-tight tabular-nums">{value}</p>
         </div>
       </CardContent>
     </Card>
@@ -616,76 +623,195 @@ const statusDot: Record<CheckStatus, string> = {
   na: "var(--muted-foreground)",
 };
 
-function MatchCard({ match: m, coverUrl, onSave }: { match: PropertyMatch; coverUrl?: string; onSave: () => void }) {
+function MatchCard({
+  match: m,
+  onSave,
+  hasDisclosure,
+  onAppointment,
+  onDisclosure,
+  onImprove,
+}: {
+  match: PropertyMatch;
+  onSave: () => void;
+  hasDisclosure: boolean;
+  onAppointment: () => void;
+  onDisclosure: () => void;
+  onImprove: () => void;
+}) {
   const p = m.property;
-  const cover = coverUrl ?? toPublicUrl(p.images?.[0]);
-  const [imgFailed, setImgFailed] = useState(false);
   const isRent = p.listing_type === "rent";
   const a = m.affordability;
+  const misses = m.checks.filter((c) => c.status === "na" || c.status === "miss");
   return (
-    <Card className="overflow-hidden transition hover:shadow-glow">
-      <div className="flex">
-        <div className="relative w-32 shrink-0 overflow-hidden bg-muted sm:w-40">
-          {cover && !imgFailed ? (
-            <img src={cover} alt={p.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
-              <ImageOff className="h-6 w-6 opacity-60" />
-              <span className="text-xs">Kein Bild</span>
-            </div>
+    <Card className="transition hover:shadow-glow">
+      <CardContent className="space-y-2 p-3">
+        <div className="flex items-start gap-2">
+          <MiniGauge value={m.score} />
+          <div className="min-w-0 flex-1">
+            <Link to="/properties/$id" params={{ id: p.id }} className="line-clamp-1 text-sm font-semibold hover:underline">
+              {p.title}
+            </Link>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {[p.postal_code && p.city ? `${p.postal_code} ${p.city}` : p.city, propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          <p className="shrink-0 text-sm font-bold tabular-nums">
+            {isRent ? `${formatCurrency(p.rent ? Number(p.rent) : null)}/Mt.` : formatCurrency(p.price ? Number(p.price) : null)}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {m.checks.map((c) => (
+            <span key={c.key} title={`${c.label}: ${c.detail}`} className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px]">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusDot[c.status] }} />
+              {c.label}
+            </span>
+          ))}
+          {a && (
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${financeChipClass(a.status)}`}>
+              {a.ratio != null ? `TB ${a.ratio.toFixed(0)} %` : ""}
+              {a.ratio != null && a.ltv != null ? " · " : ""}
+              {a.ltv != null ? `BL ${a.ltv.toFixed(0)} %` : ""}
+            </span>
+          )}
+          {m.isInvestment && p.gross_yield != null && (
+            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+              {Number(p.gross_yield).toFixed(1)} % Rendite
+            </span>
           )}
         </div>
-        <CardContent className="min-w-0 flex-1 space-y-2.5 p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="line-clamp-1 font-semibold">{p.title}</h3>
-              <p className="truncate text-xs text-muted-foreground">
-                {[p.postal_code && p.city ? `${p.postal_code} ${p.city}` : p.city, propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]].filter(Boolean).join(" · ")}
-              </p>
-              <p className="mt-0.5 font-display text-base font-bold">
-                {isRent ? `${formatCurrency(p.rent ? Number(p.rent) : null)} / Mt.` : formatCurrency(p.price ? Number(p.price) : null)}
-              </p>
-            </div>
-            <ScoreGauge value={m.score} />
-          </div>
 
-          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-            {m.checks.map((c) => (
-              <li key={c.key} className="flex min-w-0 items-center gap-1.5 text-[11px]" title={c.detail}>
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusDot[c.status] }} />
-                <span className="font-medium">{c.label}:</span>
-                <span className="truncate text-muted-foreground">{c.detail}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex flex-wrap gap-1.5">
-            {a ? (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${financeChipClass(a.status)}`} title="Kalkulatorisch: 5 % Zins, 1 % Nebenkosten, 1 % Amortisation; Richtwert max. 33 % Tragbarkeit, 80 % Belehnung">
-                {a.ratio != null ? `Tragbarkeit ${a.ratio.toFixed(0)} %` : ""}
-                {a.ratio != null && a.ltv != null ? " · " : ""}
-                {a.ltv != null ? `Belehnung ${a.ltv.toFixed(0)} %` : ""}
-                {a.hasPartner ? " (inkl. Partner)" : ""}
-              </span>
-            ) : !isRent ? (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Finanzierung offen – keine Selbstauskunft</span>
-            ) : null}
-            {m.isInvestment && p.gross_yield != null && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                Bruttorendite {Number(p.gross_yield).toFixed(1)} %
-              </span>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button size="sm" className="flex-1" onClick={onSave}>Vormerken</Button>
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/properties/$id" params={{ id: p.id }}><ExternalLink className="h-4 w-4" /></Link>
+        <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
+          <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onAppointment}>
+            <CalendarPlus className="mr-1 h-3.5 w-3.5" />Termin
+          </Button>
+          {!hasDisclosure && !isRent && (
+            <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onDisclosure}>
+              <Send className="mr-1 h-3.5 w-3.5" />Selbstauskunft
+            </Button>
+          )}
+          {misses.length > 0 && (
+            <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onImprove} title={`Fehlt: ${misses.map((c) => c.label).join(", ")}`}>
+              <Sparkles className="mr-1 h-3.5 w-3.5" />Profil ergänzen
+            </Button>
+          )}
+          <div className="ml-auto flex gap-1">
+            <Button size="icon" variant="ghost" className="h-7 w-7" title="Vormerken" onClick={onSave}>
+              <Bookmark className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7" title="Objekt öffnen" asChild>
+              <Link to="/properties/$id" params={{ id: p.id }}><ExternalLink className="h-3.5 w-3.5" /></Link>
             </Button>
           </div>
-        </CardContent>
-      </div>
+        </div>
+      </CardContent>
     </Card>
+  );
+}
+
+function generateToken() {
+  const arr = new Uint8Array(24);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function DisclosureDialog({ client, userId, onClose }: { client: Client | null; userId?: string; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const create = async () => {
+    if (!client || !userId) return;
+    setBusy(true);
+    try {
+      const token = generateToken();
+      const { error } = await supabase.from("financing_links").insert({
+        token, client_id: client.id, link_type: "self_disclosure", created_by: userId, dossier_id: null,
+      } as any);
+      if (error) throw error;
+      setUrl(`${window.location.origin}/selbstauskunft/${token}`);
+      toast.success("Link erstellt");
+    } catch (e: any) {
+      toast.error(e.message ?? "Fehler");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const mail = () => {
+    if (!url || !client) return;
+    const body = encodeURIComponent(`Guten Tag\n\nbitte füllen Sie Ihre Selbstauskunft über folgenden Link aus:\n\n${url}\n\nFreundliche Grüsse`);
+    window.location.href = `mailto:${client.email ?? ""}?subject=${encodeURIComponent("Ihre Selbstauskunft")}&body=${body}`;
+  };
+  return (
+    <Dialog open={!!client} onOpenChange={(o) => { if (!o) { setUrl(null); onClose(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Selbstauskunft anfordern</DialogTitle>
+          <DialogDescription>
+            Ohne Selbstauskunft kann {client?.full_name} nicht auf Tragbarkeit geprüft werden.
+          </DialogDescription>
+        </DialogHeader>
+        {url ? (
+          <div className="space-y-2">
+            <Input readOnly value={url} className="text-xs" />
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => { navigator.clipboard.writeText(url); toast.success("Link kopiert"); }}>
+                <Copy className="mr-1.5 h-4 w-4" />Kopieren
+              </Button>
+              <Button className="flex-1" onClick={mail}><Mail className="mr-1.5 h-4 w-4" />Per E-Mail</Button>
+            </div>
+          </div>
+        ) : (
+          <DialogFooter>
+            <Button onClick={create} disabled={busy || !userId}><Send className="mr-1.5 h-4 w-4" />Sicheren Link erstellen</Button>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AppointmentDialog({
+  target, userId, onClose,
+}: { target: { client: Client; property: Property } | null; userId?: string; onClose: () => void }) {
+  const [start, setStart] = useState("");
+  const [duration, setDuration] = useState("60");
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!target || !userId || !start) throw new Error("Bitte Datum und Uhrzeit wählen");
+      const s = new Date(start);
+      const e = new Date(s.getTime() + Number(duration) * 60000);
+      const p = target.property;
+      const { error } = await supabase.from("appointments").insert({
+        owner_id: userId, client_id: target.client.id, property_id: p.id,
+        title: `Besichtigung ${p.title}`, appointment_type: "viewing",
+        starts_at: s.toISOString(), ends_at: e.toISOString(),
+        location: [p.address, [p.postal_code, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Besichtigung eingetragen"); setStart(""); onClose(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Besichtigung planen</DialogTitle>
+          <DialogDescription>{target?.client.full_name} · {target?.property.title}</DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-[1fr_110px] gap-2">
+          <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
+          <Select value={duration} onValueChange={setDuration}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {["30", "45", "60", "90"].map((d) => <SelectItem key={d} value={d}>{d} Min.</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}><CalendarPlus className="mr-1.5 h-4 w-4" />Eintragen</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
