@@ -238,8 +238,8 @@ export function PropertiesMap({ properties }: Props) {
         [12.5, 49.0],
       ],
     });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-    map.addControl(new mapboxgl.FullscreenControl({ container: wrapperRef.current ?? undefined }), "top-right");
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapboxgl.FullscreenControl({ container: wrapperRef.current ?? undefined }), "bottom-right");
     mapRef.current = map;
     const onFs = () => {
       setIsFs(!!document.fullscreenElement && document.fullscreenElement === wrapperRef.current);
@@ -352,22 +352,31 @@ export function PropertiesMap({ properties }: Props) {
 
   return (
     <div ref={wrapperRef} className={isFs ? "relative h-full bg-background" : "relative"}>
-      <div className="absolute left-3 right-16 top-3 z-20 flex flex-col items-start gap-2">
-        <div className="flex w-full items-center gap-2">
-          <div className="relative w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-3 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/95 pl-9 pr-8 shadow-soft backdrop-blur" />
-            {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
-          </div>
-          <Button type="button" variant={filtersOpen ? "default" : "outline"} className={`h-10 shrink-0 rounded-full shadow-soft ${filtersOpen ? "" : "bg-background/95 backdrop-blur"}`} onClick={() => setFiltersOpen((v) => !v)}>
-            <SlidersHorizontal className="mr-1.5 h-4 w-4" />{filtersOpen ? "Filter ausblenden" : "Filter"}{hasMapFilters && !filtersOpen ? " •" : ""}
+      <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex items-start gap-2">
+        <div className="pointer-events-auto relative">
+          <Button
+            type="button"
+            aria-label={filtersOpen ? "Filter ausblenden" : "Filter einblenden"}
+            title={filtersOpen ? "Filter ausblenden" : "Filter einblenden"}
+            variant={filtersOpen ? "default" : "outline"}
+            className={`relative h-10 w-10 rounded-full p-0 shadow-soft ${filtersOpen ? "" : "bg-background/70 backdrop-blur"}`}
+            onClick={() => setFiltersOpen((v) => !v)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {hasMapFilters && !filtersOpen && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background" />}
           </Button>
-          <span className="hidden shrink-0 rounded-full border bg-background/95 px-3 py-2 text-xs shadow-soft backdrop-blur sm:inline">
-            {geocoding ? "Lädt…" : <><strong>{visiblePoints.length}</strong> auf Karte{withoutAddress > 0 && <span className="text-muted-foreground"> · {withoutAddress} ohne Adresse</span>}</>}
-          </span>
         </div>
+        <div className="pointer-events-auto relative mx-auto w-full max-w-md">
+          <Search className="pointer-events-none absolute left-3 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/70 pl-9 pr-8 shadow-soft backdrop-blur" />
+          {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
+        </div>
+        <div className="pointer-events-auto hidden shrink-0 rounded-full border bg-background/70 px-3 py-2 text-xs shadow-soft backdrop-blur sm:block">
+          {geocoding ? "Lädt…" : <><strong>{visiblePoints.length}</strong> auf Karte{withoutAddress > 0 && <span className="text-muted-foreground"> · {withoutAddress} ohne Adresse</span>}</>}
+        </div>
+      </div>
       {filtersOpen && (
-      <div className="flex w-full flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-2 shadow-soft backdrop-blur">
+      <div className="absolute left-3 right-3 top-[60px] z-20 flex flex-wrap items-center gap-2 rounded-xl border bg-background/60 p-2 shadow-soft backdrop-blur-md">
         <Select value={listingFilter} onValueChange={setListingFilter}>
           <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent container={isFs ? wrapperRef.current : undefined}>
@@ -419,7 +428,6 @@ export function PropertiesMap({ properties }: Props) {
         )}
       </div>
       )}
-      </div>
 
       <div className={isFs ? "relative h-full" : "relative"}>
       <div
