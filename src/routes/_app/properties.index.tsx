@@ -361,7 +361,7 @@ function PropertiesPage() {
         onImported={() => qc.invalidateQueries({ queryKey: ["properties"] })}
       />
 
-      {(() => {
+      {view !== "map" && (() => {
         const activeChips: Array<{ key: string; label: string; clear: () => void }> = [];
         if (fStatuses.length) activeChips.push({ key: "status", label: t("properties.chips.status", { value: fStatuses.map(statusLabel).join(", ") }), clear: () => setFStatuses([]) });
         if (fListing !== "all") activeChips.push({ key: "listing", label: t("properties.chips.listing", { value: listingLabel(fListing) }), clear: () => setFListing("all") });
@@ -604,7 +604,7 @@ function PropertiesPage() {
           ) : undefined}
         />
       ) : view === "map" ? (
-        <PropertiesMap properties={displayed} />
+        <PropertiesMap properties={(properties as any[]).filter((p) => p.status !== "archived")} />
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paginated.map((p: any) => {

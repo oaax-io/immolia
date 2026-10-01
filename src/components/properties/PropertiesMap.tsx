@@ -6,11 +6,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
 import { getMapboxToken, geocodeAddresses, type GeocodedPoint } from "@/lib/mapbox.functions";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
-import { ArrowRight, Bed, BrainCircuit, Building2, Loader2, MapPin, Maximize, RotateCcw, Sparkles, TrendingUp, X } from "lucide-react";
+import { Search, SlidersHorizontal, ArrowRight, Bed, BrainCircuit, Building2, Loader2, MapPin, Maximize, RotateCcw, Sparkles, TrendingUp, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   formatArea,
@@ -88,6 +89,8 @@ export function PropertiesMap({ properties }: Props) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [analysingId, setAnalysingId] = useState<string | null>(null);
   const [isFs, setIsFs] = useState(false);
+  const [mapSearch, setMapSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [yieldRange, setYieldRange] = useState<[number, number]>([0, 10]);
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -197,6 +200,10 @@ export function PropertiesMap({ properties }: Props) {
     if (cantonFilter.length > 0 && !cantonFilter.includes(canton)) return false;
     if (listingFilter !== "all" && property.listing_type !== listingFilter) return false;
     if (statusFilter !== "all" && property.status !== statusFilter) return false;
+    if (mapSearch.trim()) {
+      const q = mapSearch.trim().toLowerCase();
+      if (!`${property.title ?? ""} ${property.address ?? ""} ${property.postal_code ?? ""} ${property.city ?? ""}`.toLowerCase().includes(q)) return false;
+    }
     if (yieldActive) {
       const r = latestAnalysisByProperty.get(point.id)?.sections?.rental;
       const v = [r?.gross_yield_min, r?.gross_yield_max].filter((x): x is number => typeof x === "number");
@@ -209,7 +216,7 @@ export function PropertiesMap({ properties }: Props) {
       if (!v || v < pr[0] || v > pr[1]) return false;
     }
     return true;
-  }), [points, propertyById, cantonFilter, listingFilter, statusFilter, yieldActive, yieldRange, priceActive, pr[0], pr[1], latestAnalysisByProperty]);
+  }), [points, propertyById, cantonFilter, listingFilter, statusFilter, yieldActive, yieldRange, priceActive, pr[0], pr[1], latestAnalysisByProperty, mapSearch]);
 
 
   const selectedId = pinnedId ?? hoveredId;
@@ -331,20 +338,36 @@ export function PropertiesMap({ properties }: Props) {
   }
 
   const withoutAddress = properties.length - geocodeItems.length;
-  const hasMapFilters = cantonFilter.length > 0 || listingFilter !== "all" || statusFilter !== "all" || yieldActive || priceActive;
+  const hasMapFilters = cantonFilter.length > 0 || listingFilter !== "all" || statusFilter !== "all" || yieldActive || priceActive || !!mapSearch;
   const chf = (v: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(v);
   const resetMapFilters = () => {
     setCantonFilter([]);
     setListingFilter("all");
     setStatusFilter("all");
     setYieldRange([0, 10]);
+    setMapSearch("");
     setPriceRange(null);
     setPinnedId(null);
   };
 
   return (
-    <div ref={wrapperRef} className={isFs ? "flex h-full flex-col gap-3 bg-background p-3" : "space-y-3"}>
-      <div className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-lg border bg-card p-2 shadow-soft">
+    <div ref={wrapperRef} className={isFs ? "relative h-full bg-background" : "relative"}>
+      <div className="absolute left-3 right-16 top-3 z-20 flex flex-col items-start gap-2">
+        <div className="flex w-full max-w-md items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/95 pl-9 pr-8 shadow-soft backdrop-blur" />
+            {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
+          </div>
+          <Button type="button" variant={filtersOpen ? "default" : "outline"} className="h-10 shrink-0 rounded-full bg-background/95 shadow-soft backdrop-blur data-[on=true]:bg-primary" data-on={filtersOpen} onClick={() => setFiltersOpen((v) => !v)}>
+            <SlidersHorizontal className="mr-1.5 h-4 w-4" />{filtersOpen ? "Filter ausblenden" : "Filter"}{hasMapFilters && !filtersOpen ? " •" : ""}
+          </Button>
+          <span className="hidden shrink-0 rounded-full border bg-background/95 px-3 py-2 text-xs shadow-soft backdrop-blur sm:inline">
+            {geocoding ? "Lädt…" : <><strong>{visiblePoints.length}</strong> auf Karte{withoutAddress > 0 && <span className="text-muted-foreground"> · {withoutAddress} ohne Adresse</span>}</>}
+          </span>
+        </div>
+      {filtersOpen && (
+      <div className="flex max-w-full flex-wrap items-center gap-2 rounded-xl border bg-background/95 p-2 shadow-soft backdrop-blur">
         <Select value={listingFilter} onValueChange={setListingFilter}>
           <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent container={isFs ? wrapperRef.current : undefined}>
@@ -395,26 +418,15 @@ export function PropertiesMap({ properties }: Props) {
           </Button>
         )}
       </div>
+      )}
+      </div>
 
-      <div className={isFs ? "relative min-h-0 flex-1" : "relative"}>
+      <div className={isFs ? "relative h-full" : "relative"}>
       <div
         ref={mapContainer}
-        className={isFs ? "h-full w-full overflow-hidden rounded-xl border" : "h-[calc(100vh-320px)] min-h-[500px] w-full overflow-hidden rounded-xl border"}
+        className={isFs ? "h-full w-full overflow-hidden" : "h-[calc(100vh-170px)] min-h-[560px] w-full overflow-hidden rounded-xl border"}
       />
 
-      {/* Info bar */}
-      <div className="absolute left-3 top-3 z-10 rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-soft backdrop-blur">
-        {geocoding ? (
-          <span className="text-muted-foreground">Adressen werden geladen…</span>
-        ) : (
-          <span>
-            <strong>{visiblePoints.length}</strong> auf Karte
-            {withoutAddress > 0 && (
-              <span className="text-muted-foreground"> · {withoutAddress} ohne Adresse</span>
-            )}
-          </span>
-        )}
-      </div>
 
       {visiblePoints.length === 0 && !geocoding && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
