@@ -11,14 +11,14 @@ import { getSwissParcelGeometry } from "@/lib/property-location.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CANTON_NAMES } from "@/components/properties/PropertiesMap";
+import { CANTON_NAMES } from "@/lib/cantons";
 import { ArrowRight, BrainCircuit, Loader2, MapPin, RotateCcw, SlidersHorizontal, Sparkles, TrendingUp, X } from "lucide-react";
 import { toast } from "sonner";
 
 const YIELD_MIN = 0, YIELD_MAX = 10;
 const chf = (v: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(v);
 
-function RangeSlider({ value, min, max, step, onChange }: { value: [number, number]; min: number; max: number; step: number; onChange: (v: [number, number]) => void }) {
+export function RangeSlider({ value, min, max, step, onChange }: { value: [number, number]; min: number; max: number; step: number; onChange: (v: [number, number]) => void }) {
   return (
     <SliderPrimitive.Root className="relative flex w-full touch-none select-none items-center py-1" value={value} min={min} max={max} step={step} onValueChange={(v) => onChange([v[0], v[1]] as [number, number])}>
       <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-primary/20">
@@ -263,7 +263,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
       const p = propById.get(pt.id);
       const el = document.createElement("button");
       el.type = "button";
-      el.className = "rounded-full border-2 border-background bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background shadow-md transition-transform hover:scale-110";
+      el.className = `property-map-marker canton-${pt.canton ?? "UNBEKANNT"}`;
       const v = priceOf(p);
       el.textContent = v ? (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)} Mio` : chf(v)) : "•";
       el.setAttribute("aria-label", p?.title ?? "Objekt");
@@ -419,7 +419,7 @@ function arc(from: number, to: number) {
   return `M ${x1} ${y1} A 56 56 0 0 1 ${x2} ${y2}`;
 }
 
-function YieldGauge({ min, max }: { min?: number; max?: number }) {
+export function YieldGauge({ min, max }: { min?: number; max?: number }) {
   const vals = [min, max].filter((v): v is number => typeof v === "number" && Number.isFinite(v));
   const value = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   const [nx, ny] = polar(70, 70, 44, value ?? G_MIN);
@@ -445,7 +445,7 @@ function YieldGauge({ min, max }: { min?: number; max?: number }) {
   );
 }
 
-function MarketScale({ comparison }: { comparison?: string }) {
+export function MarketScale({ comparison }: { comparison?: string }) {
   const pos = comparison === "below_market" ? 16 : comparison === "at_market" ? 50 : comparison === "above_market" ? 84 : null;
   return (
     <div>
@@ -457,7 +457,7 @@ function MarketScale({ comparison }: { comparison?: string }) {
   );
 }
 
-function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+export function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border bg-background/60 p-2">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
