@@ -117,8 +117,17 @@ export function PropertyLocationMap({ property }: { property: any }) {
   useEffect(() => {
     const map = mapReady;
     if (!map || !parcel?.geometry) return;
-    const primary = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
-    const color = primary ? (primary.startsWith("oklch") || primary.startsWith("#") || primary.startsWith("hsl") ? primary : `hsl(${primary})`) : "#2563eb";
+    const color = (() => {
+      try {
+        const probe = document.createElement("div");
+        probe.className = "bg-primary"; document.body.appendChild(probe);
+        const css = getComputedStyle(probe).backgroundColor; probe.remove();
+        const c = document.createElement("canvas").getContext("2d")!;
+        c.fillStyle = css; c.fillRect(0, 0, 1, 1);
+        const [r, g, b] = c.getImageData(0, 0, 1, 1).data;
+        return `rgb(${r}, ${g}, ${b})`;
+      } catch { return "rgb(37, 99, 235)"; }
+    })();
     const data = { type: "Feature", properties: {}, geometry: parcel.geometry } as any;
     if (map.getSource("parcel")) (map.getSource("parcel") as mapboxgl.GeoJSONSource).setData(data);
     else {
