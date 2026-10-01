@@ -152,7 +152,7 @@ export const getSwissParcelGeometry = createServerFn({ method: "POST" })
     latitude: z.number().min(45).max(48),
     longitude: z.number().min(5).max(11),
   }).parse(value))
-  .handler(async ({ data }): Promise<{ parcel_no: string; e_grid: string; canton: string; geometry: unknown } | null> => {
+  .handler(async ({ data }): Promise<{ parcel_no: string; e_grid: string; canton: string; geometry: { type: string; coordinates: number[][][] } } | null> => {
     const { latitude: lat, longitude: lng } = data;
     const identify = new URL("https://api3.geo.admin.ch/rest/services/api/MapServer/identify");
     identify.search = new URLSearchParams({
@@ -164,8 +164,8 @@ export const getSwissParcelGeometry = createServerFn({ method: "POST" })
     }).toString();
     const res = await fetch(identify);
     if (!res.ok) return null;
-    const json = await res.json() as { results?: Array<{ geometry?: unknown; properties?: { number?: string; egris_egrid?: string; ak?: string } }> };
+    const json = await res.json() as { results?: Array<{ geometry?: { type: string; coordinates: number[][][] }; properties?: { number?: string; egris_egrid?: string; ak?: string } }> };
     const hit = json.results?.find((r) => r.geometry);
     if (!hit) return null;
-    return { parcel_no: hit.properties?.number ?? "", e_grid: hit.properties?.egris_egrid ?? "", canton: hit.properties?.ak ?? "", geometry: hit.geometry };
+    return { parcel_no: hit.properties?.number ?? "", e_grid: hit.properties?.egris_egrid ?? "", canton: hit.properties?.ak ?? "", geometry: hit.geometry! };
   });
