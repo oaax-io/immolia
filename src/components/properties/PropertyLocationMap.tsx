@@ -1,15 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getMapboxToken, geocodeAddresses } from "@/lib/mapbox.functions";
+import { Link } from "@tanstack/react-router";
+import * as SliderPrimitive from "@radix-ui/react-slider";
+import { getMapboxToken, geocodeAddresses, type GeocodedPoint } from "@/lib/mapbox.functions";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
 import { getSwissParcelGeometry } from "@/lib/property-location.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, Loader2, MapPin, Sparkles, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CANTON_NAMES } from "@/components/properties/PropertiesMap";
+import { ArrowRight, BrainCircuit, Loader2, MapPin, RotateCcw, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
+
+const YIELD_MIN = 0, YIELD_MAX = 10;
+const chf = (v: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(v);
+
+function RangeSlider({ value, min, max, step, onChange }: { value: [number, number]; min: number; max: number; step: number; onChange: (v: [number, number]) => void }) {
+  return (
+    <SliderPrimitive.Root className="relative flex w-full touch-none select-none items-center py-1" value={value} min={min} max={max} step={step} onValueChange={(v) => onChange([v[0], v[1]] as [number, number])}>
+      <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-primary/20">
+        <SliderPrimitive.Range className="absolute h-full bg-primary" />
+      </SliderPrimitive.Track>
+      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow" />
+      <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow" />
+    </SliderPrimitive.Root>
+  );
+}
 
 type Sections = {
   purchase_price?: { estimated_value_min?: number; estimated_value_max?: number; comparison?: string };
