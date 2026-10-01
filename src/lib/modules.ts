@@ -3,7 +3,7 @@
  * DB-Spiegel: public.platform_module_keys() / platform_core_module_keys() – bei Änderungen beide anpassen.
  */
 export type ModuleCategory = "Basis" | "CRM" | "Verkauf" | "Finanzierung" | "Organisation" | "Hilfe";
-export type ModuleDef = { key: string; label: string; description: string; category: ModuleCategory; is_core: boolean };
+export type ModuleDef = { key: string; label: string; description: string; category: ModuleCategory; is_core: boolean; default_enabled?: boolean };
 
 export const MODULE_REGISTRY: ModuleDef[] = [
   { key: "dashboard", label: "Dashboard", description: "Startseite nach der Anmeldung", category: "Basis", is_core: true },
@@ -33,7 +33,8 @@ export const MODULE_KEYS = MODULE_REGISTRY.map((m) => m.key);
 export const CORE_MODULE_KEYS = MODULE_REGISTRY.filter((m) => m.is_core).map((m) => m.key);
 export const MODULE_LABEL: Record<string, string> = Object.fromEntries(MODULE_REGISTRY.map((m) => [m.key, m.label]));
 /** Vorauswahl im Assistenten «Neues Unternehmen» (kein Kernmodul-Status). */
-export const DEFAULT_MODULES = ["dashboard", "leads", "clients", "properties", "appointments", "tasks", "documents", "employees", "company_settings"];
+/** Immolia-Core-Startpaket = Registry-Module mit default_enabled !== false (DB-Spiegel: platform_default_module_keys()). */
+export const DEFAULT_MODULES = MODULE_REGISTRY.filter((m) => m.default_enabled !== false).map((m) => m.key);
 
 export type ModuleState = "active" | "entitled" | "locked";
 export function moduleState(row: { is_entitled: boolean; is_enabled: boolean } | undefined): ModuleState {
