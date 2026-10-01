@@ -101,3 +101,6 @@
 ## Partner (zentral + Tenant)
 - Zentrale Partnerstammdaten liegen in platform_partners und werden ausschliesslich ueber platform_*-Partner-RPCs (is_platform_admin, Audit) geschrieben; Tenants lesen nur is_active-Eintraege. Why: ein Katalog fuer alle Firmen, keine Browser-Schreibzugriffe.
 - Eigene Ansprechpartner liegen in agency_partner_contacts (agency_id per Trigger, Schreiben nur Inhaber/Admin der aktiven Firma); Module wie Finanzierung waehlen daraus vor, Freitext bleibt moeglich. Why: firmenspezifische Kontakte ohne Aufweichung der Tenant-Isolation.
+## Core Consolidation 1
+- Portal-Webhook bestimmt den Tenant nur aus PORTAL_TARGET_AGENCY_ID (gültig + aktiv), sonst 503 vor jeder Mutation; nie Payload, nie hartcodierter Default; why: kein Tenant ist impliziter Default.
+- Dokumentvorlagen werden nie als Seiteneffekt beim Öffnen angelegt; neutrale Defaults nur aus IMMOLIA_SYSTEM_TEMPLATES (src/lib/template-catalog.ts) via Provisioning, ASIMO_TEMPLATES bleiben Tenantinhalte; why: keine ASIMO-Verträge in fremden Firmen.

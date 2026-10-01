@@ -2,17 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
 /**
- * Tenant-Bestimmung: Der Mandant ergibt sich ausschliesslich aus dem
- * serverseitig konfigurierten Portal-Zugang (API-Key + Signatur-Secret),
- * nie aus dem Payload. Heute existiert genau ein Zugang (ASIMO-Portal).
- * PORTAL_TARGET_AGENCY_ID kann den Mandanten serverseitig überschreiben.
+ * Tenant-Bestimmung (fail closed): Der Mandant ergibt sich ausschliesslich aus
+ * der serverseitigen Konfiguration PORTAL_TARGET_AGENCY_ID – nie aus dem Payload
+ * und nie aus einem hartcodierten Default. Fehlt sie, ist sie ungültig oder ist
+ * die Firma nicht aktiv, wird der Request abgelehnt (keine CRM-Mutation).
  */
-const ASIMO_PORTAL_AGENCY_ID = "69eb3646-8b0e-4f96-b3c9-143e5739d224";
+const UUID_RE_TENANT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function resolvePortalTenant(sb: any): Promise<string | null> {
-  const agencyId = process.env["PORTAL_TARGET_AGENCY_ID"] || ASIMO_PORTAL_AGENCY_ID;
-  const { data } = await sb.from("agencies").select("id").eq("id", agencyId).maybeSingle();
-  return (data?.id as string | undefined) ?? null;
+async function resolvePortalTenant(sb: any, configured: string | undefined): Promise<string | null> {
+  const agencyId = (configured ?? "").trim();
+  if (!agencyId || !UUID_RE_TENANT.test(agencyId)) return null;
+  const { data } = await sb.from("agencies").select("id,status").eq("id", agencyId).maybeSingle();
+  if (!data?.id || data.status !== "active") return null;
+  return data.id as string;
 }
 
 type Body = {
@@ -206,10 +208,10 @@ export const Route = createFileRoute("/api/public/portal-webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const sb = supabaseAdmin as any;
 
-        const agencyId = await resolvePortalTenant(sb);
+        const agencyId = await resolvePortalTenant(sb, process.env["PORTAL_TARGET_AGENCY_ID"]);
         if (!agencyId) {
-          console.error("Portal webhook: tenant not resolvable");
-          return new Response("Not configured", { status: 500 });
+          console.error("Portal webhook: PORTAL_TARGET_AGENCY_ID missing/invalid/inactive – rejected");
+          return new Response("Portal tenant not configured", { status: 503 });
         }
 
         const { error: logError } = await sb

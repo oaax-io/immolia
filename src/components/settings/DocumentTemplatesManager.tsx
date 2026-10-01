@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Plus, FileCode2, Trash2, Eye, Sparkles, Code2, Star, Lock, Copy } from "lucide-react";
@@ -20,7 +20,7 @@ import {
   renderTemplate,
   wrapHtmlDocument,
 } from "@/lib/document-templates";
-import { seedAsimoTemplates, setDefaultTemplate } from "@/lib/templates.functions";
+import { setDefaultTemplate } from "@/lib/templates.functions";
 
 const TYPE_LABELS: Record<string, string> = {
   mandate: "Mandat (exklusiv)",
@@ -55,12 +55,8 @@ export function DocumentTemplatesManager() {
   const [previewHtml, setPreviewHtml] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
 
-  // One-shot ASIMO seeder: ensures all ASIMO system templates exist & are up-to-date.
-  useEffect(() => {
-    seedAsimoTemplates()
-      .then(() => qc.invalidateQueries({ queryKey: ["all-document-templates"] }))
-      .catch((err) => console.error("ASIMO seed failed", err));
-  }, [qc]);
+  // Kein Seeding beim Öffnen: Lesen dieser Seite erzeugt nie Vorlagen.
+  // Standardvorlagen kommen künftig nur über das Tenant-Provisioning (siehe template-catalog.ts).
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["all-document-templates"],
