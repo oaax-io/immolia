@@ -94,6 +94,9 @@ export function PropertiesMap({ properties }: Props) {
   const markerElsRef = useRef<Map<string, HTMLElement>>(new Map());
   const pinnedRef = useRef<string | null>(null);
   pinnedRef.current = pinnedId;
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keepHover = () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); };
+  const leaveHover = () => { keepHover(); hoverTimer.current = setTimeout(() => setHoveredId(null), 220); };
 
   const { data: tokenData } = useQuery({
     queryKey: ["mapbox-token"],
@@ -267,9 +270,10 @@ export function PropertiesMap({ properties }: Props) {
       const price = prop.listing_type === "rent" ? prop.rent : prop.price;
       el.textContent = price ? formatCurrency(Number(price)).replace(/\s/g, "") : "•";
       el.addEventListener("mouseenter", () => {
+        keepHover();
         if (!pinnedRef.current) setHoveredId(prop.id);
       });
-      el.addEventListener("mouseleave", () => setHoveredId(null));
+      el.addEventListener("mouseleave", leaveHover);
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         setPinnedId((current) => current === prop.id ? null : prop.id);
@@ -419,7 +423,7 @@ export function PropertiesMap({ properties }: Props) {
       )}
 
       {selected && (
-        <div className="absolute bottom-4 left-4 right-4 z-10 mx-auto max-w-xl overflow-hidden rounded-lg border bg-card shadow-glow">
+        <div onMouseEnter={keepHover} onMouseLeave={() => { if (!pinnedId) leaveHover(); }} className="absolute bottom-4 left-4 right-4 z-10 mx-auto max-w-xl overflow-hidden rounded-lg border bg-card shadow-glow">
           <div className="flex gap-3 p-3">
             <Link
               to="/properties/$id"
