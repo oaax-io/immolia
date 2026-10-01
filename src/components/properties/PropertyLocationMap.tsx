@@ -273,7 +273,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
     if (!fittedRef.current && filteredPoints.length && point) {
       fittedRef.current = true;
       const b = new mapboxgl.LngLatBounds([point.longitude, point.latitude], [point.longitude, point.latitude]);
-      filteredPoints.forEach((pt) => b.extend([pt.longitude, pt.latitude]));
+      filteredPoints.filter((pt) => !isSwiss || (pt.latitude > 45.7 && pt.latitude < 47.9 && pt.longitude > 5.8 && pt.longitude < 10.6)).forEach((pt) => b.extend([pt.longitude, pt.latitude]));
       map.fitBounds(b, { padding: 80, maxZoom: 14, duration: 800 });
     }
     return () => markers.forEach((m) => m.remove());
