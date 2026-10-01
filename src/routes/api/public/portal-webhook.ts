@@ -9,7 +9,7 @@ import { createHmac, timingSafeEqual } from "crypto";
  */
 const UUID_RE_TENANT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function resolvePortalTenant(sb: any, configured: string | undefined): Promise<string | null> {
+async function resolvePortalTenant(sb: any, configured: string | undefined): Promise<string | null> {
   const agencyId = (configured ?? "").trim();
   if (!agencyId || !UUID_RE_TENANT.test(agencyId)) return null;
   const { data } = await sb.from("agencies").select("id,status").eq("id", agencyId).maybeSingle();
