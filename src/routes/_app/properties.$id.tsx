@@ -1403,7 +1403,7 @@ function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { p
         </button>
       )}
       {!isMoreSlide && (
-        <div className="absolute right-3 top-3 rounded-md bg-background/85 px-2 py-1 text-xs font-medium shadow">
+        <div className="absolute right-3 top-14 rounded-md bg-background/85 px-2 py-1 text-xs font-medium shadow">
           {idx + 1} / {images.length}
         </div>
       )}
