@@ -302,7 +302,7 @@ export function PropertiesMap({ properties }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2 shadow-soft">
+      <div className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-lg border bg-card p-2 shadow-soft">
         <Select value={listingFilter} onValueChange={setListingFilter}>
           <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -318,7 +318,7 @@ export function PropertiesMap({ properties }: Props) {
             {Object.entries(propertyStatusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+        <div className="order-last flex w-full min-w-0 flex-nowrap gap-1.5 overflow-x-auto pb-1 lg:order-none lg:w-auto lg:flex-1 lg:flex-wrap lg:overflow-visible lg:pb-0">
           {cantons.map(([canton, count]) => {
             const active = cantonFilter.length === 0 || cantonFilter.includes(canton);
             return (
@@ -327,7 +327,7 @@ export function PropertiesMap({ properties }: Props) {
                 type="button"
                 size="sm"
                 variant="outline"
-                className={`h-8 gap-1.5 px-2 ${active ? "opacity-100" : "opacity-45"}`}
+                className={`h-8 shrink-0 gap-1.5 px-2 ${active ? "opacity-100" : "opacity-45"}`}
                 onClick={() => setCantonFilter((current) => current.includes(canton) ? current.filter((item) => item !== canton) : [...current, canton])}
               >
                 <span className={`property-map-legend-dot canton-${canton}`} />
