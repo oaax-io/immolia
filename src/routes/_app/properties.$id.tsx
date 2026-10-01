@@ -43,6 +43,7 @@ import { PropertyAssigneePicker, usePropertyAssignees } from "@/components/prope
 import type { EmployeeLite } from "@/components/clients/ClientAssignees";
 import { PropertyQuickActions } from "@/components/properties/PropertyQuickActions";
 import { deleteToTrash } from "@/lib/trash";
+import { PropertyLocationMap } from "@/components/properties/PropertyLocationMap";
 import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
@@ -529,7 +530,7 @@ function PropertyDetail() {
 
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 aspect-[16/10] overflow-hidden rounded-2xl">
-          <PropertyImageGallery propertyId={id} images={p.images ?? []} title={p.title} />
+          <CoverWithMap property={p} />
         </div>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
@@ -1092,6 +1093,30 @@ function OwnerTab({ p }: { p: any }) {
   );
 }
 
+function CoverWithMap({ property }: { property: any }) {
+  const [view, setView] = useState<"photos" | "map">("photos");
+  const count = (property.images ?? []).length;
+  return (
+    <div className="relative h-full w-full">
+      {view === "photos" ? (
+        <PropertyImageGallery propertyId={property.id} images={property.images ?? []} title={property.title} />
+      ) : (
+        <div className="h-full w-full overflow-hidden rounded-2xl border bg-muted">
+          <PropertyLocationMap property={property} />
+        </div>
+      )}
+      <div className="absolute right-3 top-3 z-20 flex rounded-full border bg-background/90 p-0.5 text-xs font-medium shadow backdrop-blur">
+        <button type="button" onClick={() => setView("photos")} className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${view === "photos" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+          <ImageIcon className="h-3.5 w-3.5" />Fotos{count ? ` (${count})` : ""}
+        </button>
+        <button type="button" onClick={() => setView("map")} className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${view === "map" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
+          <MapPin className="h-3.5 w-3.5" />Karte
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { propertyId: string; images: string[]; title: string }) {
   const qc = useQueryClient();
   const [dragOver, setDragOver] = useState(false);
@@ -1378,7 +1403,7 @@ function PropertyImageGallery({ propertyId, images: fallbackImages, title }: { p
         </button>
       )}
       {!isMoreSlide && (
-        <div className="absolute right-3 top-3 rounded-md bg-background/85 px-2 py-1 text-xs font-medium shadow">
+        <div className="absolute right-3 top-14 rounded-md bg-background/85 px-2 py-1 text-xs font-medium shadow">
           {idx + 1} / {images.length}
         </div>
       )}
