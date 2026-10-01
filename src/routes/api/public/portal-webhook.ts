@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
-import { resolveInboundConnection, portalSecrets } from "@/lib/portal-connections.server";
 
 /**
  * Inbound (fail closed): Firma ergibt sich ausschliesslich aus der eindeutigen,
@@ -180,6 +179,7 @@ export const Route = createFileRoute("/api/public/portal-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { resolveInboundConnection, portalSecrets } = await import("@/lib/portal-connections.server");
         const { targetApiKey: apiKeyEnv, signingSecret: secret } = portalSecrets(LEGACY_SECRET_REF);
         if (!apiKeyEnv || !secret) {
           console.error("Portal webhook: secrets missing");

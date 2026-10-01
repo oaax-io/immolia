@@ -111,3 +111,9 @@
 - Core-Startpaket = MODULE_REGISTRY[].default_enabled (default true), DB-Spiegel platform_default_module_keys(); platform_create_tenant nutzt platform_module_keys() statt eigener Liste; why: eine Modulliste.
 - Generische Startdaten nur via _immolia_provision_defaults(agency) (versioniert, ON CONFLICT DO NOTHING, nur service_role/innerhalb platform_create_tenant), nie beim Seitenaufruf, nie automatisch für bestehende Firmen; why: reproduzierbar, idempotent, keine ASIMO-Daten als Systemdaten.
 - Systemvorlagen künftig über document_templates.system_key/system_version (eindeutig pro Firma); why: idempotentes Einspielen freigegebener Vorlagen.
+
+## Property Portal Foundation (Core Step 4)
+- Portal-Anbindung = property_portal_connections (agency_id, provider_key, display_name, enabled, protocol, secret_ref); Secrets nur als Server-Env <secret_ref>_*; Browser liest nur eigene Firma, schreibt nie; why: Portal ist Core, ASIMO nur erste Verbindung.
+- Inbound-Webhook ermittelt Firma ausschliesslich aus der eindeutigen aktiven Verbindung zum verifizierten Secret-Satz (sonst 503); Outbound-Publish/Auto-Sync nur bei aktiver Verbindung der aktiven Firma; why: kein Cross-Tenant-Publishing, kein globaler Default.
+- Protokoll legacy_asimo_v1 behält Wire-Namen (x-asimo-key, x-asimo-signature, /api/public/asimo/properties) nur als Transport; why: externe Portalseite hängt davon ab.
+- Idempotenz: portal_event_log (provider_key, portal_event_id) eindeutig; keine automatische Lead-Zusammenführung; why: legitime Anfragen nie verlieren.
