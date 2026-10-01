@@ -407,14 +407,42 @@ function PropertyDetail() {
       <div className="mb-4 flex items-center justify-between">
         <Button variant="ghost" asChild><Link to="/properties"><ArrowLeft className="mr-1 h-4 w-4" />Zurück</Link></Button>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setExposeOpen(true)}>
-            <Share2 className="mr-1 h-4 w-4" />Veröffentlichen
-          </Button>
-          <Button variant="outline" onClick={() => setFinancingOpen(true)}>
-            <Banknote className="mr-1 h-4 w-4" />Finanzierung starten
-          </Button>
-          <Button variant="outline" onClick={() => openPropertyChat(id)}><MessagesSquare className="mr-1 h-4 w-4" />Projekt-Chat</Button>
-          <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="mr-1 h-4 w-4" />Bearbeiten</Button>
+          <TooltipProvider delayDuration={200}>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setExposeOpen(true)}>
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Veröffentlichen</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setFinancingOpen(true)}>
+                    <Banknote className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Finanzierung starten</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => openPropertyChat(id)}>
+                    <MessagesSquare className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Projekt-Chat</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setEditOpen(true)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Bearbeiten</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
           <Select value={p.status} onValueChange={(v) => updateStatus.mutate(v)}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent>{STATUSES.map(s => (
