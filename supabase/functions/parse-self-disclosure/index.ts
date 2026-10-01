@@ -496,6 +496,7 @@ Mapping (typische Codes):
 CHF-Beträge: nur Zahlen, ohne Tausender, ohne Währung.
 Felder die leer/nicht vorhanden sind weglassen. Keine Halluzinationen.
 Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder leer lassen.`;
+    const systemPrompt = isLegacy ? legacyPrompt : genericPrompt;
 
 
     const userParts: Array<Record<string, unknown>> = [
@@ -639,6 +640,8 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
         children,
         form_fields_count: formFieldsCount,
         source: Object.keys(directFields).length > 0 ? "acroform+ai" : "ai",
+        source_format: sourceFormat,
+        review_required: !isLegacy,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
