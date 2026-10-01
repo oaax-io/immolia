@@ -448,19 +448,28 @@ export function findMissingVariables(template: string, ctx: TemplateContext): st
 }
 
 /**
- * Detect a skin marker in template body. Templates can opt into an alternate
- * visual skin by including `<!--skin:asimo-->` at the top.
+ * Layout-Stil (nicht Branding!). Vorlagen wählen den Stil per Marker im Body:
+ *   <!--layout:compact-->  kompaktes Vertragslayout (Akzent = Tenant-Branding)
+ *   <!--skin:asimo-->      Legacy-Alias für "compact" – bleibt für bestehende
+ *                          Vorlagen/Dokumente rückwärtskompatibel erhalten.
+ * Farben, Logo, Name und Kontakt kommen immer aus dem Tenant-Branding.
  */
-export function pickSkin(bodyHtml: string): "default" | "asimo" {
-  if (/<!--\s*skin:asimo\s*-->/i.test(bodyHtml)) return "asimo";
+export type DocumentLayout = "default" | "compact";
+export function pickLayout(bodyHtml: string): DocumentLayout {
+  if (/<!--\s*layout:compact\s*-->/i.test(bodyHtml)) return "compact";
+  if (/<!--\s*skin:asimo\s*-->/i.test(bodyHtml)) return "compact"; // legacy
   return "default";
+}
+/** @deprecated Legacy-Name, liefert den Layout-Stil. */
+export function pickSkin(bodyHtml: string): "default" | "asimo" {
+  return pickLayout(bodyHtml) === "compact" ? "asimo" : "default";
 }
 
 export function wrapHtmlDocument(
   title: string,
   bodyHtml: string,
   brand?: TemplateContext["brand"] | null,
-  options?: { customCss?: string | null; skin?: "default" | "asimo" | "auto" },
+  options?: { customCss?: string | null; skin?: "default" | "asimo" | "compact" | "auto" },
 ): string {
   const b = { ...DEFAULT_BRAND, ...(brand ?? {}) };
   const primary = b.primary_color || DEFAULT_BRAND.primary_color;
@@ -469,10 +478,11 @@ export function wrapHtmlDocument(
   const companyName = escapeAttr(b.company_name || "");
   const customCss = (options?.customCss ?? "").toString();
   const skinOpt = options?.skin ?? "auto";
-  const skin = skinOpt === "auto" ? pickSkin(bodyHtml) : skinOpt;
+  const layout: DocumentLayout =
+    skinOpt === "auto" ? pickLayout(bodyHtml) : skinOpt === "default" ? "default" : "compact";
 
-  if (skin === "asimo") {
-    return wrapAsimoSkin({ title, bodyHtml, brand: b, font, customCss });
+  if (layout === "compact") {
+    return wrapCompactLayout({ title, bodyHtml, brand: b, font, customCss });
   }
 
   const headerHtml = b.header_html
@@ -952,7 +962,7 @@ export const DEFAULT_NDA_TEMPLATE = `<h1>Vertraulichkeitsvereinbarung (NDA)</h1>
 export function defaultTemplateForType(type: string): string {
   switch (type) {
     case "mandate":
-      return DEFAULT_MANDATE_ASIMO_EXCLUSIVE;
+      return DEFAULT_MANDATE_TEMPLATE;
     case "mandate_partial":
       return DEFAULT_MANDATE_PARTIAL_TEMPLATE;
     case "reservation":
@@ -967,11 +977,12 @@ export function defaultTemplateForType(type: string): string {
 }
 
 /* ============================================================
- * ASIMO SKIN — pixel-faithful re-creation of ASIMO PDFs
- * Triggered by `<!--skin:asimo-->` marker at top of template body.
+ * COMPACT LAYOUT — kompaktes Vertragslayout (ursprünglich für ASIMO entworfen).
+ * Aktiv bei `<!--layout:compact-->` oder Legacy `<!--skin:asimo-->`.
+ * Akzentfarbe = Tenant-Branding (secondary_color, sonst primary_color).
  * ============================================================ */
 
-function wrapAsimoSkin(args: {
+function wrapCompactLayout(args: {
   title: string;
   bodyHtml: string;
   brand: NonNullable<TemplateContext["brand"]>;
@@ -979,8 +990,8 @@ function wrapAsimoSkin(args: {
   customCss: string;
 }): string {
   const { title, bodyHtml, brand, font, customCss } = args;
-  const accent = "#C8932E"; // ASIMO ocker/bronze
-  const accentSoft = "#F8F1E3";
+  const accent = brand.secondary_color || brand.primary_color || DEFAULT_BRAND.primary_color;
+  const accentSoft = `color-mix(in srgb, ${accent} 12%, #ffffff)`;
   const companyName = escapeAttr(brand.company_name || "");
   const logoUrl = brand.logo_url ? escapeAttr(brand.logo_url) : "";
   const website = brand.company_website
@@ -1025,17 +1036,17 @@ function wrapAsimoSkin(args: {
     }
   }
   :root {
-    --asimo-accent: ${accent};
-    --asimo-accent-soft: ${accentSoft};
-    --asimo-text: #1a1a1a;
-    --asimo-muted: #6b7280;
-    --asimo-rule: #d6d6d6;
+    --doc-accent: ${accent};
+    --doc-accent-soft: ${accentSoft};
+    --doc-text: #1a1a1a;
+    --doc-muted: #6b7280;
+    --doc-rule: #d6d6d6;
   }
   * { box-sizing: border-box; }
   html, body { background: #fff; margin: 0; padding: 0; }
   body {
     font-family: ${font};
-    color: var(--asimo-text);
+    color: var(--doc-text);
     line-height: 1.35;
     font-size: 8.75pt;
     -webkit-print-color-adjust: exact;
@@ -1047,19 +1058,19 @@ function wrapAsimoSkin(args: {
   .a-logo { height: 32px; width: auto; display: block; }
   .a-parties {
     display: grid; grid-template-columns: 180px 1fr; gap: 14px; margin-bottom: 12px;
-    border-left: 3px solid var(--asimo-accent); padding-left: 12px;
+    border-left: 3px solid var(--doc-accent); padding-left: 12px;
   }
   .a-zwischen { font-weight: 700; color: #111; font-size: 9.5pt; margin-bottom: 4px; }
   .a-party-l { font-size: 8.5pt; line-height: 1.35; color: #111; }
   .a-parties-r-label { font-size: 9.5pt; margin-bottom: 4px; color: #111; }
   .a-formgrid { display: grid; grid-template-columns: 90px 1fr 90px 1fr; column-gap: 10px; row-gap: 0; }
-  .a-formgrid .lbl { font-size: 8pt; color: #111; font-weight: 600; padding: 4px 0 3px; border-bottom: 1px solid var(--asimo-rule); }
-  .a-formgrid .val { font-size: 8.75pt; color: #111; padding: 4px 0 3px; border-bottom: 1px solid var(--asimo-rule); min-height: 16px; }
+  .a-formgrid .lbl { font-size: 8pt; color: #111; font-weight: 600; padding: 4px 0 3px; border-bottom: 1px solid var(--doc-rule); }
+  .a-formgrid .val { font-size: 8.75pt; color: #111; padding: 4px 0 3px; border-bottom: 1px solid var(--doc-rule); min-height: 16px; }
 
-  .a-objekt { border: 1px dashed var(--asimo-accent); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; page-break-inside: avoid; }
+  .a-objekt { border: 1px dashed var(--doc-accent); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; page-break-inside: avoid; }
   .a-objekt h3 { font-size: 11.5pt; font-weight: 800; color: #111; margin: 0 0 8px; }
   .a-objekt .a-formgrid { grid-template-columns: 100px 1fr; }
-  .a-objekt .lbl.highlight { background: var(--asimo-accent-soft); padding-left: 6px; border-bottom-color: var(--asimo-accent); }
+  .a-objekt .lbl.highlight { background: var(--doc-accent-soft); padding-left: 6px; border-bottom-color: var(--doc-accent); }
 
   .a-checks-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px 10px; font-size: 8.25pt; color: #111; margin-bottom: 8px; }
   .a-check { white-space: nowrap; }
@@ -1067,7 +1078,7 @@ function wrapAsimoSkin(args: {
   .bx.on { background: #111; color: #fff; }
 
   .a-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 7px; }
-  .a-section h4 { font-size: 9.5pt; font-weight: 700; color: var(--asimo-accent); margin: 6px 0 3px; }
+  .a-section h4 { font-size: 9.5pt; font-weight: 700; color: var(--doc-accent); margin: 6px 0 3px; }
   .a-section h4.sub { font-size: 9pt; color: #333; margin-top: 4px; }
   .a-section p { margin: 0 0 4px; text-align: justify; hyphens: auto; -webkit-hyphens: auto; font-size: 8.25pt; line-height: 1.38; }
   .commission-row { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 5px; font-size: 8.25pt; align-items: center; }
@@ -1083,7 +1094,7 @@ function wrapAsimoSkin(args: {
   .a-signatures {
     margin-top: 14px;
     padding-top: 10px;
-    border-top: 1px solid var(--asimo-rule);
+    border-top: 1px solid var(--doc-rule);
     width: calc(50% - 9px);
     margin-left: auto;
     display: block;
@@ -1105,13 +1116,13 @@ function wrapAsimoSkin(args: {
     left: 0;
     bottom: 6px;
     font-size: 11pt;
-    color: var(--asimo-accent);
+    color: var(--doc-accent);
     line-height: 1;
     opacity: 0.6;
   }
-  .a-sig .label { font-size: 7.75pt; color: var(--asimo-muted); margin-top: 3px; }
+  .a-sig .label { font-size: 7.75pt; color: var(--doc-muted); margin-top: 3px; }
 
-  .a-footer { position: fixed; bottom: 6mm; left: 14mm; right: 14mm; display: flex; justify-content: space-between; align-items: center; font-size: 8pt; color: var(--asimo-muted); border-top: 1px solid var(--asimo-rule); padding-top: 6px; }
+  .a-footer { position: fixed; bottom: 6mm; left: 14mm; right: 14mm; display: flex; justify-content: space-between; align-items: center; font-size: 8pt; color: var(--doc-muted); border-top: 1px solid var(--doc-rule); padding-top: 6px; }
   .a-foot-left { display: flex; align-items: center; gap: 8px; }
   .a-foot-left img { height: 12px; }
   .a-foot-mark { font-weight: 700; color: #111; font-size: 9pt; letter-spacing: 0.05em; }
@@ -1570,7 +1581,8 @@ export const DEFAULT_NDA_ASIMO = `<!--skin:asimo-->
 `;
 
 /* ============================================================
- * ASIMO Template Registry – used by the seeder + settings UI
+ * ASIMO-Tenantinhalte (Legacy). NICHT als Immolia-Default verwenden; wird von
+ * keinem Code mehr eingespielt. Neutrale Defaults: src/lib/template-catalog.ts
  * ============================================================ */
 export const ASIMO_TEMPLATES: Array<{
   key: string;
