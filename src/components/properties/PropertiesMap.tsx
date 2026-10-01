@@ -359,7 +359,7 @@ export function PropertiesMap({ properties }: Props) {
             <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/95 pl-9 pr-8 shadow-soft backdrop-blur" />
             {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
           </div>
-          <Button type="button" variant={filtersOpen ? "default" : "outline"} className="h-10 shrink-0 rounded-full bg-background/95 shadow-soft backdrop-blur data-[on=true]:bg-primary" data-on={filtersOpen} onClick={() => setFiltersOpen((v) => !v)}>
+          <Button type="button" variant={filtersOpen ? "default" : "outline"} className={`h-10 shrink-0 rounded-full shadow-soft ${filtersOpen ? "" : "bg-background/95 backdrop-blur"}`} onClick={() => setFiltersOpen((v) => !v)}>
             <SlidersHorizontal className="mr-1.5 h-4 w-4" />{filtersOpen ? "Filter ausblenden" : "Filter"}{hasMapFilters && !filtersOpen ? " •" : ""}
           </Button>
           <span className="hidden shrink-0 rounded-full border bg-background/95 px-3 py-2 text-xs shadow-soft backdrop-blur sm:inline">
