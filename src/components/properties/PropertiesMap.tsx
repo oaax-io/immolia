@@ -355,7 +355,7 @@ export function PropertiesMap({ properties }: Props) {
       <div className="absolute left-3 right-16 top-3 z-20 flex flex-col items-start gap-2">
         <div className="flex w-full items-center gap-2">
           <div className="relative w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 z-10 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={mapSearch} onChange={(e) => setMapSearch(e.target.value)} placeholder="Titel, Adresse, Ort suchen…" className="h-10 rounded-full border bg-background/95 pl-9 pr-8 shadow-soft backdrop-blur" />
             {mapSearch && <button type="button" aria-label="Suche leeren" onClick={() => setMapSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
           </div>
