@@ -7,11 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { matchClientToProperties, scoreMatch, type ScoreBreakdown, type FinancialCapacity } from "@/lib/matching";
+import { matchClientToProperties, buildCityPostalIndex, type PropertyMatch, type FinancialCapacity, type CheckStatus } from "@/lib/matching";
 import { formatCurrency, clientTypeLabels, propertyTypeLabels } from "@/lib/format";
-import { Sparkles, ExternalLink, Users, Search, Target, Plus, Pencil, Bell, BellRing, ImageOff } from "lucide-react";
+import { ExternalLink, Users, Search, Target, Plus, Pencil, Bell, BellRing, ImageOff, TrendingUp } from "lucide-react";
 import { SearchProfileDialog, type SearchProfile } from "@/components/matching/SearchProfileDialog";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -41,10 +40,6 @@ export const Route = createFileRoute("/_app/matching")({
   component: MatchingPage,
 });
 
-interface GlobalMatch extends ScoreBreakdown {
-  client: Client;
-  property: Property;
-}
 
 function MatchingPage() {
   const { clientId, view, profileId } = Route.useSearch();
@@ -52,7 +47,8 @@ function MatchingPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [query, setQuery] = useState("");
-  const [minScore, setMinScore] = useState(60);
+  const [minScore, setMinScore] = useState(50);
+  const [filter, setFilter] = useState<FilterValue>("all");
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [editProfile, setEditProfile] = useState<SearchProfile | null>(null);
 
@@ -194,142 +190,146 @@ function MatchingPage() {
     return out;
   }, [disclosures, relationships, clients]);
 
-  // Global matches: alle Kunde × Immobilie Paare, gefiltert + sortiert
-  const globalMatches = useMemo<GlobalMatch[]>(() => {
-    const seekers = clients.filter((c) => c.client_type === "buyer" || c.client_type === "tenant");
-    const available = properties.filter(
-      (p) => p.status === "available" || p.status === "draft" || p.status === "active" || p.status === "preparation",
-    );
-    const out: GlobalMatch[] = [];
-    for (const c of seekers) {
-      for (const p of available) {
-        const r = scoreMatch(c, p, capacityMap.get(c.id) ?? null);
-        if (r.score >= minScore) out.push({ client: c, property: p, ...r });
+  const cityPostalIndex = useMemo(() => buildCityPostalIndex(properties), [properties]);
+  const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+
+  /**
+   * Suchende: aktive Suchprofile sind die Hauptbasis. Kunden ohne aktives Profil
+   * (Käufer/Mieter/Investoren mit eigenen Kriterien) laufen als Fallback mit.
+   */
+  const seekers = useMemo<Seeker[]>(() => {
+    const now = new Date();
+    const out: Seeker[] = [];
+    const withProfile = new Set<string>();
+    for (const p of searchProfiles as SearchProfile[]) {
+      const base = clientById.get(p.client_id);
+      if (!base || !p.is_active || (p.expires_at && new Date(p.expires_at) <= now)) continue;
+      withProfile.add(p.client_id);
+      const investor =
+        (p.yield_target != null && Number(p.yield_target) > 0) ||
+        (p.usage_types ?? []).some((u) => /invest|anlage|rendite/i.test(u)) ||
+        p.role_type === "investor";
+      out.push({
+        key: `p:${p.id}`,
+        client: base,
+        profile: p,
+        investor,
+        criteria: {
+          ...base,
+          budget_min: p.budget_min,
+          budget_max: p.budget_max,
+          rooms_min: p.rooms_min,
+          area_min: p.area_min,
+          area_max: p.area_max,
+          preferred_cities: p.preferred_cities,
+          preferred_types: (p.preferred_property_types ?? []) as Client["preferred_types"],
+          preferred_listing: p.listing_type,
+        } as Client,
+      });
+    }
+    for (const c of clients) {
+      if (withProfile.has(c.id)) continue;
+      if (c.client_type !== "buyer" && c.client_type !== "tenant" && c.client_type !== "investor") continue;
+      out.push({ key: `c:${c.id}`, client: c, profile: null, investor: c.client_type === "investor", criteria: c });
+    }
+    return out;
+  }, [searchProfiles, clients, clientById]);
+
+  const matchesBySeeker = useMemo(() => {
+    const m = new Map<string, PropertyMatch[]>();
+    for (const s of seekers) {
+      m.set(
+        s.key,
+        matchClientToProperties(s.criteria, properties, minScore, capacityMap.get(s.client.id) ?? null, {
+          investor: s.investor,
+          cityPostalIndex,
+        }),
+      );
+    }
+    return m;
+  }, [seekers, properties, minScore, capacityMap, cityPostalIndex]);
+
+  const kpis = useMemo(() => {
+    let total = 0, top = 0, good = 0, withHits = 0;
+    const yields: number[] = [];
+    for (const s of seekers) {
+      const list = matchesBySeeker.get(s.key) ?? [];
+      if (list.length) withHits++;
+      for (const m of list) {
+        total++;
+        if (m.score >= 80) top++;
+        else if (m.score >= 65) good++;
+        if (m.isInvestment && m.property.gross_yield != null) yields.push(Number(m.property.gross_yield));
       }
     }
-    return out.sort((a, b) => b.score - a.score);
-  }, [clients, properties, minScore, capacityMap]);
+    const subscribed = seekers.filter((s) => s.profile && subscribedIds.has(s.profile.id)).length;
+    const avgYield = yields.length ? yields.reduce((a, b) => a + b, 0) / yields.length : null;
+    return { total, top, good, rest: total - top - good, withHits, subscribed, avgYield };
+  }, [seekers, matchesBySeeker, subscribedIds]);
 
-  const filteredGlobal = useMemo(() => {
+  const visibleSeekers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return globalMatches;
-    return globalMatches.filter(
-      (m) =>
-        m.client.full_name?.toLowerCase().includes(q) ||
-        m.property.title?.toLowerCase().includes(q) ||
-        m.property.city?.toLowerCase().includes(q),
-    );
-  }, [globalMatches, query]);
+    return seekers
+      .filter((s) => {
+        const list = matchesBySeeker.get(s.key) ?? [];
+        if (filter === "subscribed" && !(s.profile && subscribedIds.has(s.profile.id))) return false;
+        if (filter === "sale" && s.criteria.preferred_listing === "rent") return false;
+        if (filter === "rent" && s.criteria.preferred_listing !== "rent") return false;
+        if (filter === "investor" && !s.investor) return false;
+        if (filter === "top" && !list.some((m) => m.score >= 80)) return false;
+        if (q && !s.client.full_name?.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const la = matchesBySeeker.get(a.key) ?? [], lb = matchesBySeeker.get(b.key) ?? [];
+        return (lb[0]?.score ?? 0) - (la[0]?.score ?? 0) || lb.length - la.length;
+      });
+  }, [seekers, matchesBySeeker, filter, query, subscribedIds]);
 
-  // Pro-Kunde Ansicht (alte Logik)
-  const selected = clients.find((c) => c.id === clientId) ?? clients[0];
-  const clientMatches = useMemo(
-    () => (selected ? matchClientToProperties(selected, properties, 40, capacityMap.get(selected.id) ?? null) : []),
-    [selected, properties, capacityMap],
-  );
+  const selectedSeeker =
+    seekers.find((s) => (profileId ? s.profile?.id === profileId : clientId && s.client.id === clientId)) ??
+    (profileId || clientId ? undefined : visibleSeekers[0]);
+  const selectedMatches = selectedSeeker ? matchesBySeeker.get(selectedSeeker.key) ?? [] : [];
 
-
-  // Top-Kunden mit den meisten guten Matches (für die Sidebar-Liste)
-  const clientLeaderboard = useMemo(() => {
-    const map = new Map<string, { client: Client; count: number; best: number }>();
-    for (const m of globalMatches) {
-      const cur = map.get(m.client.id) ?? { client: m.client, count: 0, best: 0 };
-      cur.count++;
-      cur.best = Math.max(cur.best, m.score);
-      map.set(m.client.id, cur);
-    }
-    return [...map.values()].sort((a, b) => b.best - a.best || b.count - a.count).slice(0, 8);
-  }, [globalMatches]);
+  const selectSeeker = (s: Seeker) =>
+    navigate({ search: { clientId: s.client.id, view: s.profile ? "profile" : "client", profileId: s.profile?.id ?? "" } });
 
   const save = useMutation({
     mutationFn: async (m: { client_id: string; property_id: string; score: number; reasons: string[] }) => {
       const { error } = await supabase.from("matches").upsert(
-        {
-          client_id: m.client_id,
-          property_id: m.property_id,
-          score: m.score,
-          reasons: m.reasons,
-          status: "shortlisted",
-        },
+        { client_id: m.client_id, property_id: m.property_id, score: m.score, reasons: m.reasons, status: "shortlisted" },
         { onConflict: "client_id,property_id" },
       );
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Match gespeichert");
+      toast.success("Match vorgemerkt");
       qc.invalidateQueries({ queryKey: ["matches"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const setView = (v: "all" | "client" | "profile") =>
-    navigate({ search: { clientId, view: v, profileId } });
-
-  const clientNameById = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of clients) m.set(c.id, c.full_name ?? "");
-    return m;
-  }, [clients]);
-  const activeProfiles = useMemo(
-    () =>
-      (searchProfiles as SearchProfile[]).filter(
-        (p) =>
-          p.is_active &&
-          clientNameById.has(p.client_id) &&
-          (!p.expires_at || new Date(p.expires_at) > new Date()),
-      ),
-    [searchProfiles, clientNameById],
-  );
-
-
-
-  /** Suchprofil → Pseudo-Kunde für den bestehenden Scoring-Algorithmus */
-  const profileAsClient = (p: SearchProfile): Client => {
-    const base = clients.find((c) => c.id === p.client_id);
-    return {
-      ...(base as Client),
-      budget_min: p.budget_min,
-      budget_max: p.budget_max,
-      rooms_min: p.rooms_min,
-      area_min: p.area_min,
-      area_max: p.area_max,
-      preferred_cities: p.preferred_cities,
-      preferred_types: (p.preferred_property_types ?? []) as Client["preferred_types"],
-      preferred_listing: p.listing_type,
-    } as Client;
-  };
-
-  const profileMatchCount = (p: SearchProfile) => {
-    const pseudo = profileAsClient(p);
-    if (!pseudo?.id) return 0;
-    return matchClientToProperties(pseudo, properties, 60, capacityMap.get(p.client_id) ?? null).length;
-  };
-
-  const selectedProfile = (searchProfiles as SearchProfile[]).find((p) => p.id === profileId) ?? null;
-  const profileMatches = useMemo(() => {
-    if (!selectedProfile) return [];
-    const pseudo = profileAsClient(selectedProfile);
-    if (!pseudo?.id) return [];
-    return matchClientToProperties(pseudo, properties, 40, capacityMap.get(selectedProfile.client_id) ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProfile, properties, capacityMap, clients]);
+  const criteriaChips = (s: Seeker) =>
+    [
+      s.criteria.preferred_listing === "rent" ? "Miete" : s.criteria.preferred_listing === "sale" ? "Kauf" : null,
+      s.criteria.budget_max ? `bis ${formatCurrency(Number(s.criteria.budget_max))}` : null,
+      s.criteria.rooms_min ? `≥ ${s.criteria.rooms_min} Zi` : null,
+      s.criteria.area_min ? `≥ ${s.criteria.area_min} m²` : null,
+      ...(s.criteria.preferred_cities ?? []),
+      ...((s.criteria.preferred_types ?? []) as string[]).map((t) => propertyTypeLabels[t as keyof typeof propertyTypeLabels] ?? t),
+    ].filter(Boolean) as string[];
 
   return (
     <>
       <PageHeader
         title={
           <span className="inline-flex items-center gap-2.5">
-            <Target className="h-8 w-8 text-[#6F6B94]" />
+            <Target className="h-8 w-8 text-primary" />
             Matching
           </span>
         }
         action={
-          <Button
-            onClick={() => {
-              setEditProfile(null);
-              setProfileDialogOpen(true);
-            }}
-          >
+          <Button onClick={() => { setEditProfile(null); setProfileDialogOpen(true); }}>
             <Plus className="mr-2 h-4 w-4" />
             Suchprofil erstellen
           </Button>
@@ -340,6 +340,7 @@ function MatchingPage() {
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
         profile={editProfile}
+        defaultClientId={selectedSeeker?.client.id}
       />
 
       {clients.length === 0 ? (
@@ -350,423 +351,346 @@ function MatchingPage() {
         />
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Tabs value={view} onValueChange={(v) => setView(v as "all" | "client" | "profile")}>
-              <TabsList className="bg-primary/15">
-                <TabsTrigger
-                  value="all"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  Alle Matches
-                </TabsTrigger>
-                <TabsTrigger
-                  value="client"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  Pro Kunde
-                </TabsTrigger>
-                <TabsTrigger
-                  value="profile"
-                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-                >
-                  Suchprofile
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {view === "profile" ? (
-              <>
-                <span className="text-sm text-muted-foreground">Suchprofil:</span>
-                <Select
-                  value={selectedProfile?.id ?? ""}
-                  onValueChange={(v) => navigate({ search: { clientId, view: "profile", profileId: v } })}
-                >
-                  <SelectTrigger className="h-9 w-80"><SelectValue placeholder="Suchprofil wählen" /></SelectTrigger>
-                  <SelectContent>
-                    {activeProfiles.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {clientNameById.get(p.client_id) || "Kunde"} · {p.listing_type === "rent" ? "Miete" : "Kauf"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedProfile && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditProfile(selectedProfile);
-                      setProfileDialogOpen(true);
-                    }}
-                  >
-                    <Pencil className="mr-2 h-3.5 w-3.5" />
-                    Bearbeiten
-                  </Button>
-                )}
-                <Badge variant="secondary" className="ml-auto">{profileMatches.length} Treffer</Badge>
-              </>
-            ) : view === "all" ? (
-              <>
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Kunde, Objekt oder Stadt suchen…"
-                    className="h-9 w-72 pl-8"
-                  />
+          {/* KPI-Leiste */}
+          <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardContent className="flex items-center gap-4 p-4">
+                <MatchDonut top={kpis.top} good={kpis.good} rest={kpis.rest} />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Matches gesamt</p>
+                  <p className="font-display text-2xl font-bold tabular-nums">{kpis.total}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    <span className="font-medium" style={{ color: "var(--chart-2)" }}>{kpis.top} Volltreffer</span> · {kpis.good} gut
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Min. Score</span>
-                  <Select value={String(minScore)} onValueChange={(v) => setMinScore(Number(v))}>
-                    <SelectTrigger className="h-9 w-24"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {[40, 50, 60, 70, 80, 90].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n}%</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Badge variant="secondary" className="ml-auto">{filteredGlobal.length} Treffer</Badge>
-              </>
-            ) : (
-              <>
-                <span className="text-sm text-muted-foreground">Kunde:</span>
-                <Select
-                  value={selected?.id ?? ""}
-                  onValueChange={(v) => navigate({ search: { clientId: v, view: "client", profileId } })}
-                >
-                  <SelectTrigger className="h-9 w-72"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name} · {clientTypeLabels[c.client_type as keyof typeof clientTypeLabels]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selected && (
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {selected.budget_max && <Badge variant="secondary">bis {formatCurrency(Number(selected.budget_max))}</Badge>}
-                    {selected.preferred_cities?.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}
-                    {selected.rooms_min && <Badge variant="secondary">≥ {selected.rooms_min} Zi</Badge>}
-                  </div>
-                )}
-              </>
-            )}
+              </CardContent>
+            </Card>
+            <KpiCard icon={Users} label="Suchende mit Treffern" value={`${kpis.withHits} / ${seekers.length}`} hint="sofort bedienbar" />
+            <KpiCard icon={BellRing} label="Abonnierte Suchprofile" value={String(kpis.subscribed)} hint="du wirst bei neuen Treffern benachrichtigt" />
+            <KpiCard
+              icon={TrendingUp}
+              label="Ø Bruttorendite Anlage-Matches"
+              value={kpis.avgYield != null ? `${kpis.avgYield.toFixed(1)} %` : "–"}
+              hint="nur Anlageobjekte & Investoren"
+            />
           </div>
 
-          {view === "all" ? (
-            <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-              <div>
-                {filteredGlobal.length === 0 ? (
-                  <EmptyState
-                    title="Keine Matches gefunden"
-                    description="Senke den Mindest-Score oder erfasse mehr Kunden / Immobilien mit Suchprofil."
-                  />
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {filteredGlobal.slice(0, 60).map((m) => (
-                      <MatchCard
-                        key={`${m.client.id}_${m.property.id}`}
-                        client={m.client}
-                        property={m.property}
-                        coverUrl={coverByProperty.get(m.property.id)}
-                        score={m.score}
-                        reasons={m.reasons}
-                        onSave={() => save.mutate({ client_id: m.client.id, property_id: m.property.id, score: m.score, reasons: m.reasons })}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <aside className="space-y-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                      <Users className="h-4 w-4 text-primary" />
-                      Top Kunden
-                    </h3>
-                    {clientLeaderboard.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Noch keine Matches.</p>
-                    ) : (
-                      <ul className="space-y-1.5">
-                        {clientLeaderboard.map((l) => (
-                          <li key={l.client.id}>
-                            <button
-                              onClick={() => navigate({ search: { clientId: l.client.id, view: "client", profileId } })}
-                              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/60"
-                            >
-                              <span className="truncate">{l.client.full_name}</span>
-                              <span className="flex shrink-0 items-center gap-1.5">
-                                <span className="text-[10px] text-muted-foreground">{l.count}×</span>
-                                <Badge variant="secondary" className="font-mono tabular-nums text-[10px]">{l.best}%</Badge>
-                              </span>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <h3 className="flex items-center gap-2 text-sm font-semibold">
-                        <Target className="h-4 w-4 text-primary" />
-                        Aktive Suchprofile
-                      </h3>
-                      <Badge variant="secondary" className="text-[10px]">{activeProfiles.length}</Badge>
-                    </div>
-                    {activeProfiles.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        Noch keine Suchprofile. Erstelle oben rechts ein Suchprofil.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {activeProfiles.slice(0, 8).map((p) => (
-                          <button
-                            key={p.id}
-                            onClick={() => navigate({ search: { clientId: p.client_id, view: "profile", profileId: p.id } })}
-                            className="w-full rounded-lg border bg-muted/40 p-2.5 text-left transition hover:bg-accent/60"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-sm font-medium">
-                                {clientNameById.get(p.client_id) || "Kunde"}
-                              </span>
-                              <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
-                                {profileMatchCount(p)} Objekte
-                              </Badge>
-                            </div>
-                            <p className="mt-1 truncate text-[11px] text-muted-foreground">
-                              {[
-                                p.listing_type === "rent" ? "Miete" : "Kauf",
-                                p.budget_max ? `bis ${formatCurrency(Number(p.budget_max))}` : null,
-                                p.rooms_min ? `≥ ${p.rooms_min} Zi` : null,
-                                p.preferred_cities?.length ? p.preferred_cities.join(", ") : null,
-                              ].filter(Boolean).join(" · ")}
+          <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+            {/* Links: Suchende */}
+            <Card className="h-fit lg:sticky lg:top-4">
+              <CardContent className="space-y-3 p-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Kunde suchen…" className="h-9 pl-8" />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={() => setFilter(f.value)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+                        filter === f.value ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="max-h-[calc(100vh-320px)] space-y-1.5 overflow-y-auto pr-1">
+                  {visibleSeekers.length === 0 ? (
+                    <p className="p-3 text-center text-xs text-muted-foreground">Keine Suchenden für diesen Filter.</p>
+                  ) : (
+                    visibleSeekers.map((s) => {
+                      const list = matchesBySeeker.get(s.key) ?? [];
+                      const best = list[0]?.score ?? 0;
+                      const active = selectedSeeker?.key === s.key;
+                      const subscribed = !!s.profile && subscribedIds.has(s.profile.id);
+                      return (
+                        <div
+                          key={s.key}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => selectSeeker(s)}
+                          onKeyDown={(e) => e.key === "Enter" && selectSeeker(s)}
+                          className={`flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition ${
+                            active ? "border-primary bg-primary/10" : "bg-background hover:bg-accent/60"
+                          }`}
+                        >
+                          <MiniGauge value={best} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{s.client.full_name}</p>
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              {s.profile ? "Suchprofil" : "Kundenangaben"}
+                              {s.investor ? " · Investor" : ""}
+                              {s.criteria.budget_max ? ` · bis ${formatCurrency(Number(s.criteria.budget_max))}` : ""}
                             </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </aside>
-            </div>
-          ) : view === "profile" ? (
-            !selectedProfile ? (
-              activeProfiles.length === 0 ? (
-                <EmptyState
-                  title="Noch keine Suchprofile"
-                  description="Erstelle oben rechts ein Suchprofil."
-                />
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {activeProfiles.map((p) => {
-                    const criteria = [
-                      p.listing_type === "rent" ? "Miete" : "Kauf",
-                      p.budget_min ? `ab ${formatCurrency(Number(p.budget_min))}` : null,
-                      p.budget_max ? `bis ${formatCurrency(Number(p.budget_max))}` : null,
-                      p.rooms_min ? `≥ ${p.rooms_min} Zi` : null,
-                      p.area_min ? `≥ ${p.area_min} m²` : null,
-                      ...(p.preferred_cities ?? []),
-                      ...((p.preferred_property_types ?? []) as string[]).map(
-                        (t) => propertyTypeLabels[t as keyof typeof propertyTypeLabels] ?? t,
-                      ),
-                    ].filter(Boolean) as string[];
-                    return (
-                      <Card key={p.id} className="transition hover:shadow-glow">
-                        <CardContent className="space-y-3 p-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="truncate font-medium">{clientNameById.get(p.client_id)}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {p.expires_at
-                                  ? `Läuft ab am ${new Date(p.expires_at).toLocaleDateString("de-CH")}`
-                                  : "Unbefristet"}
-                              </p>
-
-                            </div>
-                            <Badge variant="secondary" className="shrink-0 font-mono text-[10px]">
-                              {profileMatchCount(p)} Objekte
-                            </Badge>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {criteria.length === 0 ? (
-                              <span className="text-xs text-muted-foreground">Keine Kriterien hinterlegt</span>
-                            ) : (
-                              criteria.map((c) => (
-                                <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>
-                              ))
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <Badge variant={list.length ? "default" : "secondary"} className="tabular-nums text-[10px]">
+                              {list.length}
+                            </Badge>
+                            {s.profile && (
+                              <button
+                                title={subscribed ? "Abo beenden" : "Treffer abonnieren"}
+                                disabled={!user?.id || toggleSubscription.isPending}
+                                onClick={(e) => { e.stopPropagation(); toggleSubscription.mutate(s.profile!.id); }}
+                                className={subscribed ? "text-primary" : "text-muted-foreground hover:text-foreground"}
+                              >
+                                {subscribed ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+                              </button>
                             )}
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => navigate({ search: { clientId: p.client_id, view: "profile", profileId: p.id } })}
-                            >
-                              <Target className="mr-2 h-3.5 w-3.5" />
-                              Treffer anzeigen
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={subscribedIds.has(p.id) ? "default" : "outline"}
-                              title={subscribedIds.has(p.id) ? "Abo beenden" : "Treffer abonnieren"}
-                              disabled={!user?.id || toggleSubscription.isPending}
-                              onClick={() => toggleSubscription.mutate(p.id)}
-                            >
-                              {subscribedIds.has(p.id) ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditProfile(p);
-                                setProfileDialogOpen(true);
-                              }}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              )
+              </CardContent>
+            </Card>
 
-            ) : profileMatches.length === 0 ? (
-              <EmptyState
-                title="Keine passenden Immobilien"
-                description="Verfeinere das Suchprofil oder erfasse weitere Objekte."
-              />
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {profileMatches.map(({ property: p, score, reasons }) => (
-                  <MatchCard
-                    key={p.id}
-                    property={p}
-                    coverUrl={coverByProperty.get(p.id)}
-                    score={score}
-                    reasons={reasons}
-                    onSave={() => save.mutate({ client_id: selectedProfile.client_id, property_id: p.id, score, reasons })}
-                  />
-                ))}
-              </div>
-            )
-          ) : clientMatches.length === 0 ? (
-            <EmptyState title="Keine passenden Immobilien" description="Erfasse mehr Objekte oder verfeinere das Suchprofil." />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {clientMatches.map(({ property: p, score, reasons }) => (
-                <MatchCard
-                  key={p.id}
-                  property={p}
-                  coverUrl={coverByProperty.get(p.id)}
-                  score={score}
-                  reasons={reasons}
-                  onSave={() => save.mutate({ client_id: selected!.id, property_id: p.id, score, reasons })}
-                />
-              ))}
+            {/* Rechts: Treffer */}
+            <div className="min-w-0 space-y-3">
+              {!selectedSeeker ? (
+                <EmptyState title="Suchende auswählen" description="Wähle links einen Kunden oder ein Suchprofil." />
+              ) : (
+                <>
+                  <Card>
+                    <CardContent className="flex flex-wrap items-center gap-3 p-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link to="/clients/$id" params={{ id: selectedSeeker.client.id }} className="truncate font-display text-lg font-semibold hover:underline">
+                            {selectedSeeker.client.full_name}
+                          </Link>
+                          <Badge variant="outline" className="text-[10px]">
+                            {selectedSeeker.profile ? "Suchprofil" : clientTypeLabels[selectedSeeker.client.client_type as keyof typeof clientTypeLabels]}
+                          </Badge>
+                          {capacityMap.has(selectedSeeker.client.id) ? (
+                            <Badge variant="secondary" className="text-[10px]">Selbstauskunft vorhanden</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground">Keine Selbstauskunft</Badge>
+                          )}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {criteriaChips(selectedSeeker).length === 0 ? (
+                            <span className="text-xs text-muted-foreground">Keine Suchkriterien hinterlegt</span>
+                          ) : (
+                            criteriaChips(selectedSeeker).map((c) => <Badge key={c} variant="secondary" className="text-[10px]">{c}</Badge>)
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Min.</span>
+                        <Select value={String(minScore)} onValueChange={(v) => setMinScore(Number(v))}>
+                          <SelectTrigger className="h-9 w-20"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[40, 50, 60, 70, 80].map((n) => <SelectItem key={n} value={String(n)}>{n}%</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {selectedSeeker.profile && (
+                          <Button size="sm" variant="outline" onClick={() => { setEditProfile(selectedSeeker.profile); setProfileDialogOpen(true); }}>
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />Profil
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {selectedMatches.length === 0 ? (
+                    <EmptyState
+                      title="Keine passenden Objekte"
+                      description="Kauf/Miete, Verfügbarkeit oder Budget (max. +10 %) schliessen alle Objekte aus. Senke den Mindestwert oder passe die Kriterien an."
+                    />
+                  ) : (
+                    <div className="grid gap-3 xl:grid-cols-2">
+                      {selectedMatches.map((m) => (
+                        <MatchCard
+                          key={m.property.id}
+                          match={m}
+                          coverUrl={coverByProperty.get(m.property.id)}
+                          onSave={() => save.mutate({ client_id: selectedSeeker.client.id, property_id: m.property.id, score: m.score, reasons: m.reasons })}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
+          </div>
         </>
       )}
     </>
   );
 }
 
-function affordabilityChipClass(ratio: number): string {
-  if (ratio <= 28) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/30";
-  if (ratio <= 33) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/20";
-  if (ratio <= 38) return "bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/30";
-  return "bg-destructive/15 text-destructive ring-1 ring-destructive/30";
+const FILTERS = [
+  { value: "all", label: "Alle" },
+  { value: "subscribed", label: "Abonniert" },
+  { value: "sale", label: "Kauf" },
+  { value: "rent", label: "Miete" },
+  { value: "investor", label: "Investoren" },
+  { value: "top", label: "≥ 80 %" },
+] as const;
+type FilterValue = (typeof FILTERS)[number]["value"];
+
+interface Seeker {
+  key: string;
+  client: Client;
+  profile: SearchProfile | null;
+  investor: boolean;
+  criteria: Client;
 }
 
-function MatchCard({
-  client,
-  property: p,
-  coverUrl,
-  score,
-  reasons,
-  onSave,
-}: {
-  client?: Client;
-  property: Property;
-  coverUrl?: string;
-  score: number;
-  reasons: string[];
-  onSave: () => void;
-}) {
-  const cover = coverUrl ?? toPublicUrl(p.images?.[0]);
-  const [imgFailed, setImgFailed] = useState(false);
-  return (
-    <Card className="overflow-hidden transition hover:shadow-glow">
-      <div className="aspect-[16/10] overflow-hidden bg-muted">
-        {cover && !imgFailed ? (
-          <img
-            src={cover}
-            alt={p.title}
-            className="h-full w-full object-cover"
-            loading="lazy"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-soft text-muted-foreground">
-            <ImageOff className="h-6 w-6 opacity-60" />
-            <span className="text-xs">Kein Bild</span>
-          </div>
-        )}
-      </div>
+const scoreColor = (v: number) => (v >= 80 ? "var(--chart-2)" : v >= 65 ? "var(--chart-1)" : "var(--chart-4)");
 
-      <CardContent className="p-4">
-        {client && (
-          <p className="mb-1 truncate text-xs font-medium text-primary">
-            <Users className="mr-1 inline h-3 w-3" />
-            {client.full_name}
-          </p>
-        )}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 font-semibold">{p.title}</h3>
-          <div className="flex shrink-0 items-center gap-1 rounded-full bg-gradient-brand px-2.5 py-1 text-xs font-bold text-primary-foreground">
-            <Sparkles className="h-3 w-3" />{score}%
-          </div>
+function KpiCard({ icon: Icon, label, value, hint }: { icon: typeof Users; label: string; value: string; hint: string }) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {[p.city, propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]].filter(Boolean).join(" · ")}
-        </p>
-        <p className="mt-1.5 font-display text-base font-bold">{formatCurrency(p.price ? Number(p.price) : null)}</p>
-        <div className="mt-2 flex flex-wrap gap-1">
-          {reasons.slice(0, 4).map((r) => {
-            const m = r.match(/Tragbarkeit\s+(\d+(?:\.\d+)?)%/i);
-            if (m) {
-              const ratio = Number(m[1]);
-              return (
-                <span
-                  key={r}
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${affordabilityChipClass(ratio)}`}
-                  title="Kalkulatorische Tragbarkeit (Richtwert max. 33 %)"
-                >
-                  {r}
-                </span>
-              );
-            }
-            return (
-              <span key={r} className="rounded-full bg-accent/60 px-2 py-0.5 text-[10px] text-accent-foreground">{r}</span>
-            );
-          })}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" className="flex-1" onClick={onSave}>Vormerken</Button>
-          <Button size="sm" variant="outline" asChild>
-            <Link to="/properties/$id" params={{ id: p.id }}><ExternalLink className="h-4 w-4" /></Link>
-          </Button>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="font-display text-2xl font-bold tabular-nums">{value}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{hint}</p>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function MatchDonut({ top, good, rest }: { top: number; good: number; rest: number }) {
+  const total = top + good + rest || 1;
+  const r = 20, c = 2 * Math.PI * r;
+  let off = 0;
+  const segs = [
+    { v: top, color: "var(--chart-2)" },
+    { v: good, color: "var(--chart-1)" },
+    { v: rest, color: "var(--chart-4)" },
+  ];
+  return (
+    <svg viewBox="0 0 50 50" className="h-14 w-14 shrink-0 -rotate-90">
+      <circle cx="25" cy="25" r={r} fill="none" strokeWidth="7" style={{ stroke: "var(--muted)" }} />
+      {segs.map((s, i) => {
+        const len = (s.v / total) * c;
+        const el = (
+          <circle key={i} cx="25" cy="25" r={r} fill="none" strokeWidth="7" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-off} style={{ stroke: s.color }} />
+        );
+        off += len;
+        return el;
+      })}
+    </svg>
+  );
+}
+
+function MiniGauge({ value }: { value: number }) {
+  const r = 15, c = 2 * Math.PI * r;
+  return (
+    <div className="relative h-10 w-10 shrink-0">
+      <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90">
+        <circle cx="20" cy="20" r={r} fill="none" strokeWidth="4" style={{ stroke: "var(--muted)" }} />
+        <circle cx="20" cy="20" r={r} fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(value / 100) * c} ${c}`} style={{ stroke: scoreColor(value) }} />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums">{value || "–"}</span>
+    </div>
+  );
+}
+
+function ScoreGauge({ value }: { value: number }) {
+  const r = 34, half = Math.PI * r;
+  return (
+    <div className="relative h-12 w-20 shrink-0">
+      <svg viewBox="0 0 80 46" className="h-12 w-20">
+        <path d="M6 42 A34 34 0 0 1 74 42" fill="none" strokeWidth="7" strokeLinecap="round" style={{ stroke: "var(--muted)" }} />
+        <path d="M6 42 A34 34 0 0 1 74 42" fill="none" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${(value / 100) * half} ${half}`} style={{ stroke: scoreColor(value) }} />
+      </svg>
+      <span className="absolute inset-x-0 bottom-0 text-center text-sm font-bold tabular-nums">{value}%</span>
+    </div>
+  );
+}
+
+const statusDot: Record<CheckStatus, string> = {
+  ok: "var(--chart-2)",
+  partial: "var(--chart-1)",
+  miss: "var(--destructive)",
+  na: "var(--muted-foreground)",
+};
+
+function MatchCard({ match: m, coverUrl, onSave }: { match: PropertyMatch; coverUrl?: string; onSave: () => void }) {
+  const p = m.property;
+  const cover = coverUrl ?? toPublicUrl(p.images?.[0]);
+  const [imgFailed, setImgFailed] = useState(false);
+  const isRent = p.listing_type === "rent";
+  const a = m.affordability;
+  return (
+    <Card className="overflow-hidden transition hover:shadow-glow">
+      <div className="flex">
+        <div className="relative w-32 shrink-0 overflow-hidden bg-muted sm:w-40">
+          {cover && !imgFailed ? (
+            <img src={cover} alt={p.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" onError={() => setImgFailed(true)} />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+              <ImageOff className="h-6 w-6 opacity-60" />
+              <span className="text-xs">Kein Bild</span>
+            </div>
+          )}
+        </div>
+        <CardContent className="min-w-0 flex-1 space-y-2.5 p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="line-clamp-1 font-semibold">{p.title}</h3>
+              <p className="truncate text-xs text-muted-foreground">
+                {[p.postal_code && p.city ? `${p.postal_code} ${p.city}` : p.city, propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]].filter(Boolean).join(" · ")}
+              </p>
+              <p className="mt-0.5 font-display text-base font-bold">
+                {isRent ? `${formatCurrency(p.rent ? Number(p.rent) : null)} / Mt.` : formatCurrency(p.price ? Number(p.price) : null)}
+              </p>
+            </div>
+            <ScoreGauge value={m.score} />
+          </div>
+
+          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            {m.checks.map((c) => (
+              <li key={c.key} className="flex min-w-0 items-center gap-1.5 text-[11px]" title={c.detail}>
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusDot[c.status] }} />
+                <span className="font-medium">{c.label}:</span>
+                <span className="truncate text-muted-foreground">{c.detail}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-wrap gap-1.5">
+            {a ? (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${financeChipClass(a.status)}`} title="Kalkulatorisch: 5 % Zins, 1 % Nebenkosten, 1 % Amortisation; Richtwert max. 33 % Tragbarkeit, 80 % Belehnung">
+                {a.ratio != null ? `Tragbarkeit ${a.ratio.toFixed(0)} %` : ""}
+                {a.ratio != null && a.ltv != null ? " · " : ""}
+                {a.ltv != null ? `Belehnung ${a.ltv.toFixed(0)} %` : ""}
+                {a.hasPartner ? " (inkl. Partner)" : ""}
+              </span>
+            ) : !isRent ? (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">Finanzierung offen – keine Selbstauskunft</span>
+            ) : null}
+            {m.isInvestment && p.gross_yield != null && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                Bruttorendite {Number(p.gross_yield).toFixed(1)} %
+              </span>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1" onClick={onSave}>Vormerken</Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/properties/$id" params={{ id: p.id }}><ExternalLink className="h-4 w-4" /></Link>
+            </Button>
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  );
+}
+
+function financeChipClass(s: "ok" | "warn" | "fail"): string {
+  if (s === "ok") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/30";
+  if (s === "warn") return "bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/30";
+  return "bg-destructive/15 text-destructive ring-1 ring-destructive/30";
 }
