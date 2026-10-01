@@ -3,6 +3,11 @@
 ## Aktueller Kalenderwunsch
 - [x] Klick auf Immolia-Termin zeigt Details; Absagen, Verschieben und Bearbeiten sind getrennte Aktionen.
 
+## Immobilienkarte
+- [x] Objektvorschau bei Mouseover und fixierbare Detailkarte.
+- [x] Kartenfilter für Kanton, Kauf/Miete und Status; Kantone haben feste Farben.
+- [x] Gespeichertes Verkaufs- und Vermietungspotenzial anzeigen; KI-Analyse nur auf Wunsch starten.
+
 Einzige interne Roadmap. Die Liste unter Dokumentation → Roadmap in der App ist die Kunden-Roadmap und enthält keine Architekturthemen.
 
 ## Commercial – Reihenfolge

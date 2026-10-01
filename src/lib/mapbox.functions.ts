@@ -23,6 +23,7 @@ export type GeocodedPoint = {
   id: string;
   longitude: number;
   latitude: number;
+  canton: string | null;
 };
 
 export const geocodeAddresses = createServerFn({ method: "POST" })
@@ -64,7 +65,19 @@ export const geocodeAddresses = createServerFn({ method: "POST" })
           const json = (await res.json()) as any;
           const f = json.features?.[0];
           if (!f?.center) return;
-          out.push({ id: it.id, longitude: f.center[0], latitude: f.center[1] });
+          const context = Array.isArray(f.context) ? f.context : [];
+          const region = [f, ...context].find(
+            (entry: any) => typeof entry?.id === "string" && entry.id.startsWith("region."),
+          );
+          const shortCode = typeof region?.properties?.short_code === "string"
+            ? region.properties.short_code
+            : typeof region?.short_code === "string"
+              ? region.short_code
+              : "";
+          const canton = shortCode.includes("-")
+            ? shortCode.split("-").pop()?.toUpperCase() ?? null
+            : null;
+          out.push({ id: it.id, longitude: f.center[0], latitude: f.center[1], canton });
         } catch {
           /* ignore */
         }

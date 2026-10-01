@@ -10,3 +10,4 @@ Immer gültige Invarianten:
 - Module: `agency_modules` steuert Produktzugang (RESTRICTIVE Policies), `module_permissions` nur Rollenrechte darin. Fehlende Zeile = verweigert.
 - Additiv arbeiten: neue Spalten NULLABLE, keine bestehenden Spalten/Tabellen/Enums/Policies umbenennen oder löschen; jede neue Tabelle mit GRANTs und RLS.
 - UI-Sprache Deutsch (Schweiz).
+- Immobilien-Marktanalysen laufen über eine geschützte, gezählte TanStack-Serverfunktion und werden in der bestehenden firmengebundenen Analysehistorie gespeichert; so verwenden Karte und Detailansicht denselben sicheren Weg.
