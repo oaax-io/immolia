@@ -117,6 +117,19 @@
   --gradient-soft: linear-gradient(180deg, color-mix(in oklch, var(--tenant-primary) 2%, white), color-mix(in oklch, var(--tenant-primary) 8%, white));
   --shadow-soft: 0 1px 2px oklch(0.22 0.005 30 / 0.06), 0 4px 16px oklch(0.22 0.005 30 / 0.08);
   --shadow-glow: 0 8px 32px oklch(0.71 0.09 65 / 0.30);
+
+  /* Feste Kartenfarben je Kanton: Marker und Legende verwenden dieselbe Zuordnung. */
+  --map-region-01: oklch(0.58 0.18 25);
+  --map-region-02: oklch(0.62 0.16 45);
+  --map-region-03: oklch(0.68 0.15 75);
+  --map-region-04: oklch(0.63 0.14 115);
+  --map-region-05: oklch(0.58 0.14 150);
+  --map-region-06: oklch(0.58 0.12 180);
+  --map-region-07: oklch(0.59 0.13 215);
+  --map-region-08: oklch(0.57 0.16 250);
+  --map-region-09: oklch(0.58 0.16 285);
+  --map-region-10: oklch(0.6 0.16 325);
+  --map-region-neutral: oklch(0.52 0.01 250);
 }
 
 .dark {
@@ -251,6 +264,38 @@
             mask-image: linear-gradient(180deg, transparent 0%, black 35%, black 90%, transparent 100%);
   }
 }
+
+.property-map-marker {
+  display: flex;
+  min-width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-background);
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  color: var(--color-primary-foreground);
+  font-size: 0.7rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  cursor: pointer;
+}
+.property-map-marker:hover,
+.property-map-marker:focus-visible { transform: translateY(-2px) scale(1.1); box-shadow: var(--shadow-glow); outline: none; }
+.property-map-legend-dot { display: inline-block; width: 0.65rem; height: 0.65rem; flex: none; border-radius: 9999px; background: var(--map-canton-color, var(--map-region-neutral)); }
+.property-map-marker { background: var(--map-canton-color, var(--map-region-neutral)); }
+.canton-ZH, .canton-GL, .canton-JU { --map-canton-color: var(--map-region-01); }
+.canton-LU, .canton-TG, .canton-GE { --map-canton-color: var(--map-region-02); }
+.canton-BE, .canton-AI, .canton-TI { --map-canton-color: var(--map-region-03); }
+.canton-AG, .canton-NW, .canton-NE { --map-canton-color: var(--map-region-04); }
+.canton-SG, .canton-OW, .canton-VD { --map-canton-color: var(--map-region-05); }
+.canton-BS, .canton-UR, .canton-VS { --map-canton-color: var(--map-region-06); }
+.canton-ZG, .canton-SH, .canton-FR { --map-canton-color: var(--map-region-07); }
+.canton-SZ, .canton-BL { --map-canton-color: var(--map-region-08); }
+.canton-GR, .canton-SO { --map-canton-color: var(--map-region-09); }
+.canton-AR { --map-canton-color: var(--map-region-10); }
+.canton-UNBEKANNT { --map-canton-color: var(--map-region-neutral); }
 
 @keyframes wave {
   0%, 60%, 100% { transform: rotate(0deg); }
