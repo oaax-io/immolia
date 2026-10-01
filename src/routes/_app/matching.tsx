@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -660,46 +662,48 @@ function MatchCard({
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
           {m.checks.map((c) => (
-            <span key={c.key} title={`${c.label}: ${c.detail}`} className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-1.5 py-0.5 text-[10px]">
+            <span key={c.key} title={`${c.label}: ${c.detail}`} className="inline-flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusDot[c.status] }} />
               {c.label}
             </span>
           ))}
-          {a && (
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${financeChipClass(a.status)}`}>
-              {a.ratio != null ? `TB ${a.ratio.toFixed(0)} %` : ""}
-              {a.ratio != null && a.ltv != null ? " · " : ""}
-              {a.ltv != null ? `BL ${a.ltv.toFixed(0)} %` : ""}
-            </span>
-          )}
-          {m.isInvestment && p.gross_yield != null && (
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-              {Number(p.gross_yield).toFixed(1)} % Rendite
-            </span>
-          )}
         </div>
+        {(a || (m.isInvestment && p.gross_yield != null)) && (
+          <div className="flex flex-wrap items-center gap-x-3 text-[11px]">
+            {a && (
+              <span className={financeTextClass(a.status)} title="Tragbarkeit · Belehnung (kalkulatorisch)">
+                {a.ratio != null ? `Tragbarkeit ${a.ratio.toFixed(0)} %` : ""}
+                {a.ratio != null && a.ltv != null ? " · " : ""}
+                {a.ltv != null ? `Belehnung ${a.ltv.toFixed(0)} %` : ""}
+              </span>
+            )}
+            {m.isInvestment && p.gross_yield != null && (
+              <span className="font-medium text-primary">{Number(p.gross_yield).toFixed(1)} % Rendite</span>
+            )}
+          </div>
+        )}
 
-        <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
-          <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onAppointment}>
-            <CalendarPlus className="mr-1 h-3.5 w-3.5" />Termin
+        <div className="flex flex-wrap items-center gap-1 border-t border-border/60 pt-2">
+          <Button size="sm" variant="outline" className="h-7 border-primary/30 px-2.5 text-[11px] text-primary hover:bg-primary/5 hover:text-primary" onClick={onAppointment}>
+            <CalendarPlus className="mr-1 h-3.5 w-3.5" />Besichtigung
           </Button>
           {!hasDisclosure && !isRent && (
-            <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onDisclosure}>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground" onClick={onDisclosure}>
               <Send className="mr-1 h-3.5 w-3.5" />Selbstauskunft
             </Button>
           )}
           {misses.length > 0 && (
-            <Button size="sm" variant="secondary" className="h-7 px-2 text-[11px]" onClick={onImprove} title={`Fehlt: ${misses.map((c) => c.label).join(", ")}`}>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground" onClick={onImprove} title={`Fehlt: ${misses.map((c) => c.label).join(", ")}`}>
               <Sparkles className="mr-1 h-3.5 w-3.5" />Profil ergänzen
             </Button>
           )}
-          <div className="ml-auto flex gap-1">
-            <Button size="icon" variant="ghost" className="h-7 w-7" title="Vormerken" onClick={onSave}>
+          <div className="ml-auto flex">
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Vormerken" onClick={onSave}>
               <Bookmark className="h-3.5 w-3.5" />
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7" title="Objekt öffnen" asChild>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" title="Objekt öffnen" asChild>
               <Link to="/properties/$id" params={{ id: p.id }}><ExternalLink className="h-3.5 w-3.5" /></Link>
             </Button>
           </div>
@@ -772,23 +776,52 @@ function DisclosureDialog({ client, userId, onClose }: { client: Client | null; 
 function AppointmentDialog({
   target, userId, onClose,
 }: { target: { client: Client; property: Property } | null; userId?: string; onClose: () => void }) {
-  const [start, setStart] = useState("");
+  const p = target?.property;
+  const defaultLocation = p ? [p.address, [p.postal_code, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "";
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("10:00");
   const [duration, setDuration] = useState("60");
+  const [location, setLocation] = useState("");
+  const [note, setNote] = useState("");
+  const [sendMail, setSendMail] = useState(true);
+  useEffect(() => {
+    if (target) {
+      const d = new Date(); d.setDate(d.getDate() + 1);
+      setDate(d.toISOString().slice(0, 10)); setTime("10:00"); setDuration("60");
+      setLocation(defaultLocation); setNote(""); setSendMail(!!target.client.email);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+
   const save = useMutation({
     mutationFn: async () => {
-      if (!target || !userId || !start) throw new Error("Bitte Datum und Uhrzeit wählen");
-      const s = new Date(start);
+      if (!target || !userId || !date || !time) throw new Error("Bitte Datum und Uhrzeit wählen");
+      const s = new Date(`${date}T${time}`);
       const e = new Date(s.getTime() + Number(duration) * 60000);
-      const p = target.property;
       const { error } = await supabase.from("appointments").insert({
-        owner_id: userId, client_id: target.client.id, property_id: p.id,
-        title: `Besichtigung ${p.title}`, appointment_type: "viewing",
+        owner_id: userId, client_id: target.client.id, property_id: target.property.id,
+        title: `Besichtigung ${target.property.title}`, appointment_type: "viewing",
         starts_at: s.toISOString(), ends_at: e.toISOString(),
-        location: [p.address, [p.postal_code, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || null,
+        location: location || null, notes: note || null,
       } as any);
       if (error) throw error;
+      return { s, e };
     },
-    onSuccess: () => { toast.success("Besichtigung eingetragen"); setStart(""); onClose(); },
+    onSuccess: ({ s, e }) => {
+      toast.success("Besichtigung im Kalender eingetragen");
+      if (sendMail && target) {
+        const fmtD = s.toLocaleDateString("de-CH", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+        const fmtT = `${s.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })} – ${e.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })} Uhr`;
+        const body = [
+          `Guten Tag ${target.client.full_name ?? ""}`.trim(), "",
+          `gerne bestätige ich Ihnen den Besichtigungstermin für «${target.property.title}»:`, "",
+          `Datum: ${fmtD}`, `Zeit: ${fmtT}`, location ? `Treffpunkt: ${location}` : "",
+          note ? `\n${note}` : "", "", "Bei Verhinderung bitte ich um kurze Rückmeldung.", "", "Freundliche Grüsse",
+        ].filter((l) => l !== null).join("\n");
+        window.location.href = `mailto:${target.client.email ?? ""}?subject=${encodeURIComponent(`Besichtigung ${target.property.title} – ${fmtD}`)}&body=${encodeURIComponent(body)}`;
+      }
+      onClose();
+    },
     onError: (e: any) => toast.error(e.message),
   });
   return (
@@ -798,21 +831,43 @@ function AppointmentDialog({
           <DialogTitle>Besichtigung planen</DialogTitle>
           <DialogDescription>{target?.client.full_name} · {target?.property.title}</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-[1fr_110px] gap-2">
-          <Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} />
-          <Select value={duration} onValueChange={setDuration}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {["30", "45", "60", "90"].map((d) => <SelectItem key={d} value={d}>{d} Min.</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="space-y-3">
+          <div className="grid grid-cols-[1fr_100px_100px] gap-2">
+            <div><Label className="text-xs">Datum</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div><Label className="text-xs">Uhrzeit</Label><Input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></div>
+            <div>
+              <Label className="text-xs">Dauer</Label>
+              <Select value={duration} onValueChange={setDuration}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["30", "45", "60", "90"].map((d) => <SelectItem key={d} value={d}>{d} Min.</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div><Label className="text-xs">Treffpunkt</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Adresse der Liegenschaft" /></div>
+          <div><Label className="text-xs">Nachricht an den Kunden (optional)</Label><Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. Bitte Ausweis mitbringen, Parkplatz vor dem Haus" /></div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border/60 p-2.5 text-sm">
+            <input type="checkbox" checked={sendMail} onChange={(e) => setSendMail(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-1">Einladung per E-Mail an den Kunden</span>
+            {!target?.client.email && <span className="text-[11px] text-muted-foreground">keine E-Mail hinterlegt</span>}
+          </label>
         </div>
         <DialogFooter>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}><CalendarPlus className="mr-1.5 h-4 w-4" />Eintragen</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            <CalendarPlus className="mr-1.5 h-4 w-4" />{sendMail ? "Eintragen & E-Mail öffnen" : "Eintragen"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function financeTextClass(s: "ok" | "warn" | "fail"): string {
+  if (s === "ok") return "font-medium text-emerald-700 dark:text-emerald-400";
+  if (s === "warn") return "font-medium text-orange-700 dark:text-orange-400";
+  return "font-medium text-destructive";
 }
 
 function financeChipClass(s: "ok" | "warn" | "fail"): string {
