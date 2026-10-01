@@ -91,6 +91,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
       attributionControl: false,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapboxgl.FullscreenControl({ container: wrapper.current ?? undefined }), "bottom-right");
     const el = document.createElement("div");
     el.className = "rounded-full border-[3px] border-background bg-primary shadow-lg";
     el.style.cssText = "width:22px;height:22px;cursor:pointer;";
