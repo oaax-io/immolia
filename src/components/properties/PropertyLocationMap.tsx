@@ -41,6 +41,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
   const parcelFn = useServerFn(getSwissParcelGeometry);
   const qc = useQueryClient();
   const container = useRef<HTMLDivElement | null>(null);
+  const wrapper = useRef<HTMLDivElement | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [analysing, setAnalysing] = useState(false);
   const [mapReady, setMapReady] = useState<mapboxgl.Map | null>(null);
@@ -170,7 +171,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
   const r = latest?.rental;
 
   return (
-    <div className="relative h-full w-full" onMouseLeave={() => setShowDetails(false)}>
+    <div ref={wrapper} className="relative h-full w-full bg-background" onMouseLeave={() => setShowDetails(false)}>
       <div ref={container} className="h-full w-full" />
       {(geoLoading || !token) && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
