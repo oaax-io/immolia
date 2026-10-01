@@ -1,9 +1,19 @@
-// Parses an uploaded ASIMO Selbstauskunft PDF and returns structured field values
+// Selbstauskunft-PDF-Import (Immolia Core).
+// Architektur: PDF-Extraktion → Source Adapter (Format-Erkennung + Mapping)
+//   → kanonische Selbstauskunftsfelder.
+// Formate:
+//   - legacy_asimo_self_disclosure_v1: historisches interaktives Formular mit
+//     Feldcodes AN../MI.. (nur Eingabeformat, unabhängig von der Firma).
+//   - unknown: kein bekanntes Formular → nur beschriftete Personen-/Kontaktangaben,
+//     keine Beträge (review_required), damit keine falschen Finanzdaten entstehen.
+// Firma ausschliesslich aus der Sitzung (current_agency_id), nie aus dem PDF.
+//
+// Returns structured field values
 // matching the client_self_disclosures schema.
 //
 // Strategy:
 //   1) Extract AcroForm field values directly from the PDF (deterministic, exact).
-//      ASIMO PDFs are interactive forms — Vision-only OCR misses these because
+//      Legacy forms are interactive — Vision-only OCR misses these because
 //      the values are stored in form objects, not rendered as glyphs.
 //   2) Send the raw form-field map + extracted text to Gemini with the target
 //      schema, so the LLM does the mapping (label codes -> our DB columns).
@@ -196,7 +206,7 @@ function detectSalutation(
   fields: Record<string, string>,
   prefix: "AN" | "MI",
 ): string | undefined {
-  // ASIMO PDFs verwenden meist Checkboxen wie "ANanrede_herr" / "ANherr" / "ANfrau".
+  // Legacy-Formular verwendet meist Checkboxen wie "ANanrede_herr" / "ANherr" / "ANfrau".
   const lcPrefix = prefix.toLowerCase();
   for (const [k, v] of Object.entries(fields)) {
     const lk = k.toLowerCase();
@@ -219,7 +229,8 @@ function detectSalutation(
   return undefined;
 }
 
-function mapAsimoFormFields(
+/** Source Adapter legacy_asimo_self_disclosure_v1 (Feldcodes AN../MI..). */
+function mapLegacyFormFields(
   fields: Record<string, string>,
   prefix: "AN" | "MI" = "AN",
 ): Record<string, string | number> {
@@ -300,7 +311,7 @@ function mapAsimoFormFields(
     if (c) mapped.country = c;
   }
 
-  // Arbeitgeber-Adresse. Beim Mitantragsteller verwendet das ASIMO-PDF
+  // Arbeitgeber-Adresse. Beim Mitantragsteller verwendet das Legacy-Formular
   // AN15plzM/AN15ortM und M16/M16x statt MI15plz/MI15ort/MI16.
   const empStreet = P === "MI"
     ? [pickValue(fields, "M16", "MI16"), pickValue(fields, "M16x", "MI16x")]
@@ -315,7 +326,7 @@ function mapAsimoFormFields(
   const employerAddress = [empStreet, empCity].filter(Boolean).join(", ");
   if (employerAddress) mapped.employer_address = employerAddress;
 
-  // Mitantragsteller: Beruf-/Einkommensfelder verwenden im ASIMO-PDF
+  // Mitantragsteller: Beruf-/Einkommensfelder verwenden im Legacy-Formular
   // das Präfix "M" statt "MI" (M13, M14, M17, M18, M18x, M19, M22).
   if (P === "MI") {
     const setIfMissingStr = (key: string, ...names: string[]) => {
@@ -438,19 +449,26 @@ Deno.serve(async (req: Request) => {
     // 1) Extract AcroForm fields deterministically.
     const formFields = await extractFormFields(bytes);
     const formFieldsCount = Object.keys(formFields).length;
-    console.log("form fields extracted:", formFieldsCount);
-    console.log("form field names:", Object.keys(formFields).sort().join(", "));
+    // Format-Erkennung: mind. 3 Feldcodes nach Legacy-Schema (AN/MI + 2 Ziffern).
+    const legacyCodeCount = Object.keys(formFields).filter((k) => /^(AN|MI)\d{2}/.test(k)).length;
+    const sourceFormat = legacyCodeCount >= 3 ? "legacy_asimo_self_disclosure_v1" : "unknown";
+    const isLegacy = sourceFormat !== "unknown";
 
-    const directFields = mapAsimoFormFields(formFields, "AN");
-    const coApplicantFields = mapAsimoFormFields(formFields, "MI");
+    const directFields = isLegacy ? mapLegacyFormFields(formFields, "AN") : {};
+    const coApplicantFields = isLegacy ? mapLegacyFormFields(formFields, "MI") : {};
     const hasCoApplicant = hasMeaningfulPerson(coApplicantFields);
     // Hinweis: Wir returnen NICHT mehr früh, auch wenn AcroForm Daten lieferte.
     // Die AI ergänzt Felder, die in den Formularfeldern fehlen oder nicht
     // sauber benannt sind (z. B. Anrede-Checkboxen, Wohnhaft seit als Freitext).
     // AcroForm-Werte haben am Ende Vorrang.
 
+    const genericPrompt = `Du bist ein präziser Datenextraktor für Selbstauskünfte (Schweiz).
+Das Dokument hat kein bekanntes Formularschema. Extrahiere NUR Werte, die eindeutig
+neben einer Beschriftung im Dokument stehen (Name, Adresse, Kontakt, Geburtsdatum,
+Zivilstand, Anstellung, Arbeitgeber). Keine Beträge schätzen. Unklare Felder weglassen.
+Antragsteller → "applicant", Mitantragsteller → "co_applicant". Keine Halluzinationen.`;
 
-    const systemPrompt = `Du bist ein präziser Datenextraktor für die ASIMO-Selbstauskunft (Schweiz).
+    const legacyPrompt = `Du bist ein präziser Datenextraktor für Selbstauskunft-Formulare (Schweiz), Format legacy_v1.
 Du erhältst (a) die rohen AcroForm-Feldwerte des PDFs als JSON und (b) die PDF-Datei.
 
 WICHTIG – Feld-Kodierung:
@@ -478,6 +496,7 @@ Mapping (typische Codes):
 CHF-Beträge: nur Zahlen, ohne Tausender, ohne Währung.
 Felder die leer/nicht vorhanden sind weglassen. Keine Halluzinationen.
 Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder leer lassen.`;
+    const systemPrompt = isLegacy ? legacyPrompt : genericPrompt;
 
 
     const userParts: Array<Record<string, unknown>> = [
@@ -534,7 +553,7 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
 
     if (!aiResp.ok) {
       const txt = await aiResp.text();
-      console.error("AI error", aiResp.status, txt);
+      console.error("AI error", aiResp.status, txt.slice(0, 200));
       // Bei AI-Fehler: AcroForm-Daten allein zurückgeben, falls vorhanden.
       if (Object.keys(directFields).length > 0) {
         return new Response(
@@ -542,9 +561,11 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
             fields: directFields,
             co_applicant_fields: hasCoApplicant ? coApplicantFields : null,
             has_co_applicant: hasCoApplicant,
-            children: extractChildren(formFields),
+            children: isLegacy ? extractChildren(formFields) : [],
             form_fields_count: formFieldsCount,
             source: "acroform-only",
+            source_format: sourceFormat,
+            review_required: false,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -596,8 +617,11 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
       console.warn("could not parse AI result", parseError);
     }
 
-    const aiApplicant = sanitizeFields(aiRaw.applicant ?? aiRaw);
-    const aiCoApplicant = sanitizeFields(aiRaw.co_applicant);
+    // Unbekanntes Format: keine automatisch erkannten Beträge übernehmen (fail safe).
+    const stripAmounts = (f: Record<string, string | number>) =>
+      isLegacy ? f : Object.fromEntries(Object.entries(f).filter(([, v]) => typeof v !== "number"));
+    const aiApplicant = stripAmounts(sanitizeFields(aiRaw.applicant ?? aiRaw));
+    const aiCoApplicant = stripAmounts(sanitizeFields(aiRaw.co_applicant));
 
     // AcroForm-Werte haben Vorrang. AI ergänzt nur fehlende Felder.
     const mergedFields: Record<string, string | number> = { ...aiApplicant, ...directFields };
@@ -606,7 +630,7 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
       ...coApplicantFields,
     };
     const finalHasCoApplicant = hasMeaningfulPerson(mergedCoApplicant);
-    const children = extractChildren(formFields);
+    const children = isLegacy ? extractChildren(formFields) : [];
 
     return new Response(
       JSON.stringify({
@@ -616,6 +640,8 @@ Wenn kein Mitantragsteller im PDF erkennbar ist, co_applicant weglassen oder lee
         children,
         form_fields_count: formFieldsCount,
         source: Object.keys(directFields).length > 0 ? "acroform+ai" : "ai",
+        source_format: sourceFormat,
+        review_required: !isLegacy,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
