@@ -1,21 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 
-/**
- * Tenant-Bestimmung (fail closed): Der Mandant ergibt sich ausschliesslich aus
- * der serverseitigen Konfiguration PORTAL_TARGET_AGENCY_ID – nie aus dem Payload
- * und nie aus einem hartcodierten Default. Fehlt sie, ist sie ungültig oder ist
- * die Firma nicht aktiv, wird der Request abgelehnt (keine CRM-Mutation).
- */
-const UUID_RE_TENANT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-async function resolvePortalTenant(sb: any, configured: string | undefined): Promise<string | null> {
-  const agencyId = (configured ?? "").trim();
-  if (!agencyId || !UUID_RE_TENANT.test(agencyId)) return null;
-  const { data } = await sb.from("agencies").select("id,status").eq("id", agencyId).maybeSingle();
-  if (!data?.id || data.status !== "active") return null;
-  return data.id as string;
-}
+/**
+ * Inbound (fail closed): Firma ergibt sich ausschliesslich aus der eindeutigen,
+ * aktiven Portal-Verbindung (property_portal_connections) zum verifizierten
+ * Secret-Satz – nie aus dem Payload, nie aus einem globalen Default.
+ * Legacy-Wire-Protokoll "legacy_asimo_v1": Header x-api-key + x-asimo-signature.
+ * PORTAL_TARGET_AGENCY_ID ist nicht mehr nötig; falls gesetzt, muss sie zur
+ * Verbindung passen (Konsistenzprüfung), sonst 503.
+ */
+const LEGACY_PROTOCOL = "legacy_asimo_v1";
+const LEGACY_SECRET_REF = "PORTAL";
 
 type Body = {
   id: string;
@@ -59,7 +55,7 @@ function fmt(label: string, value: unknown): string {
 
 async function createLead(
   sb: any,
-  args: { agencyId: string; data: Record<string, any>; internalNotes: string; extra?: Record<string, any> },
+  args: { agencyId: string; source: string; data: Record<string, any>; internalNotes: string; extra?: Record<string, any> },
 ): Promise<string> {
   const d = args.data;
   const { data: lead, error } = await sb
@@ -70,7 +66,7 @@ async function createLead(
       full_name: d.name ?? "Unbekannt",
       email: d.email ?? null,
       phone: d.phone ?? null,
-      source: "ASIMO Portal",
+      source: args.source,
       status: "new",
       entity_type: "person",
       internal_notes: args.internalNotes,
@@ -81,17 +77,17 @@ async function createLead(
   return lead.id as string;
 }
 
-async function handleLead(sb: any, agencyId: string, body: Body) {
+async function handleLead(sb: any, agencyId: string, source: string, body: Body) {
   const d = body.data;
   const notes =
     `Betreff: ${d.subject ?? "-"}\n\n${d.message ?? ""}` +
     (d.property_id ? `\n\nPortal-Objekt-ID: ${d.property_id}` : "") +
     (d.internal_note ? `\n\nPortal-Notiz: ${d.internal_note}` : "");
-  const leadId = await createLead(sb, { agencyId, data: d, internalNotes: notes });
+  const leadId = await createLead(sb, { agencyId, source, data: d, internalNotes: notes });
   return { lead_id: leadId };
 }
 
-async function handleAppointment(sb: any, agencyId: string, body: Body) {
+async function handleAppointment(sb: any, agencyId: string, source: string, body: Body) {
   const d = body.data;
   const slots: string[] = Array.isArray(d.slots) ? d.slots.filter(Boolean) : [];
   const channel = String(d.channel ?? "");
@@ -101,7 +97,7 @@ async function handleAppointment(sb: any, agencyId: string, body: Body) {
     `\nWunschtermine: ${slots.join(", ")}` +
     (d.internal_note ? `\n\nPortal-Notiz: ${d.internal_note}` : "");
 
-  const leadId = await createLead(sb, { agencyId, data: d, internalNotes: notes });
+  const leadId = await createLead(sb, { agencyId, source, data: d, internalNotes: notes });
 
   const startsAt = slots[0] ? new Date(slots[0]) : new Date();
   const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
@@ -127,7 +123,7 @@ async function handleAppointment(sb: any, agencyId: string, body: Body) {
   return { lead_id: leadId, appointment_id: appt.id as string };
 }
 
-async function handleSelfDisclosure(sb: any, agencyId: string, body: Body) {
+async function handleSelfDisclosure(sb: any, agencyId: string, source: string, body: Body) {
   const d = body.data;
   const summary =
     "Betreff: Selbstauskunft / Finanzierungsanfrage\n\n" +
@@ -167,6 +163,7 @@ async function handleSelfDisclosure(sb: any, agencyId: string, body: Body) {
   const price = typeof d.price === "number" ? d.price : d.price ? Number(d.price) : null;
   const leadId = await createLead(sb, {
     agencyId,
+    source,
     data: d,
     internalNotes: summary,
     extra: {
@@ -182,10 +179,10 @@ export const Route = createFileRoute("/api/public/portal-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKeyEnv = process.env["PORTAL_TARGET_API_KEY"];
-        const secret = process.env["PORTAL_SIGNING_SECRET"];
+        const { resolveInboundConnection, portalSecrets } = await import("@/lib/portal-connections.server");
+        const { targetApiKey: apiKeyEnv, signingSecret: secret } = portalSecrets(LEGACY_SECRET_REF);
         if (!apiKeyEnv || !secret) {
-          console.error("Portal webhook: env vars missing");
+          console.error("Portal webhook: secrets missing");
           return new Response("Not configured", { status: 500 });
         }
 
@@ -208,15 +205,22 @@ export const Route = createFileRoute("/api/public/portal-webhook")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const sb = supabaseAdmin as any;
 
-        const agencyId = await resolvePortalTenant(sb, process.env["PORTAL_TARGET_AGENCY_ID"]);
-        if (!agencyId) {
-          console.error("Portal webhook: PORTAL_TARGET_AGENCY_ID missing/invalid/inactive – rejected");
-          return new Response("Portal tenant not configured", { status: 503 });
+        const conn = await resolveInboundConnection(sb, LEGACY_PROTOCOL, LEGACY_SECRET_REF);
+        const legacyTarget = (process.env["PORTAL_TARGET_AGENCY_ID"] ?? "").trim();
+        if (!conn || (legacyTarget && legacyTarget !== conn.agency_id)) {
+          console.error("Portal webhook: no unique active portal connection – rejected");
+          return new Response("Portal connection not configured", { status: 503 });
         }
+        const agencyId = conn.agency_id;
 
-        const { error: logError } = await sb
-          .from("portal_event_log")
-          .insert({ portal_event_id: body.id, entity: body.entity, action: body.action });
+        const { error: logError } = await sb.from("portal_event_log").insert({
+          portal_event_id: body.id,
+          entity: body.entity,
+          action: body.action,
+          provider_key: conn.provider_key,
+          agency_id: agencyId,
+          connection_id: conn.id,
+        });
         if (logError) {
           if (logError.code === "23505") {
             return Response.json({ ok: true, duplicate: true });
@@ -227,9 +231,9 @@ export const Route = createFileRoute("/api/public/portal-webhook")({
 
         try {
           let created: Record<string, string> = {};
-          if (body.entity === "lead") created = await handleLead(sb, agencyId, body);
-          else if (body.entity === "appointment") created = await handleAppointment(sb, agencyId, body);
-          else created = await handleSelfDisclosure(sb, agencyId, body);
+          if (body.entity === "lead") created = await handleLead(sb, agencyId, conn.display_name, body);
+          else if (body.entity === "appointment") created = await handleAppointment(sb, agencyId, conn.display_name, body);
+          else created = await handleSelfDisclosure(sb, agencyId, conn.display_name, body);
 
           await sb
             .from("portal_event_log")
