@@ -190,7 +190,8 @@
     "kpis": {
       "activeClients": "Clients actifs",
       "activeProperties": "Biens actifs",
-      "activeReservations": "Réservations actives"
+      "activeReservations": "Réservations actives",
+      "matches": "Correspondances"
     },
     "clientStatus": {
       "title": "Clients par statut",
