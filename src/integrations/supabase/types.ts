@@ -5086,27 +5086,36 @@ export type Database = {
       portal_event_log: {
         Row: {
           action: string | null
+          agency_id: string | null
+          connection_id: string | null
           created_appointment_id: string | null
           created_lead_id: string | null
           entity: string
           portal_event_id: string
           processed_at: string
+          provider_key: string | null
         }
         Insert: {
           action?: string | null
+          agency_id?: string | null
+          connection_id?: string | null
           created_appointment_id?: string | null
           created_lead_id?: string | null
           entity: string
           portal_event_id: string
           processed_at?: string
+          provider_key?: string | null
         }
         Update: {
           action?: string | null
+          agency_id?: string | null
+          connection_id?: string | null
           created_appointment_id?: string | null
           created_lead_id?: string | null
           entity?: string
           portal_event_id?: string
           processed_at?: string
+          provider_key?: string | null
         }
         Relationships: [
           {
@@ -5873,6 +5882,50 @@ export type Database = {
             columns: ["property_id"]
             isOneToOne: false
             referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_portal_connections: {
+        Row: {
+          agency_id: string
+          created_at: string
+          display_name: string
+          enabled: boolean
+          id: string
+          protocol: string
+          provider_key: string
+          secret_ref: string
+          updated_at: string
+        }
+        Insert: {
+          agency_id: string
+          created_at?: string
+          display_name: string
+          enabled?: boolean
+          id?: string
+          protocol: string
+          provider_key: string
+          secret_ref: string
+          updated_at?: string
+        }
+        Update: {
+          agency_id?: string
+          created_at?: string
+          display_name?: string
+          enabled?: boolean
+          id?: string
+          protocol?: string
+          provider_key?: string
+          secret_ref?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_portal_connections_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
             referencedColumns: ["id"]
           },
         ]
