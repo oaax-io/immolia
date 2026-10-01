@@ -113,7 +113,9 @@ export function PropertyLocationMap({ property }: { property: any }) {
     });
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container.current);
-    return () => { ro.disconnect(); setMapReady(null); map.remove(); };
+    const onFs = () => map.resize();
+    document.addEventListener("fullscreenchange", onFs);
+    return () => { ro.disconnect(); document.removeEventListener("fullscreenchange", onFs); setMapReady(null); map.remove(); };
   }, [token, point, isSwiss]);
 
   useEffect(() => {
