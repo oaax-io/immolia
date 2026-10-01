@@ -482,7 +482,9 @@ export function wrapHtmlDocument(
     skinOpt === "auto" ? pickLayout(bodyHtml) : skinOpt === "default" ? "default" : "compact";
 
   if (layout === "compact") {
-    return wrapCompactLayout({ title, bodyHtml, brand: b, font, customCss });
+    // Akzent nur aus explizitem Tenant-Branding (nicht aus gemergten Defaults).
+    const accent = brand?.secondary_color || brand?.primary_color || DEFAULT_BRAND.primary_color;
+    return wrapCompactLayout({ title, bodyHtml, brand: b, font, customCss, accent });
   }
 
   const headerHtml = b.header_html
@@ -988,9 +990,9 @@ function wrapCompactLayout(args: {
   brand: NonNullable<TemplateContext["brand"]>;
   font: string;
   customCss: string;
+  accent: string;
 }): string {
-  const { title, bodyHtml, brand, font, customCss } = args;
-  const accent = brand.secondary_color || brand.primary_color || DEFAULT_BRAND.primary_color;
+  const { title, bodyHtml, brand, font, customCss, accent } = args;
   const accentSoft = `color-mix(in srgb, ${accent} 12%, #ffffff)`;
   const companyName = escapeAttr(brand.company_name || "");
   const logoUrl = brand.logo_url ? escapeAttr(brand.logo_url) : "";
