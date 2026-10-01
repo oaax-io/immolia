@@ -351,7 +351,7 @@ export function PropertiesMap({ properties }: Props) {
   };
 
   return (
-    <div ref={wrapperRef} className={isFs ? "relative h-full bg-background" : "relative"}>
+    <div ref={wrapperRef} className={isFs ? "relative h-full overflow-hidden bg-background" : "relative overflow-hidden rounded-xl"}>
       <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex items-start gap-2">
         <div className="pointer-events-auto relative">
           <Button
@@ -429,7 +429,7 @@ export function PropertiesMap({ properties }: Props) {
       </div>
       )}
 
-      <div className={isFs ? "relative h-full" : "relative"}>
+      <div className={isFs ? "relative h-full overflow-hidden" : "relative overflow-hidden"}>
       <div
         ref={mapContainer}
         className={isFs ? "h-full w-full overflow-hidden" : "h-[calc(100vh-170px)] min-h-[560px] w-full overflow-hidden rounded-xl border"}
