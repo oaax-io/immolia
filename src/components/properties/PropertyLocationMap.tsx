@@ -234,9 +234,9 @@ function YieldGauge({ min, max }: { min?: number; max?: number }) {
   return (
     <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-2">
       <svg viewBox="0 0 140 80" className="h-[72px] w-[126px] shrink-0">
-        <path d={arc(2, 3.5)} stroke="var(--chart-4)" strokeWidth="12" fill="none" />
-        <path d={arc(3.5, 4.5)} stroke="var(--chart-2)" strokeWidth="12" fill="none" />
-        <path d={arc(4.5, 6)} stroke="var(--chart-1)" strokeWidth="12" fill="none" />
+        <path d={arc(2, 3.5)} style={{ stroke: "var(--chart-4)" }} strokeWidth="12" fill="none" />
+        <path d={arc(3.5, 4.5)} style={{ stroke: "var(--chart-2)" }} strokeWidth="12" fill="none" />
+        <path d={arc(4.5, 6)} style={{ stroke: "var(--chart-1)" }} strokeWidth="12" fill="none" />
         {value != null && <line x1="70" y1="70" x2={nx} y2={ny} className="stroke-foreground" strokeWidth="3" strokeLinecap="round" />}
         <circle cx="70" cy="70" r="5" className="fill-foreground" />
         <text x="10" y="79" className="fill-muted-foreground" fontSize="9">2%</text>
