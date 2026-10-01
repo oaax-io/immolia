@@ -31,7 +31,7 @@ const CH_BOUNDS: [[number, number], [number, number]] = [
   [10.4914, 47.8084],
 ];
 
-const CANTON_NAMES: Record<string, string> = {
+export const CANTON_NAMES: Record<string, string> = {
   AG: "Aargau", AI: "Appenzell Innerrhoden", AR: "Appenzell Ausserrhoden", BE: "Bern",
   BL: "Basel-Landschaft", BS: "Basel-Stadt", FR: "Freiburg", GE: "Genf", GL: "Glarus",
   GR: "Graubünden", JU: "Jura", LU: "Luzern", NE: "Neuenburg", NW: "Nidwalden",
