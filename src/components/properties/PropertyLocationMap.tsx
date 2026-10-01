@@ -79,12 +79,15 @@ export function PropertyLocationMap({ property }: { property: any }) {
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
     const el = document.createElement("div");
-    el.className = "property-map-marker";
-    el.style.cssText = "width:22px;height:22px;border-radius:9999px;background:hsl(var(--primary, 220 80% 50%));border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer;";
+    el.className = "rounded-full border-[3px] border-background bg-primary shadow-lg";
+    el.style.cssText = "width:22px;height:22px;cursor:pointer;";
     el.addEventListener("mouseenter", () => setShowDetails(true));
     el.addEventListener("click", () => setShowDetails((s) => !s));
     new mapboxgl.Marker({ element: el }).setLngLat([point.longitude, point.latitude]).addTo(map);
-    return () => map.remove();
+    map.on("load", () => map.resize());
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(container.current);
+    return () => { ro.disconnect(); map.remove(); };
   }, [token, point]);
 
   const runAnalysis = async () => {
@@ -110,7 +113,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
 
   return (
     <div className="relative h-full w-full" onMouseLeave={() => setShowDetails(false)}>
-      <div ref={container} className="absolute inset-0" />
+      <div ref={container} className="h-full w-full" />
       {(geoLoading || !token) && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
