@@ -180,20 +180,42 @@ export function MandateWizard({ open, onOpenChange, onCreated }: Props) {
       }),
   });
 
+  // Vertragstext kommt ausschliesslich aus einer Vorlage der aktiven Firma
+  // (RLS: current_agency_id). Kein Code-Fallback auf fremde/ASIMO-Texte.
+  const { data: tenantTemplate, isLoading: tplLoading } = useQuery({
+    queryKey: ["mandate-wizard-template", docKind],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("document_templates")
+        .select("id, name, content, is_default")
+        .eq("type", docKind as never)
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+        .order("name")
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data && data.content?.trim() ? data : null;
+    },
+  });
+  const missingTemplate = open && !tplLoading && !tenantTemplate;
+
   const previewHtml = useMemo(() => {
-    if (!ctx) return "";
-    const tpl = defaultTemplateForType(docKind);
+    if (!ctx || !tenantTemplate) return "";
     return wrapHtmlDocument(
       mandateType === "exclusive" ? "Maklermandat (exklusiv)" : "Maklermandat (teilexklusiv)",
-      renderTemplate(tpl, ctx),
+      renderTemplate(tenantTemplate.content, ctx),
       ctx.brand,
     );
-  }, [ctx, docKind, mandateType]);
+  }, [ctx, tenantTemplate, mandateType]);
 
   const create = useMutation({
     mutationFn: async () => {
       if (!clientId || !propertyId) throw new Error("Kunde und Immobilie sind erforderlich");
       if (!commissionValue) throw new Error("Provision fehlt");
+      if (!tenantTemplate || !previewHtml)
+        throw new Error("Keine Mandatsvorlage vorhanden. Bitte unter Einstellungen → Dokumentvorlagen eine Vorlage erstellen.");
 
       // Validierung VOR jeder Speicherung: leere Zeilen (ohne Person und ohne Anteil) ignorieren,
       // Zeilen mit Person, aber 0 % bzw. > 100 % → Korrektur verlangen.
@@ -502,7 +524,16 @@ export function MandateWizard({ open, onOpenChange, onCreated }: Props) {
                   disabled={!createdDocumentId}
                 />
               </div>
-              {previewHtml ? (
+              {missingTemplate ? (
+                <div className="rounded-md border border-destructive/40 bg-destructive/5 p-6 text-sm">
+                  <div className="font-medium text-foreground">
+                    Keine {mandateType === "exclusive" ? "exklusive" : "teilexklusive"} Mandatsvorlage vorhanden
+                  </div>
+                  <p className="mt-1 text-muted-foreground">
+                    Bitte unter Einstellungen → Dokumentvorlagen eine Vorlage erstellen oder aktivieren. Ohne Vorlage kann kein Mandat gespeichert werden.
+                  </p>
+                </div>
+              ) : previewHtml ? (
                 <iframe
                   title="Vorschau"
                   srcDoc={previewHtml}
@@ -570,7 +601,7 @@ export function MandateWizard({ open, onOpenChange, onCreated }: Props) {
               <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => create.mutate()}
-                  disabled={create.isPending || !!createdDocumentId}
+                  disabled={create.isPending || !!createdDocumentId || missingTemplate}
                 >
                   <Check className="mr-2 size-4" />
                   {createdDocumentId

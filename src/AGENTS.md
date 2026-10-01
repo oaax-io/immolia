@@ -104,3 +104,5 @@
 ## Core Consolidation 1
 - Portal-Webhook bestimmt den Tenant nur aus PORTAL_TARGET_AGENCY_ID (gültig + aktiv), sonst 503 vor jeder Mutation; nie Payload, nie hartcodierter Default; why: kein Tenant ist impliziter Default.
 - Dokumentvorlagen werden nie als Seiteneffekt beim Öffnen angelegt; neutrale Defaults nur aus IMMOLIA_SYSTEM_TEMPLATES (src/lib/template-catalog.ts) via Provisioning, ASIMO_TEMPLATES bleiben Tenantinhalte; why: keine ASIMO-Verträge in fremden Firmen.
+- Dokument-Layout ≠ Branding: Layout-Stil per Marker (`layout:compact`, Legacy-Alias `skin:asimo`), Farben/Logo/Name/Kontakt nur aus Tenant-Branding; why: jeder Tenant nutzt denselben Stil mit eigener Marke, alte Vorlagen bleiben gültig.
+- Mandate rendern nur aus einer aktiven Vorlage der aktiven Firma; ohne Vorlage wird Speichern blockiert (kein Code-Fallback); why: kein fremder Vertragstext in einer Firma.
