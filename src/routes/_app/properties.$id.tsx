@@ -43,6 +43,7 @@ import { PropertyQuickActions } from "@/components/properties/PropertyQuickActio
 import { deleteToTrash } from "@/lib/trash";
 import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
+import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
 
 
 export const Route = createFileRoute("/_app/properties/$id")({
@@ -2634,6 +2635,7 @@ const comparisonMap: Record<string, { label: string; cls: string }> = {
 function MarketAnalysisTab({ property }: { property: any }) {
   const confirm = useConfirm();
   const qc = useQueryClient();
+  const analyseProperty = useServerFn(generatePropertyMarketAnalysis);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -2655,13 +2657,9 @@ function MarketAnalysisTab({ property }: { property: any }) {
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("property-market-analysis", {
-        body: { property },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      const data = await analyseProperty({ data: { propertyId: property.id, requestId: crypto.randomUUID() } });
       await qc.invalidateQueries({ queryKey: ["market_analyses", property.id] });
-      setSelectedId((data as any).id ?? null);
+      setSelectedId(data.id ?? null);
       toast.success("Marktanalyse erstellt");
     } catch (e: any) {
       toast.error(e?.message ?? "Marktanalyse fehlgeschlagen");

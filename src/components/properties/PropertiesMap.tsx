@@ -7,9 +7,9 @@ import { Link } from "@tanstack/react-router";
 import { getMapboxToken, geocodeAddresses, type GeocodedPoint } from "@/lib/mapbox.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
 import { ArrowRight, Bed, BrainCircuit, Building2, Loader2, MapPin, Maximize, RotateCcw, Sparkles, TrendingUp, X } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -63,7 +63,7 @@ const comparisonLabels: Record<string, string> = {
 
 function potentialRange(min?: number, max?: number, suffix = "") {
   if (!Number.isFinite(min) && !Number.isFinite(max)) return "—";
-  const format = (value?: number) => Number.isFinite(value) ? new Intl.NumberFormat("de-CH", { maximumFractionDigits: suffix ? 1 : 0 }).format(value) : "—";
+  const format = (value?: number) => typeof value === "number" && Number.isFinite(value) ? new Intl.NumberFormat("de-CH", { maximumFractionDigits: suffix ? 1 : 0 }).format(value) : "—";
   if (min === max || !Number.isFinite(max)) return `${format(min)}${suffix}`;
   if (!Number.isFinite(min)) return `${format(max)}${suffix}`;
   return `${format(min)}–${format(max)}${suffix}`;
@@ -81,6 +81,7 @@ function inSwitzerland(lat: number, lng: number) {
 export function PropertiesMap({ properties }: Props) {
   const tokenFn = useServerFn(getMapboxToken);
   const geocodeFn = useServerFn(geocodeAddresses);
+  const analyseFn = useServerFn(generatePropertyMarketAnalysis);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -272,9 +273,7 @@ export function PropertiesMap({ properties }: Props) {
   const runAnalysis = async (property: any) => {
     setAnalysingId(property.id);
     try {
-      const { data, error } = await supabase.functions.invoke("property-market-analysis", { body: { property } });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      await analyseFn({ data: { propertyId: property.id, requestId: crypto.randomUUID() } });
       await refetchAnalyses();
       toast.success("KI-Potenzial wurde analysiert");
     } catch (error) {
