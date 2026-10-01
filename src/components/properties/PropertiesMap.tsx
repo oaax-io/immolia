@@ -87,6 +87,13 @@ export function PropertiesMap({ properties }: Props) {
   const [listingFilter, setListingFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [analysingId, setAnalysingId] = useState<string | null>(null);
+  const [isFs, setIsFs] = useState(false);
+  const [yieldRange, setYieldRange] = useState<[number, number]>([0, 10]);
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const markerElsRef = useRef<Map<string, HTMLElement>>(new Map());
+  const pinnedRef = useRef<string | null>(null);
+  pinnedRef.current = pinnedId;
 
   const { data: tokenData } = useQuery({
     queryKey: ["mapbox-token"],
@@ -150,25 +157,15 @@ export function PropertiesMap({ properties }: Props) {
     return [...counts.entries()].sort(([a], [b]) => (CANTON_NAMES[a] ?? a).localeCompare(CANTON_NAMES[b] ?? b, "de"));
   }, [points, propertyById]);
 
-  const visiblePoints = useMemo(() => points.filter((point) => {
-    const property = propertyById.get(point.id);
-    if (!property || !inSwitzerland(point.latitude, point.longitude)) return false;
-    const canton = point.canton ?? "UNBEKANNT";
-    if (cantonFilter.length > 0 && !cantonFilter.includes(canton)) return false;
-    if (listingFilter !== "all" && property.listing_type !== listingFilter) return false;
-    if (statusFilter !== "all" && property.status !== statusFilter) return false;
-    return true;
-  }), [points, propertyById, cantonFilter, listingFilter, statusFilter]);
-
-  const visibleIds = useMemo(() => visiblePoints.map((point) => point.id), [visiblePoints]);
+  const allIds = useMemo(() => points.map((point) => point.id), [points]);
   const { data: analyses = [], refetch: refetchAnalyses } = useQuery({
-    queryKey: ["map-market-analyses", visibleIds.join("|")],
-    enabled: visibleIds.length > 0,
+    queryKey: ["map-market-analyses", allIds.join("|")],
+    enabled: allIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("property_market_analyses")
         .select("id, property_id, created_at, sections")
-        .in("property_id", visibleIds)
+        .in("property_id", allIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -182,6 +179,35 @@ export function PropertiesMap({ properties }: Props) {
     }
     return map;
   }, [analyses]);
+  const maxPrice = useMemo(() => {
+    const m = Math.max(0, ...properties.filter((p) => p.listing_type !== "rent").map((p) => Number(p.price) || 0));
+    return m > 0 ? Math.ceil(m / 100_000) * 100_000 : 5_000_000;
+  }, [properties]);
+  const pr: [number, number] = priceRange ?? [0, maxPrice];
+  const yieldActive = yieldRange[0] > 0 || yieldRange[1] < 10;
+  const priceActive = !!priceRange && (priceRange[0] > 0 || priceRange[1] < maxPrice);
+
+  const visiblePoints = useMemo(() => points.filter((point) => {
+    const property = propertyById.get(point.id);
+    if (!property || !inSwitzerland(point.latitude, point.longitude)) return false;
+    const canton = point.canton ?? "UNBEKANNT";
+    if (cantonFilter.length > 0 && !cantonFilter.includes(canton)) return false;
+    if (listingFilter !== "all" && property.listing_type !== listingFilter) return false;
+    if (statusFilter !== "all" && property.status !== statusFilter) return false;
+    if (yieldActive) {
+      const r = latestAnalysisByProperty.get(point.id)?.sections?.rental;
+      const v = [r?.gross_yield_min, r?.gross_yield_max].filter((x): x is number => typeof x === "number");
+      const y = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+      if (y == null || y < yieldRange[0] || y > yieldRange[1]) return false;
+    }
+    if (priceActive) {
+      if (property.listing_type === "rent") return false;
+      const v = Number(property.price) || 0;
+      if (!v || v < pr[0] || v > pr[1]) return false;
+    }
+    return true;
+  }), [points, propertyById, cantonFilter, listingFilter, statusFilter, yieldActive, yieldRange, priceActive, pr[0], pr[1], latestAnalysisByProperty]);
+
 
   const selectedId = pinnedId ?? hoveredId;
   const selected = selectedId ? propertyById.get(selectedId) ?? null : null;
@@ -203,8 +229,15 @@ export function PropertiesMap({ properties }: Props) {
       ],
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new mapboxgl.FullscreenControl({ container: wrapperRef.current ?? undefined }), "top-right");
     mapRef.current = map;
+    const onFs = () => {
+      setIsFs(!!document.fullscreenElement && document.fullscreenElement === wrapperRef.current);
+      setTimeout(() => map.resize(), 60);
+    };
+    document.addEventListener("fullscreenchange", onFs);
     return () => {
+      document.removeEventListener("fullscreenchange", onFs);
       map.remove();
       mapRef.current = null;
     };
@@ -218,6 +251,7 @@ export function PropertiesMap({ properties }: Props) {
     // clear existing
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
+    markerElsRef.current = new Map();
 
     if (visiblePoints.length === 0) return;
 
@@ -233,20 +267,21 @@ export function PropertiesMap({ properties }: Props) {
       const price = prop.listing_type === "rent" ? prop.rent : prop.price;
       el.textContent = price ? formatCurrency(Number(price)).replace(/\s/g, "") : "•";
       el.addEventListener("mouseenter", () => {
-        if (!pinnedId) setHoveredId(prop.id);
+        if (!pinnedRef.current) setHoveredId(prop.id);
       });
       el.addEventListener("mouseleave", () => setHoveredId(null));
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         setPinnedId((current) => current === prop.id ? null : prop.id);
         setHoveredId(null);
-        map.flyTo({ center: [pt.longitude, pt.latitude], zoom: Math.max(map.getZoom(), 12) });
+        map.easeTo({ center: [pt.longitude, pt.latitude], zoom: Math.max(map.getZoom(), 12), duration: 500 });
       });
 
       const marker = new mapboxgl.Marker({ element: el })
         .setLngLat([pt.longitude, pt.latitude])
         .addTo(map);
       markersRef.current.push(marker);
+      markerElsRef.current.set(prop.id, el);
       bounds.extend([pt.longitude, pt.latitude]);
     }
 
@@ -256,7 +291,11 @@ export function PropertiesMap({ properties }: Props) {
       // No Swiss points — reset to Switzerland overview
       map.flyTo({ center: CH_CENTER, zoom: 7.2, duration: 600 });
     }
-  }, [visiblePoints, propertyById, pinnedId]);
+  }, [visiblePoints, propertyById]);
+
+  useEffect(() => {
+    markerElsRef.current.forEach((el, id) => el.classList.toggle("is-active", id === (pinnedId ?? hoveredId)));
+  }, [pinnedId, hoveredId, visiblePoints]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -288,20 +327,23 @@ export function PropertiesMap({ properties }: Props) {
   }
 
   const withoutAddress = properties.length - geocodeItems.length;
-  const hasMapFilters = cantonFilter.length > 0 || listingFilter !== "all" || statusFilter !== "all";
+  const hasMapFilters = cantonFilter.length > 0 || listingFilter !== "all" || statusFilter !== "all" || yieldActive || priceActive;
+  const chf = (v: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(v);
   const resetMapFilters = () => {
     setCantonFilter([]);
     setListingFilter("all");
     setStatusFilter("all");
+    setYieldRange([0, 10]);
+    setPriceRange(null);
     setPinnedId(null);
   };
 
   return (
-    <div className="space-y-3">
+    <div ref={wrapperRef} className={isFs ? "flex h-full flex-col gap-3 bg-background p-3" : "space-y-3"}>
       <div className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-lg border bg-card p-2 shadow-soft">
         <Select value={listingFilter} onValueChange={setListingFilter}>
           <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectContent container={isFs ? wrapperRef.current : undefined}>
             <SelectItem value="all">Kauf & Miete</SelectItem>
             <SelectItem value="sale">Verkauf</SelectItem>
             <SelectItem value="rent">Vermietung</SelectItem>
@@ -309,7 +351,7 @@ export function PropertiesMap({ properties }: Props) {
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectContent container={isFs ? wrapperRef.current : undefined}>
             <SelectItem value="all">Alle Status</SelectItem>
             {Object.entries(propertyStatusLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
           </SelectContent>
@@ -333,6 +375,16 @@ export function PropertiesMap({ properties }: Props) {
             );
           })}
         </div>
+        <div className="flex w-full flex-wrap items-center gap-4 border-t pt-2 lg:w-auto lg:border-0 lg:pt-0">
+          <div className="w-44 space-y-0.5">
+            <div className="flex justify-between text-[11px]"><span className="text-muted-foreground">Rendite</span><span className="font-semibold">{yieldRange[0].toFixed(1)}–{yieldRange[1].toFixed(1)}{yieldRange[1] >= 10 ? "+" : ""} %</span></div>
+            <RangeSlider value={yieldRange} min={0} max={10} step={0.1} onChange={setYieldRange} />
+          </div>
+          <div className="w-52 space-y-0.5">
+            <div className="flex justify-between text-[11px]"><span className="text-muted-foreground">Kaufpreis</span><span className="font-semibold">{chf(pr[0])}–{chf(pr[1])}</span></div>
+            <RangeSlider value={pr} min={0} max={maxPrice} step={Math.max(10_000, Math.round(maxPrice / 200 / 10_000) * 10_000)} onChange={setPriceRange} />
+          </div>
+        </div>
         {hasMapFilters && (
           <Button type="button" size="sm" variant="ghost" onClick={resetMapFilters}>
             <RotateCcw className="mr-1 h-4 w-4" />Zurücksetzen
@@ -340,10 +392,10 @@ export function PropertiesMap({ properties }: Props) {
         )}
       </div>
 
-      <div className="relative">
+      <div className={isFs ? "relative min-h-0 flex-1" : "relative"}>
       <div
         ref={mapContainer}
-        className="h-[calc(100vh-320px)] min-h-[500px] w-full overflow-hidden rounded-xl border"
+        className={isFs ? "h-full w-full overflow-hidden rounded-xl border" : "h-[calc(100vh-320px)] min-h-[500px] w-full overflow-hidden rounded-xl border"}
       />
 
       {/* Info bar */}
@@ -440,6 +492,11 @@ export function PropertiesMap({ properties }: Props) {
           </div>
           <div className="border-t bg-muted/20 p-3">
             {selectedAnalysis?.sections ? (
+              <div className="space-y-2">
+              <div className="grid items-center gap-3 sm:grid-cols-[180px_1fr]">
+                <YieldGauge min={selectedAnalysis.sections.rental?.gross_yield_min} max={selectedAnalysis.sections.rental?.gross_yield_max} />
+                <MarketScale comparison={selectedAnalysis.sections.purchase_price?.comparison} />
+              </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-md border bg-background p-2.5">
                   <p className="flex items-center gap-1.5 text-xs font-semibold"><TrendingUp className="h-3.5 w-3.5 text-success" />Verkaufspotenzial</p>
@@ -451,6 +508,7 @@ export function PropertiesMap({ properties }: Props) {
                   <p className="mt-1 text-sm font-semibold">{potentialRange(selectedAnalysis.sections.rental?.monthly_rent_min, selectedAnalysis.sections.rental?.monthly_rent_max)} CHF/Mt.</p>
                   <p className="text-[11px] text-muted-foreground">Bruttorendite {potentialRange(selectedAnalysis.sections.rental?.gross_yield_min, selectedAnalysis.sections.rental?.gross_yield_max, "%")}</p>
                 </div>
+              </div>
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-2">
