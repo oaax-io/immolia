@@ -3104,6 +3104,8 @@ export type Database = {
           layout_type: string
           name: string
           source_template_id: string | null
+          system_key: string | null
+          system_version: number | null
           type: Database["public"]["Enums"]["document_type"]
           updated_at: string
           variables: Json
@@ -3124,6 +3126,8 @@ export type Database = {
           layout_type?: string
           name: string
           source_template_id?: string | null
+          system_key?: string | null
+          system_version?: number | null
           type?: Database["public"]["Enums"]["document_type"]
           updated_at?: string
           variables?: Json
@@ -3144,6 +3148,8 @@ export type Database = {
           layout_type?: string
           name?: string
           source_template_id?: string | null
+          system_key?: string | null
+          system_version?: number | null
           type?: Database["public"]["Enums"]["document_type"]
           updated_at?: string
           variables?: Json
@@ -6858,6 +6864,10 @@ export type Database = {
         Returns: Json
       }
       _credit_wallet: { Args: { _agency_id: string }; Returns: string }
+      _immolia_provision_defaults: {
+        Args: { _agency_id: string }
+        Returns: Json
+      }
       _invitation_audit: {
         Args: {
           _action: string
@@ -7298,6 +7308,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      immolia_system_defaults_version: { Args: never; Returns: number }
       invitation_accept: { Args: { _token: string }; Returns: Json }
       invitation_create_tenant_member: {
         Args: {
@@ -7456,6 +7467,7 @@ export type Database = {
         Args: { _amount: number; _operation_id: string; _reason: string }
         Returns: string
       }
+      platform_default_module_keys: { Args: never; Returns: string[] }
       platform_domain_audit: {
         Args: {
           _action: string
