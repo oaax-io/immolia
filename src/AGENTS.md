@@ -106,3 +106,8 @@
 - Dokumentvorlagen werden nie als Seiteneffekt beim Öffnen angelegt; neutrale Defaults nur aus IMMOLIA_SYSTEM_TEMPLATES (src/lib/template-catalog.ts) via Provisioning, ASIMO_TEMPLATES bleiben Tenantinhalte; why: keine ASIMO-Verträge in fremden Firmen.
 - Dokument-Layout ≠ Branding: Layout-Stil per Marker (`layout:compact`, Legacy-Alias `skin:asimo`), Farben/Logo/Name/Kontakt nur aus Tenant-Branding; why: jeder Tenant nutzt denselben Stil mit eigener Marke, alte Vorlagen bleiben gültig.
 - Mandate rendern nur aus einer aktiven Vorlage der aktiven Firma; ohne Vorlage wird Speichern blockiert (kein Code-Fallback); why: kein fremder Vertragstext in einer Firma.
+
+## New Tenant Provisioning V2 (Core Step 3)
+- Core-Startpaket = MODULE_REGISTRY[].default_enabled (default true), DB-Spiegel platform_default_module_keys(); platform_create_tenant nutzt platform_module_keys() statt eigener Liste; why: eine Modulliste.
+- Generische Startdaten nur via _immolia_provision_defaults(agency) (versioniert, ON CONFLICT DO NOTHING, nur service_role/innerhalb platform_create_tenant), nie beim Seitenaufruf, nie automatisch für bestehende Firmen; why: reproduzierbar, idempotent, keine ASIMO-Daten als Systemdaten.
+- Systemvorlagen künftig über document_templates.system_key/system_version (eindeutig pro Firma); why: idempotentes Einspielen freigegebener Vorlagen.
