@@ -117,3 +117,7 @@
 - Inbound-Webhook ermittelt Firma ausschliesslich aus der eindeutigen aktiven Verbindung zum verifizierten Secret-Satz (sonst 503); Outbound-Publish/Auto-Sync nur bei aktiver Verbindung der aktiven Firma; why: kein Cross-Tenant-Publishing, kein globaler Default.
 - Protokoll legacy_asimo_v1 behält Wire-Namen (x-asimo-key, x-asimo-signature, /api/public/asimo/properties) nur als Transport; why: externe Portalseite hängt davon ab.
 - Idempotenz: portal_event_log (provider_key, portal_event_id) eindeutig; keine automatische Lead-Zusammenführung; why: legitime Anfragen nie verlieren.
+
+## Selbstauskunft (Core Step 5)
+- PDF-Import parse-self-disclosure: Format-Erkennung → Source Adapter → kanonische client_self_disclosures-Felder; legacy_asimo_self_disclosure_v1 (Feldcodes AN../MI..) ist nur Eingabeformat, für jede Firma nutzbar; unbekanntes Format übernimmt keine Beträge (review_required); why: keine falschen Finanzdaten, kein ASIMO-Zwang.
+- Firma nur aus Sitzung (current_agency_id), nie aus PDF oder Payload; Feldinhalte nie loggen; why: sensible Finanzdaten.

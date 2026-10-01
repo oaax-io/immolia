@@ -509,6 +509,11 @@ export function ClientSelfDisclosureWizard({
       }
       setForm((prev) => ({ ...prev, ...cleaned }));
       const count = Object.keys(cleaned).length;
+      if (data?.review_required) {
+        toast.warning(
+          "Unbekanntes Formular: Nur Personen- und Kontaktangaben übernommen. Finanzangaben bitte manuell erfassen und alles prüfen.",
+        );
+      }
       toast.success(
         count > 0
           ? `${count} Felder erkannt – bitte prüfen.`

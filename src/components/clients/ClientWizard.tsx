@@ -314,6 +314,11 @@ export function ClientWizard({ open, onOpenChange, onCreated }: Props) {
       const last = (fields.last_name as string | undefined)?.trim() ?? "";
       const fullName = [first, last].filter(Boolean).join(" ");
       if (!fullName) throw new Error(t("clientWizard.toasts.noNameDetected"));
+      if (data?.review_required) {
+        toast.warning(
+          "Unbekanntes Formular: Nur Personen- und Kontaktangaben übernommen. Finanzangaben bitte manuell erfassen.",
+        );
+      }
 
       const { data: userData } = await supabase.auth.getUser();
       const owner_id = userData.user?.id ?? null;
