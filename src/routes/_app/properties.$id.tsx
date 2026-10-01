@@ -441,6 +441,14 @@ function PropertyDetail() {
                 </TooltipTrigger>
                 <TooltipContent>Bearbeiten</TooltipContent>
               </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={async () => { if (await confirm({ title: "Immobilie löschen?", description: "Diese Aktion kann nicht rückgängig gemacht werden.", confirmText: "Löschen" })) del.mutate(); }}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Löschen</TooltipContent>
+              </Tooltip>
             </div>
           </TooltipProvider>
           <Select value={p.status} onValueChange={(v) => updateStatus.mutate(v)}>
@@ -454,9 +462,6 @@ function PropertyDetail() {
               </SelectItem>
             ))}</SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={async () => { if (await confirm({ title: "Immobilie löschen?", description: "Diese Aktion kann nicht rückgängig gemacht werden.", confirmText: "Löschen" })) del.mutate(); }}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
           <PropertyQuickActions propertyId={id} marketAnalysisSlot={<MarketAnalysisTab property={p} />} />
 
         </div>
