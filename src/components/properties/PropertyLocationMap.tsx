@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMapboxToken, geocodeAddresses } from "@/lib/mapbox.functions";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
+import { getSwissParcelGeometry } from "@/lib/property-location.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { BrainCircuit, Loader2, MapPin, Sparkles, TrendingUp } from "lucide-react";
@@ -37,10 +38,12 @@ export function PropertyLocationMap({ property }: { property: any }) {
   const tokenFn = useServerFn(getMapboxToken);
   const geocodeFn = useServerFn(geocodeAddresses);
   const analyseFn = useServerFn(generatePropertyMarketAnalysis);
+  const parcelFn = useServerFn(getSwissParcelGeometry);
   const qc = useQueryClient();
   const container = useRef<HTMLDivElement | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [analysing, setAnalysing] = useState(false);
+  const [mapReady, setMapReady] = useState<mapboxgl.Map | null>(null);
 
   const query = [property.address, property.postal_code, property.city, property.country || "Schweiz"].filter(Boolean).join(", ");
 
@@ -67,6 +70,16 @@ export function PropertyLocationMap({ property }: { property: any }) {
     select: (rows: any[]) => (rows[0]?.sections as Sections | undefined) ?? null,
   });
 
+  const isSwiss = !property.country || /schweiz|switzerland|suisse|svizzera|^ch$/i.test(String(property.country));
+  const { data: parcel } = useQuery({
+    queryKey: ["property-parcel-geometry", property.id, point?.latitude, point?.longitude],
+    enabled: !!point && isSwiss,
+    staleTime: Infinity,
+    queryFn: async () => {
+      try { return await parcelFn({ data: { latitude: point!.latitude, longitude: point!.longitude } }); } catch { return null; }
+    },
+  });
+
   useEffect(() => {
     if (!token || !point || !container.current) return;
     mapboxgl.accessToken = token;
@@ -74,7 +87,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
       container: container.current,
       style: "mapbox://styles/mapbox/light-v11",
       center: [point.longitude, point.latitude],
-      zoom: 15,
+      zoom: 17,
       attributionControl: false,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -84,11 +97,46 @@ export function PropertyLocationMap({ property }: { property: any }) {
     el.addEventListener("mouseenter", () => setShowDetails(true));
     el.addEventListener("click", () => setShowDetails((s) => !s));
     new mapboxgl.Marker({ element: el }).setLngLat([point.longitude, point.latitude]).addTo(map);
-    map.on("load", () => map.resize());
+    map.on("load", () => {
+      map.resize();
+      if (isSwiss) {
+        map.addSource("cadastre", {
+          type: "raster", tileSize: 256,
+          tiles: ["https://wms.geo.admin.ch/?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS=ch.kantone.cadastralwebmap-farbe&STYLES=&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}"],
+          attribution: "© Amtliche Vermessung Schweiz",
+        });
+        map.addLayer({ id: "cadastre", type: "raster", source: "cadastre", minzoom: 14, paint: { "raster-opacity": 0.55 } });
+      }
+      setMapReady(map);
+    });
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container.current);
-    return () => { ro.disconnect(); map.remove(); };
-  }, [token, point]);
+    return () => { ro.disconnect(); setMapReady(null); map.remove(); };
+  }, [token, point, isSwiss]);
+
+  useEffect(() => {
+    const map = mapReady;
+    if (!map || !parcel?.geometry) return;
+    const primary = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+    const color = primary ? (primary.startsWith("oklch") || primary.startsWith("#") || primary.startsWith("hsl") ? primary : `hsl(${primary})`) : "#2563eb";
+    const data = { type: "Feature", properties: {}, geometry: parcel.geometry } as any;
+    if (map.getSource("parcel")) (map.getSource("parcel") as mapboxgl.GeoJSONSource).setData(data);
+    else {
+      map.addSource("parcel", { type: "geojson", data });
+      map.addLayer({ id: "parcel-fill", type: "fill", source: "parcel", paint: { "fill-color": color, "fill-opacity": 0.18 } });
+      map.addLayer({ id: "parcel-line", type: "line", source: "parcel", paint: { "line-color": color, "line-width": 2.5 } });
+      map.on("mouseenter", "parcel-fill", () => {
+        map.getCanvas().style.cursor = "pointer";
+        map.setPaintProperty("parcel-fill", "fill-opacity", 0.38);
+        setShowDetails(true);
+      });
+      map.on("mouseleave", "parcel-fill", () => {
+        map.getCanvas().style.cursor = "";
+        map.setPaintProperty("parcel-fill", "fill-opacity", 0.18);
+      });
+      map.on("click", "parcel-fill", () => setShowDetails(true));
+    }
+  }, [mapReady, parcel]);
 
   const runAnalysis = async () => {
     setAnalysing(true);
@@ -120,17 +168,27 @@ export function PropertyLocationMap({ property }: { property: any }) {
         </div>
       )}
       {showDetails && point && (
-        <div className="absolute bottom-4 left-4 z-10 w-72 rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur">
+        <div className="absolute bottom-4 left-4 z-10 w-80 rounded-2xl border bg-background/90 p-4 shadow-xl backdrop-blur-md">
           <p className="truncate text-sm font-semibold">{property.title}</p>
-          <p className="mb-3 flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{query}</p>
+          <p className="flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3" />{query}</p>
+          {(parcel?.parcel_no || property.parcel_no) && (
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">Parzelle {parcel?.parcel_no || property.parcel_no}</span>
+              {parcel?.canton && <span className="rounded-full bg-muted px-2 py-0.5">{parcel.canton}</span>}
+              {parcel?.e_grid && <span className="rounded-full bg-muted px-2 py-0.5 font-mono">{parcel.e_grid}</span>}
+            </div>
+          )}
           {latest ? (
-            <div className="space-y-2 text-sm">
-              <Row label="Verkaufspotenzial" value={range(pp?.estimated_value_min, pp?.estimated_value_max, "CHF ")} hint={pp?.comparison ? comparisonLabels[pp.comparison] : undefined} />
-              <Row label="Vermietungspotenzial" value={range(r?.monthly_rent_min, r?.monthly_rent_max, "CHF ", " / Mt.")} />
-              <Row label="Bruttorendite" value={range(r?.gross_yield_min, r?.gross_yield_max, "", " %", 1)} icon />
+            <div className="mt-3 space-y-3">
+              <YieldGauge min={r?.gross_yield_min} max={r?.gross_yield_max} />
+              <div className="grid grid-cols-2 gap-2">
+                <Tile label="Verkaufspotenzial" value={range(pp?.estimated_value_min, pp?.estimated_value_max, "CHF ")} hint={pp?.comparison ? comparisonLabels[pp.comparison] : undefined} />
+                <Tile label="Vermietung" value={range(r?.monthly_rent_min, r?.monthly_rent_max, "CHF ", " / Mt.")} />
+              </div>
+              <MarketScale comparison={pp?.comparison} />
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="mt-3 space-y-2">
               <p className="text-xs text-muted-foreground">Noch keine Marktanalyse vorhanden.</p>
               <Button size="sm" className="w-full" onClick={runAnalysis} disabled={analysing}>
                 {analysing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
@@ -142,21 +200,67 @@ export function PropertyLocationMap({ property }: { property: any }) {
       )}
       {!showDetails && point && (
         <div className="pointer-events-none absolute bottom-4 left-4 z-10 flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1 text-xs shadow">
-          <BrainCircuit className="h-3.5 w-3.5 text-primary" /> Marker berühren für Potenzial
+          <BrainCircuit className="h-3.5 w-3.5 text-primary" /> Parzelle oder Marker berühren
         </div>
       )}
     </div>
   );
 }
 
-function Row({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon?: boolean }) {
+const G_MIN = 2, G_MAX = 6;
+function polar(cx: number, cy: number, rad: number, v: number) {
+  const a = Math.PI * (1 - (Math.min(Math.max(v, G_MIN), G_MAX) - G_MIN) / (G_MAX - G_MIN));
+  return [cx + rad * Math.cos(a), cy - rad * Math.sin(a)];
+}
+function arc(from: number, to: number) {
+  const [x1, y1] = polar(70, 70, 56, from), [x2, y2] = polar(70, 70, 56, to);
+  return `M ${x1} ${y1} A 56 56 0 0 1 ${x2} ${y2}`;
+}
+
+function YieldGauge({ min, max }: { min?: number; max?: number }) {
+  const vals = [min, max].filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  const value = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const [nx, ny] = polar(70, 70, 44, value ?? G_MIN);
+  const label = value == null ? "Keine Angabe" : value >= 4.5 ? "Überdurchschnittlich" : value >= 3.5 ? "Marktüblich" : "Moderat";
   return (
-    <div className="flex items-start justify-between gap-2">
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">{icon && <TrendingUp className="h-3 w-3" />}{label}</span>
-      <span className="text-right">
-        <span className="block font-semibold">{value}</span>
-        {hint && <span className="block text-[11px] text-muted-foreground">{hint}</span>}
-      </span>
+    <div className="flex items-center gap-3 rounded-xl bg-muted/50 p-2">
+      <svg viewBox="0 0 140 80" className="h-[72px] w-[126px] shrink-0">
+        <path d={arc(2, 3.5)} className="stroke-chart-4" strokeWidth="12" fill="none" />
+        <path d={arc(3.5, 4.5)} className="stroke-chart-2" strokeWidth="12" fill="none" />
+        <path d={arc(4.5, 6)} className="stroke-chart-1" strokeWidth="12" fill="none" />
+        {value != null && <line x1="70" y1="70" x2={nx} y2={ny} className="stroke-foreground" strokeWidth="3" strokeLinecap="round" />}
+        <circle cx="70" cy="70" r="5" className="fill-foreground" />
+        <text x="10" y="79" className="fill-muted-foreground" fontSize="9">2%</text>
+        <text x="118" y="79" className="fill-muted-foreground" fontSize="9">6%+</text>
+      </svg>
+      <div>
+        <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><TrendingUp className="h-3 w-3" />Bruttorendite</p>
+        <p className="text-lg font-bold leading-tight">{range(min, max, "", " %", 1)}</p>
+        <p className="text-[11px] font-medium text-primary">{label}</p>
+        <p className="text-[10px] text-muted-foreground">Benchmark CH: 3.5–4.5 %</p>
+      </div>
+    </div>
+  );
+}
+
+function MarketScale({ comparison }: { comparison?: string }) {
+  const pos = comparison === "below_market" ? 16 : comparison === "at_market" ? 50 : comparison === "above_market" ? 84 : null;
+  return (
+    <div>
+      <div className="relative h-2 rounded-full bg-gradient-to-r from-chart-1 via-chart-2 to-chart-4">
+        {pos != null && <span className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow" style={{ left: `${pos}%` }} />}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>Unter Markt</span><span>Marktgerecht</span><span>Über Markt</span></div>
+    </div>
+  );
+}
+
+function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg border bg-background/60 p-2">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-semibold leading-snug">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
