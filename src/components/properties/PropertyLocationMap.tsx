@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CANTON_NAMES } from "@/components/properties/PropertiesMap";
-import { ArrowRight, BrainCircuit, Loader2, MapPin, RotateCcw, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { ArrowRight, BrainCircuit, Loader2, MapPin, RotateCcw, SlidersHorizontal, Sparkles, TrendingUp, X } from "lucide-react";
 import { toast } from "sonner";
 
 const YIELD_MIN = 0, YIELD_MAX = 10;
@@ -81,7 +81,7 @@ export function PropertyLocationMap({ property }: { property: any }) {
       const { data, error } = await supabase
         .from("properties")
         .select("id, title, address, postal_code, city, country, price, rent, listing_type, status")
-        .is("deleted_at" as any, null);
+        .is("deleted_at", null);
       if (error) {
         const retry = await supabase.from("properties").select("id, title, address, postal_code, city, country, price, rent, listing_type, status");
         return (retry.data ?? []) as any[];
