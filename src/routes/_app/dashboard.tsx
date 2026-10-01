@@ -261,11 +261,12 @@ function Dashboard() {
       )}
 
       {/* KPI cards */}
-      <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard icon={Users} label={t("dashboard.kpis.activeClients")} value={kpis.data?.clients ?? "—"} loading={kpis.isLoading} to="/clients" />
         <KpiCard icon={Building2} label={t("dashboard.kpis.activeProperties")} value={kpis.data?.activeProps ?? "—"} loading={kpis.isLoading} to="/properties" />
         <KpiCard icon={FileSignature} label={t("dashboard.kpis.activeReservations")} value={kpis.data?.activeRes ?? "—"} loading={kpis.isLoading} to="/reservations" />
         <KpiCard icon={UserPlus} label={t("dashboard.lists.newLeads")} value={kpis.data?.newLeads ?? "—"} loading={kpis.isLoading} to="/leads" />
+        <KpiCard icon={Sparkles} label={t("dashboard.kpis.matches", "Matching-Treffer")} value={kpis.data?.matchCount ?? "—"} loading={kpis.isLoading} to="/matching" />
       </div>
 
       {/* Smart Action Radar – sagt aktiv, was zu tun ist (live) */}
