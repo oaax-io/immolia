@@ -341,10 +341,11 @@ function PropertyDetail() {
         });
       }
 
-      // Bereits veröffentlichte Objekte automatisch mit dem ASIMO Portal synchronisieren
+      // Bereits veröffentlichte Objekte mit dem verbundenen Immobilienportal synchronisieren
+      // (Server prüft aktive Firmen-Verbindung; ohne Verbindung wird still übersprungen).
       if (p?.portal_published) {
         try {
-          await publishPropertyToPortal({ data: { propertyId: id } });
+          await publishPropertyToPortal({ data: { propertyId: id, autoSync: true } });
         } catch (e: any) {
           toast.error(`Portal-Sync fehlgeschlagen: ${e?.message ?? "Unbekannter Fehler"}`);
         }
