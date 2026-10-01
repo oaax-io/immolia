@@ -112,8 +112,9 @@ function Dashboard() {
           .gte("starts_at", startOfToday()).lte("starts_at", endOfToday()),
         supabase.from("reservations").select("id", { count: "exact", head: true })
           .in("status", ["draft", "sent", "signed"]),
+        supabase.from("matches").select("id", { count: "exact", head: true }),
       ]);
-      const [newLeads, clients, activeProps, openTasks, todayAppts, activeRes] = results.map(settledCount);
+      const [newLeads, clients, activeProps, openTasks, todayAppts, activeRes, matchCount] = results.map(settledCount);
 
       // Wenn ALLE failed -> werfen, damit Retry greift. Sonst partielles Ergebnis.
       if (results.every((r) => r.status === "rejected" || (r as any).value?.error)) {
@@ -121,7 +122,7 @@ function Dashboard() {
           ?? (results.find((r) => r.status === "fulfilled" && (r as any).value?.error) as any)?.value?.error;
         throw firstError ?? new Error("Backend aktuell nicht erreichbar");
       }
-      return { newLeads, clients, activeProps, openTasks, todayAppts, activeRes };
+      return { newLeads, clients, activeProps, openTasks, todayAppts, activeRes, matchCount };
     },
   });
 
