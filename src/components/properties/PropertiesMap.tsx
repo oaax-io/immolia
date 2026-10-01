@@ -19,6 +19,8 @@ import {
   propertyStatusLabels,
 } from "@/lib/format";
 import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
+import { CANTON_NAMES } from "@/lib/cantons";
+import { MarketScale, RangeSlider, YieldGauge } from "@/components/properties/PropertyLocationMap";
 
 interface Props {
   properties: any[];
@@ -31,13 +33,7 @@ const CH_BOUNDS: [[number, number], [number, number]] = [
   [10.4914, 47.8084],
 ];
 
-export const CANTON_NAMES: Record<string, string> = {
-  AG: "Aargau", AI: "Appenzell Innerrhoden", AR: "Appenzell Ausserrhoden", BE: "Bern",
-  BL: "Basel-Landschaft", BS: "Basel-Stadt", FR: "Freiburg", GE: "Genf", GL: "Glarus",
-  GR: "Graubünden", JU: "Jura", LU: "Luzern", NE: "Neuenburg", NW: "Nidwalden",
-  OW: "Obwalden", SG: "St. Gallen", SH: "Schaffhausen", SO: "Solothurn", SZ: "Schwyz",
-  TG: "Thurgau", TI: "Tessin", UR: "Uri", VD: "Waadt", VS: "Wallis", ZG: "Zug", ZH: "Zürich",
-};
+export { CANTON_NAMES };
 
 type MarketSections = {
   purchase_price?: {

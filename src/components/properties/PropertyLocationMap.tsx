@@ -11,14 +11,14 @@ import { getSwissParcelGeometry } from "@/lib/property-location.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CANTON_NAMES } from "@/components/properties/PropertiesMap";
+import { CANTON_NAMES } from "@/lib/cantons";
 import { ArrowRight, BrainCircuit, Loader2, MapPin, RotateCcw, SlidersHorizontal, Sparkles, TrendingUp, X } from "lucide-react";
 import { toast } from "sonner";
 
 const YIELD_MIN = 0, YIELD_MAX = 10;
 const chf = (v: number) => new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 }).format(v);
 
-function RangeSlider({ value, min, max, step, onChange }: { value: [number, number]; min: number; max: number; step: number; onChange: (v: [number, number]) => void }) {
+export function RangeSlider({ value, min, max, step, onChange }: { value: [number, number]; min: number; max: number; step: number; onChange: (v: [number, number]) => void }) {
   return (
     <SliderPrimitive.Root className="relative flex w-full touch-none select-none items-center py-1" value={value} min={min} max={max} step={step} onValueChange={(v) => onChange([v[0], v[1]] as [number, number])}>
       <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-primary/20">
