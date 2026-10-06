@@ -591,7 +591,6 @@ export function PropertyWizard({
               {visibleSteps.map((s, i) => {
                 const isActive = s.idx === step;
                 const isDone = s.idx < step;
-                const canJump = isDone || isActive || !!d.title;
                 return (
                   <div key={s.idx} className="flex items-center">
                     {i > 0 && (
@@ -599,15 +598,12 @@ export function PropertyWizard({
                     )}
                     <button
                       type="button"
-                      onClick={() => canJump && setStep(s.idx)}
-                      disabled={!canJump}
+                      onClick={() => setStep(s.idx)}
                       className={cn(
-                        "group flex shrink-0 items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium transition",
+                        "group flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium transition",
                         isActive && "bg-primary text-primary-foreground shadow-sm",
                         isDone && "bg-primary/10 text-primary hover:bg-primary/15",
-                        !isActive && !isDone && "text-muted-foreground",
-                        canJump && !isActive && "cursor-pointer hover:bg-muted",
-                        !canJump && "cursor-not-allowed opacity-50"
+                        !isActive && !isDone && "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <span
