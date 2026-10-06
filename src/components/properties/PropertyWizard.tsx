@@ -586,16 +586,44 @@ export function PropertyWizard({
               label: t(`propertyWizard.steps.${currentStepKey}`),
             })}
           </DialogDescription>
-          <div className="mt-3 flex gap-1">
-            {visibleSteps.map((s) => (
-              <div
-                key={s.idx}
-                className={cn(
-                  "h-1 flex-1 rounded-full transition",
-                  s.idx <= step ? "bg-primary" : "bg-muted"
-                )}
-              />
-            ))}
+          <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-1">
+            <div className="flex w-max items-center gap-1">
+              {visibleSteps.map((s, i) => {
+                const isActive = s.idx === step;
+                const isDone = s.idx < step;
+                return (
+                  <div key={s.idx} className="flex items-center">
+                    {i > 0 && (
+                      <div className={cn("mx-1 h-px w-4 shrink-0", isDone || isActive ? "bg-primary/40" : "bg-border")} />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setStep(s.idx)}
+                      className={cn(
+                        "group flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium transition",
+                        isActive && "bg-primary text-primary-foreground shadow-sm",
+                        isDone && "bg-primary/10 text-primary hover:bg-primary/15",
+                        !isActive && !isDone && "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
+                          isActive && "bg-primary-foreground/20 text-primary-foreground",
+                          isDone && "bg-primary text-primary-foreground",
+                          !isActive && !isDone && "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {isDone ? <Check className="h-3 w-3" /> : i + 1}
+                      </span>
+                      <span className="hidden whitespace-nowrap md:inline">
+                        {t(`propertyWizard.steps.${s.key}`)}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </DialogHeader>
 
