@@ -534,8 +534,8 @@ export function PropertyWizard({
             onValueChange={(v) => setStep(Number(v))}
             className="flex min-h-0 flex-1 flex-col gap-0"
           >
-            <div className="shrink-0 overflow-x-auto border-b px-4 py-2">
-              <TabsList className="inline-flex h-auto w-max flex-nowrap gap-1 bg-transparent p-0">
+            <div className="shrink-0 border-b px-4 py-2">
+              <TabsList className="flex h-auto w-full flex-wrap gap-1 bg-transparent p-0">
                 {visibleSteps.map((s) => (
                   <TabsTrigger
                     key={s.idx}
@@ -586,8 +586,8 @@ export function PropertyWizard({
               label: t(`propertyWizard.steps.${currentStepKey}`),
             })}
           </DialogDescription>
-          <div className="-mx-1 mt-4 overflow-x-auto px-1 pb-1">
-            <div className="flex w-max items-center gap-1">
+          <div className="mt-4 flex justify-center">
+            <div className="flex flex-wrap items-center justify-center gap-1">
               {visibleSteps.map((s, i) => {
                 const isActive = s.idx === step;
                 const isDone = s.idx < step;
