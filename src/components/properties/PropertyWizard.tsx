@@ -186,10 +186,17 @@ export type WizardSubmit = {
   media: WizardMedia[];
 };
 
+function isWizardImage(m: WizardMedia): boolean {
+  return !m.file_type || m.file_type === "image" || m.file_type.startsWith("image/");
+}
+
 function ensureWizardCover(list: WizardMedia[]): WizardMedia[] {
   if (list.length === 0) return list;
-  if (list.some((m) => m.is_cover)) return list;
-  return list.map((m, i) => ({ ...m, is_cover: i === 0 }));
+  const firstImage = list.findIndex(isWizardImage);
+  if (list.some((m) => m.is_cover && isWizardImage(m))) {
+    return list.map((m) => (isWizardImage(m) ? m : { ...m, is_cover: false }));
+  }
+  return list.map((m, i) => ({ ...m, is_cover: i === firstImage }));
 }
 
 function buildFeatures(d: WizardData): string[] {
