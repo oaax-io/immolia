@@ -954,34 +954,44 @@ function SubTypePicker({ d, update }: { d: WizardData; update: (p: Partial<Wizar
   const cfg = typeConfig(d.property_type);
   if (cfg.subTypes.length === 0) return null;
   const groups = Array.from(new Set(cfg.subTypes.map((s) => s.group ?? "")));
+  const grouped = groups.length > 1;
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold">{cfg.subTypeTitle}</h4>
-      {groups.map((g) => (
-        <div key={g} className="space-y-1.5">
-          {g && <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{g}</p>}
-          <div className="flex flex-wrap gap-2">
-            {cfg.subTypes.filter((s) => (s.group ?? "") === g).map((s) => {
-              const on = d.sub_type === s.v;
-              return (
-                <button
-                  key={s.v}
-                  type="button"
-                  title={s.desc}
-                  onClick={() => update({ sub_type: on ? "" : s.v, ...(s.structure && !on ? { structure: s.structure } : {}) })}
-                  className={cn(
-                    "rounded-xl border px-3 py-2 text-left text-sm transition",
-                    on ? "border-primary bg-primary text-primary-foreground shadow-sm" : "bg-card hover:border-primary/60 hover:bg-primary/5",
-                  )}
-                >
-                  <span className="font-medium">{s.label}</span>
-                  {s.desc && <span className={cn("block text-[11px]", on ? "text-primary-foreground/80" : "text-muted-foreground")}>{s.desc}</span>}
-                </button>
-              );
-            })}
+      <h3 className="text-lg font-semibold">{cfg.subTypeTitle}</h3>
+      <div className={cn("grid gap-x-4 gap-y-3", grouped ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "")}>
+        {groups.map((g) => (
+          <div key={g} className="space-y-1.5">
+            {g && <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>}
+            <div className={cn("grid gap-2", grouped ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4")}>
+              {cfg.subTypes.filter((s) => (s.group ?? "") === g).map((s) => {
+                const on = d.sub_type === s.v;
+                const Icon = SUB_ICONS[s.v] ?? Lu.Shapes;
+                return (
+                  <button
+                    key={s.v}
+                    type="button"
+                    title={s.desc}
+                    aria-pressed={on}
+                    onClick={() => update({ sub_type: on ? "" : s.v, ...(s.structure && !on ? { structure: s.structure } : {}) })}
+                    className={cn(
+                      "relative flex min-h-12 items-center gap-2.5 rounded-xl border-2 px-2.5 py-2 text-left transition active:scale-[0.98]",
+                      on ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border bg-card hover:border-primary/60",
+                    )}
+                  >
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", on ? "bg-primary-foreground/20" : "bg-muted text-primary")}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium leading-tight">{s.label}</span>
+                      {s.desc && <span className={cn("block truncate text-[11px]", on ? "text-primary-foreground/80" : "text-muted-foreground")}>{s.desc}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -991,23 +1001,57 @@ function Step2Structure({ d, update, buildings }: { d: WizardData; update: (p: P
   const { t } = useTranslation();
   if (cfg.fixedStructure && cfg.fixedStructure !== "unit_in_building") {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <SubTypePicker d={d} update={update} />
-        <p className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+        <p className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <Lu.Info className="h-4 w-4 shrink-0" />
           {cfg.fixedStructure === "building"
-            ? "Diese Liegenschaft wird als Gebäude erfasst. Wohnungen, Ladenlokale, Büros und Parkplätze fügst du im Schritt «Einheiten» hinzu – jederzeit erweiterbar."
-            : "Diese Objektart wird automatisch als Einzelobjekt erfasst."}
+            ? "Wird als Liegenschaft erfasst – Wohnungen, Ladenlokale, Büros und Parkplätze fügst du im Schritt «Einheiten» hinzu."
+            : "Wird automatisch als Einzelobjekt erfasst."}
         </p>
       </div>
     );
   }
+  // Wohnung, Gewerbe, Parkplatz: nur «eigenständig» oder «gehört zu Liegenschaft»
+  const inBuilding = d.structure === "unit_in_building";
+  const opts = [
+    { v: "single", icon: Lu.Square, label: "Eigenständig", desc: "Keine Liegenschaft im CRM" },
+    { v: "unit_in_building", icon: Lu.Building2, label: "Teil einer Liegenschaft", desc: "Einer erfassten Liegenschaft zuordnen" },
+  ];
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SubTypePicker d={d} update={update} />
-      <div className="border-t pt-5"><Step2StructureBase d={d} update={update} buildings={buildings} /></div>
-      {d.structure === "building" && (
-        <p className="text-xs text-muted-foreground">{t("propertyWizard.step2.hint")}</p>
-      )}
+      <div className="rounded-2xl border bg-muted/30 p-3">
+        <p className="mb-2 text-sm font-semibold">Gehört es zu einer Liegenschaft?</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {opts.map((o) => {
+            const on = (o.v === "unit_in_building") === inBuilding;
+            return (
+              <button key={o.v} type="button" aria-pressed={on}
+                onClick={() => update({ structure: o.v, ...(o.v === "single" ? { parent_property_id: null } : {}) })}
+                className={cn("flex min-h-12 items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.98]",
+                  on ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border bg-card hover:border-primary/60")}>
+                <o.icon className="h-5 w-5 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">{o.label}</span>
+                  <span className={cn("block text-[11px]", on ? "text-primary-foreground/80" : "text-muted-foreground")}>{o.desc}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {inBuilding && (
+          <Select value={d.parent_property_id ?? ""} onValueChange={(v) => update({ parent_property_id: v || null })}>
+            <SelectTrigger className="mt-2 h-11 bg-card"><SelectValue placeholder={t("propertyWizard.step2.parentPlaceholder")} /></SelectTrigger>
+            <SelectContent>
+              {buildings.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">{t("propertyWizard.step2.noBuildings")}</div>}
+              {buildings.map((b: any) => (
+                <SelectItem key={b.id} value={b.id}>{b.title} {b.city ? `· ${b.city}` : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </div>
     </div>
   );
 }
