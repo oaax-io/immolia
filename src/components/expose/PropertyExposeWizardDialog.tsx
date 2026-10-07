@@ -968,41 +968,42 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
 
             {step === 4 && (
               <div className="space-y-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={withContact} onCheckedChange={() => setWithContact((v) => !v)} />
-                  Ansprechperson im Exposé anzeigen
-                </label>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([
+                    { id: "employee", label: "Mitarbeitende(r)", desc: "Person aus dem Team wählen", icon: UserRound },
+                    { id: "company", label: "Firmenprofil", desc: "Firma, Adresse, Kontakt, Web", icon: Building2 },
+                    { id: "none", label: "Kein Ansprechpartner", desc: "Kontaktblock weglassen", icon: UserX },
+                  ] as const).map((o) => {
+                    const Icon = o.icon;
+                    const active = contactMode === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setContactMode(o.id)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition",
+                          active ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40",
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span>
+                          <span className="block text-sm font-semibold">{o.label}</span>
+                          <span className={cn("block text-[11px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{o.desc}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                <div className={cn("space-y-4", !withContact && "pointer-events-none opacity-50")}>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContactMode("employee")}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                        contactMode === "employee" ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40",
-                      )}
-                    >
-                      Mitarbeitende
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContactMode("custom")}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                        contactMode === "custom" ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40",
-                      )}
-                    >
-                      Zusätzliche Person
-                    </button>
-                  </div>
-
-                  {contactMode === "employee" ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {(employees as any[]).length === 0 && (
+                {contactMode === "employee" && (
+                  <div className="space-y-3">
+                    <Input placeholder="Mitarbeitende suchen…" value={empSearch} onChange={(e) => setEmpSearch(e.target.value)} />
+                    <div className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
+                      {filteredEmployees.length === 0 && (
                         <p className="text-sm text-muted-foreground">Keine Mitarbeitenden gefunden.</p>
                       )}
-                      {(employees as any[]).map((e) => {
+                      {filteredEmployees.map((e: any) => {
                         const active = (contactUserId ?? (profile as any)?.id) === e.id;
                         return (
                           <button
@@ -1028,32 +1029,37 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                           </button>
                         );
                       })}
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Funktion (optional)</Label>
-                        <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
-                      </div>
                     </div>
-                  ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label>Name</Label>
-                        <Input value={customContact.name} onChange={(e) => setCustomContact((c) => ({ ...c, name: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Funktion (optional)</Label>
-                        <Input value={customContact.role} onChange={(e) => setCustomContact((c) => ({ ...c, role: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>E-Mail</Label>
-                        <Input type="email" value={customContact.email} onChange={(e) => setCustomContact((c) => ({ ...c, email: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Telefon</Label>
-                        <Input value={customContact.phone} onChange={(e) => setCustomContact((c) => ({ ...c, phone: e.target.value }))} />
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label>Funktion (optional)</Label>
+                      <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {contactMode === "company" && (
+                  <div className="flex items-start gap-4 rounded-xl border bg-muted/30 p-4">
+                    {companyContact.logo ? (
+                      <img src={companyContact.logo} alt="" className="h-12 w-12 rounded object-contain" />
+                    ) : (
+                      <Building2 className="h-10 w-10 text-muted-foreground" />
+                    )}
+                    <div className="space-y-0.5 text-sm">
+                      <p className="font-semibold">{companyContact.name || "Firmenname fehlt"}</p>
+                      {companyContact.address && <p className="text-muted-foreground">{companyContact.address}</p>}
+                      {companyContact.email && <p>{companyContact.email}</p>}
+                      {companyContact.phone && <p>{companyContact.phone}</p>}
+                      {companyContact.website && <p>{companyContact.website}</p>}
+                      <p className="pt-1 text-[11px] text-muted-foreground">Angaben stammen aus den Firmeneinstellungen.</p>
+                    </div>
+                  </div>
+                )}
+
+                {contactMode === "none" && (
+                  <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                    Das Exposé wird ohne Ansprechperson erstellt.
+                  </p>
+                )}
               </div>
             )}
 
