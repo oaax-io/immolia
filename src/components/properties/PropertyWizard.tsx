@@ -891,7 +891,110 @@ function Step1Type({ d, update }: { d: WizardData; update: (p: Partial<WizardDat
   );
 }
 
+/** Objektart wechseln: Unterart zurücksetzen und feste Struktur übernehmen. */
+function changeType(d: WizardData, type: string): Partial<WizardData> {
+  if (type === d.property_type) return {};
+  const cfg = typeConfig(type);
+  return { property_type: type, sub_type: "", structure: cfg.fixedStructure ?? (d.structure === "building" ? "single" : d.structure) };
+}
+
+function PriceInsights({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
+  const cfg = typeConfig(d.property_type);
+  const price = Number(d.price) || 0;
+  const area = d.property_type === "land" ? Number(d.plot_area) : Number(d.living_area || d.usable_area);
+  const perM2 = price > 0 && area > 0 ? Math.round(price / area) : null;
+  const target = Number(d.rent_target) || 0;
+  const autoYield = price > 0 && target > 0 ? Math.round((target / price) * 10000) / 100 : null;
+  if (!cfg.yieldFields && !perM2) return null;
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+      {perM2 && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">{d.property_type === "land" ? "Landpreis" : "Preis"} pro m²: </span>
+          <span className="font-semibold">CHF {perM2.toLocaleString("de-CH")}</span>
+        </p>
+      )}
+      {cfg.yieldFields && (
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Soll-Mietertrag p.a. (CHF)</Label><Input type="number" value={d.rent_target} onChange={(e) => update({ rent_target: e.target.value })} /></div>
+          <div>
+            <Label>Bruttorendite (%)</Label>
+            <Input type="number" step="0.01" value={d.gross_yield} placeholder={autoYield ? String(autoYield) : undefined} onChange={(e) => update({ gross_yield: e.target.value })} />
+            {autoYield && !d.gross_yield && (
+              <button type="button" className="mt-1 text-xs text-primary hover:underline" onClick={() => update({ gross_yield: String(autoYield) })}>
+                Berechnet: {autoYield}% übernehmen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubTypePicker({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
+  const cfg = typeConfig(d.property_type);
+  if (cfg.subTypes.length === 0) return null;
+  const groups = Array.from(new Set(cfg.subTypes.map((s) => s.group ?? "")));
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold">{cfg.subTypeTitle}</h4>
+      {groups.map((g) => (
+        <div key={g} className="space-y-1.5">
+          {g && <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{g}</p>}
+          <div className="flex flex-wrap gap-2">
+            {cfg.subTypes.filter((s) => (s.group ?? "") === g).map((s) => {
+              const on = d.sub_type === s.v;
+              return (
+                <button
+                  key={s.v}
+                  type="button"
+                  title={s.desc}
+                  onClick={() => update({ sub_type: on ? "" : s.v, ...(s.structure && !on ? { structure: s.structure } : {}) })}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-left text-sm transition",
+                    on ? "border-primary bg-primary text-primary-foreground shadow-sm" : "bg-card hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                >
+                  <span className="font-medium">{s.label}</span>
+                  {s.desc && <span className={cn("block text-[11px]", on ? "text-primary-foreground/80" : "text-muted-foreground")}>{s.desc}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Step2Structure({ d, update, buildings }: { d: WizardData; update: (p: Partial<WizardData>) => void; buildings: any[] }) {
+  const cfg = typeConfig(d.property_type);
+  const { t } = useTranslation();
+  if (cfg.fixedStructure && cfg.fixedStructure !== "unit_in_building") {
+    return (
+      <div className="space-y-5">
+        <SubTypePicker d={d} update={update} />
+        <p className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+          {cfg.fixedStructure === "building"
+            ? "Diese Liegenschaft wird als Gebäude erfasst. Wohnungen, Ladenlokale, Büros und Parkplätze fügst du im Schritt «Einheiten» hinzu – jederzeit erweiterbar."
+            : "Diese Objektart wird automatisch als Einzelobjekt erfasst."}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <SubTypePicker d={d} update={update} />
+      <div className="border-t pt-5"><Step2StructureBase d={d} update={update} buildings={buildings} /></div>
+      {d.structure === "building" && (
+        <p className="text-xs text-muted-foreground">{t("propertyWizard.step2.hint")}</p>
+      )}
+    </div>
+  );
+}
+
+function Step2StructureBase({ d, update, buildings }: { d: WizardData; update: (p: Partial<WizardData>) => void; buildings: any[] }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-5">
@@ -1207,6 +1310,7 @@ function Step6Price({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
         </div>
         <div><Label>{t("propertyWizard.step6.commissionValue")}</Label><Input type="number" value={d.commission_value} onChange={(e) => update({ commission_value: e.target.value })} placeholder={t("propertyWizard.step6.commissionValuePlaceholder")} /></div>
       </div>
+      <PriceInsights d={d} update={update} />
     </div>
   );
 }
