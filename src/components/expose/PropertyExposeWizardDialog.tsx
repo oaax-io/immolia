@@ -98,33 +98,28 @@ function ScaledExposePreview({ html, title }: { html: string; title: string }) {
   );
 }
 
-/** Leichte, statische Mini-Vorschau einer Vorlage (kein iframe) – damit die Kacheln schnell laden und scrollen. */
+/** Kompakte Mini-Vorschau einer Vorlage mit fiktivem Beispielbild (nicht vom Objekt). */
 function TemplateThumb({ t }: { t: TemplateMeta }) {
-  const serif = t.titleFont.toLowerCase().includes("cormorant") || t.titleFont.toLowerCase().includes("serif");
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-lg border"
-      style={{ aspectRatio: t.orientation === "landscape" ? "297 / 210" : "210 / 297", background: t.pageBg }}
-    >
-      {/* Hero-Band */}
-      <div className="absolute inset-x-0 top-0" style={{ height: "42%", background: `linear-gradient(135deg, ${t.primary}, ${t.primary}dd)` }}>
-        <div className="absolute bottom-2 left-2 right-2 space-y-1">
-          <div className="h-1.5 w-2/3 rounded-full" style={{ background: t.accent }} />
-          <div className="h-1 w-1/2 rounded-full bg-white/60" />
-        </div>
+    <div className="relative w-full overflow-hidden rounded-md border" style={{ height: 88, background: t.pageBg }}>
+      {/* Fiktives Beispielbild als Hero-Band */}
+      <img
+        src={`https://picsum.photos/seed/expose-${t.id}/320/180`}
+        alt=""
+        loading="lazy"
+        className="absolute inset-x-0 top-0 h-[55%] w-full object-cover"
+      />
+      <div className="absolute inset-x-0 top-0 h-[55%]" style={{ background: `linear-gradient(180deg, transparent 40%, ${t.primary}cc)` }} />
+      {/* Akzent + Titelzeilen */}
+      <div className="absolute left-1.5 right-1.5 space-y-0.5" style={{ top: "60%" }}>
+        <div className="h-1 w-2/5 rounded-full" style={{ background: t.accent }} />
+        <div className="h-1.5 w-3/4 rounded-full" style={{ background: t.primary }} />
+        <div className="h-1 w-1/2 rounded-full bg-black/15" />
       </div>
-      {/* Titelzeilen */}
-      <div className="absolute left-2 right-2 space-y-1" style={{ top: "48%" }}>
-        <div className="h-2 w-3/4 rounded-full" style={{ background: t.primary, borderRadius: serif ? 1 : 999 }} />
-        <div className="h-1.5 w-1/2 rounded-full bg-black/15" />
-      </div>
-      {/* Fakten-Zeilen */}
-      <div className="absolute inset-x-2 bottom-2 space-y-1">
+      {/* Fakten-Punkte */}
+      <div className="absolute inset-x-1.5 bottom-1 flex gap-1">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-1">
-            <div className="h-1 w-1 rounded-full" style={{ background: t.accent }} />
-            <div className="h-1 flex-1 rounded-full bg-black/10" />
-          </div>
+          <div key={i} className="h-1 flex-1 rounded-full bg-black/10" />
         ))}
       </div>
     </div>
