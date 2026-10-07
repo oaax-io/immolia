@@ -1234,10 +1234,11 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
   const catalogExtras = extras.filter((l) => optionByLabel.has(l.toLowerCase()));
   const customExtras = extras.filter((l) => !optionByLabel.has(l.toLowerCase()));
   const removeExtra = (label: string) => setExtras(extras.filter((l) => l.toLowerCase() !== label.toLowerCase()));
+  const cfg = typeConfig(d.property_type);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {checks.map(c => {
+        {(cfg.residentialEquipment ? checks : []).map(c => {
           const Icon = featureIcon(c.key);
           const active = d[c.k] as boolean;
           return (
@@ -1280,6 +1281,30 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
         })}
       </div>
 
+      {cfg.quickFeatures.length > 0 && (
+        <div>
+          <Label>Typisch für diese Objektart</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {cfg.quickFeatures.map((label) => {
+              const on = extras.some((l) => l.toLowerCase() === label.toLowerCase());
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => (on ? removeExtra(label) : setExtras([...extras, label]))}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition",
+                    on ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                >
+                  {on ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Label className="mb-0">Weitere Ausstattungen</Label>
@@ -1320,7 +1345,7 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
         hiddenLabels={BASE_FEATURE_LABELS}
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      {cfg.heating && <div className="grid grid-cols-3 gap-3">
         <div>
           <Label>{t("propertyWizard.step7.heating")}</Label>
           <Select value={d.heating_type || "none"} onValueChange={(v) => update({ heating_type: v === "none" ? "" : v })}>
@@ -1341,7 +1366,7 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
           <Input value={d.energy_source} onChange={(e) => update({ energy_source: e.target.value })} placeholder={t("propertyWizard.step7.energySourcePlaceholder")} />
         </div>
         <div><Label>{t("propertyWizard.step7.energyClass")}</Label><Input value={d.energy_class} onChange={(e) => update({ energy_class: e.target.value })} placeholder={t("propertyWizard.step7.energyClassPlaceholder")} /></div>
-      </div>
+      </div>}
     </div>
   );
 }
