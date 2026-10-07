@@ -1028,7 +1028,7 @@ function Step2Structure({ d, update, buildings }: { d: WizardData; update: (p: P
             const on = (o.v === "unit_in_building") === inBuilding;
             return (
               <button key={o.v} type="button" aria-pressed={on}
-                onClick={() => update({ structure: o.v, ...(o.v === "single" ? { parent_property_id: null } : {}) })}
+                onClick={() => update({ structure: o.v as WizardData["structure"], ...(o.v === "single" ? { parent_property_id: null } : {}) })}
                 className={cn("flex min-h-12 items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition active:scale-[0.98]",
                   on ? "border-primary bg-primary text-primary-foreground shadow-md" : "border-border bg-card hover:border-primary/60")}>
                 <o.icon className="h-5 w-5 shrink-0" />
