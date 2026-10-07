@@ -772,7 +772,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {TEMPLATES.map((t) => (
                   <div
                     key={t.id}
@@ -782,16 +782,15 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                     )}
                   >
                     <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
-                      <ScaledExposePreview html={buildHtml(coverUrl, [], null, null, t)} title={`Vorlage ${t.label}`} />
+                      <TemplateThumb t={t} />
                       <div className="mt-2 flex items-center justify-between gap-1">
-                        <p className="text-sm font-semibold">{t.label}</p>
-                        {template.id === t.id && <Check className="h-4 w-4 text-primary" />}
+                        <p className="truncate text-sm font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
                       </div>
-                      <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
                     </button>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-1.5 flex items-center justify-between gap-1">
                       <Badge variant="outline" className="text-[10px]">
-                        {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
+                        {t.orientation === "landscape" ? "Quer" : "Hoch"}
                       </Badge>
                       <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
                         <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
