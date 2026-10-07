@@ -98,6 +98,39 @@ function ScaledExposePreview({ html, title }: { html: string; title: string }) {
   );
 }
 
+/** Leichte, statische Mini-Vorschau einer Vorlage (kein iframe) – damit die Kacheln schnell laden und scrollen. */
+function TemplateThumb({ t }: { t: TemplateMeta }) {
+  const serif = t.titleFont.toLowerCase().includes("cormorant") || t.titleFont.toLowerCase().includes("serif");
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-lg border"
+      style={{ aspectRatio: t.orientation === "landscape" ? "297 / 210" : "210 / 297", background: t.pageBg }}
+    >
+      {/* Hero-Band */}
+      <div className="absolute inset-x-0 top-0" style={{ height: "42%", background: `linear-gradient(135deg, ${t.primary}, ${t.primary}dd)` }}>
+        <div className="absolute bottom-2 left-2 right-2 space-y-1">
+          <div className="h-1.5 w-2/3 rounded-full" style={{ background: t.accent }} />
+          <div className="h-1 w-1/2 rounded-full bg-white/60" />
+        </div>
+      </div>
+      {/* Titelzeilen */}
+      <div className="absolute left-2 right-2 space-y-1" style={{ top: "48%" }}>
+        <div className="h-2 w-3/4 rounded-full" style={{ background: t.primary, borderRadius: serif ? 1 : 999 }} />
+        <div className="h-1.5 w-1/2 rounded-full bg-black/15" />
+      </div>
+      {/* Fakten-Zeilen */}
+      <div className="absolute inset-x-2 bottom-2 space-y-1">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-1">
+            <div className="h-1 w-1 rounded-full" style={{ background: t.accent }} />
+            <div className="h-1 flex-1 rounded-full bg-black/10" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const STEPS = [
   { label: "Vorlage", icon: LayoutTemplate },
   { label: "Inhalte", icon: ListChecks },
@@ -739,7 +772,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {TEMPLATES.map((t) => (
                   <div
                     key={t.id}
@@ -749,16 +782,15 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                     )}
                   >
                     <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
-                      <ScaledExposePreview html={buildHtml(coverUrl, [], null, null, t)} title={`Vorlage ${t.label}`} />
+                      <TemplateThumb t={t} />
                       <div className="mt-2 flex items-center justify-between gap-1">
-                        <p className="text-sm font-semibold">{t.label}</p>
-                        {template.id === t.id && <Check className="h-4 w-4 text-primary" />}
+                        <p className="truncate text-sm font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
                       </div>
-                      <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
                     </button>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-1.5 flex items-center justify-between gap-1">
                       <Badge variant="outline" className="text-[10px]">
-                        {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
+                        {t.orientation === "landscape" ? "Quer" : "Hoch"}
                       </Badge>
                       <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
                         <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
@@ -1317,7 +1349,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         </div>
 
         <Dialog open={!!templatePreview} onOpenChange={(o) => !o && setTemplatePreview(null)}>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Vorlage {templatePreview?.label}</DialogTitle>
               <DialogDescription>{templatePreview?.description}</DialogDescription>
