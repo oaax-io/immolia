@@ -14,6 +14,7 @@ import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2,
   Home, Building2, Building, Briefcase, TreePine, Car, Layers,
   Box, Boxes, Layers3, Upload, ImageIcon, Star, X, Library, MapPin, Sparkles, Loader2, FileText,
+  Ruler, Coins, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propertyStatusLabels } from "@/lib/format";
@@ -305,6 +306,19 @@ const STEP_KEYS = [
   "price", "equipment", "media", "units", "summary",
 ] as const;
 
+const STEP_ICONS: Record<(typeof STEP_KEYS)[number], any> = {
+  type: Home,
+  structure: Boxes,
+  basics: FileText,
+  address: MapPin,
+  areas: Ruler,
+  price: Coins,
+  equipment: Sparkles,
+  media: ImageIcon,
+  units: Layers3,
+  summary: ClipboardCheck,
+};
+
 function hydrateFromProperty(p: any): WizardData {
   if (!p) return { ...empty };
   const features: string[] = Array.isArray(p.features) ? p.features : [];
@@ -586,39 +600,45 @@ export function PropertyWizard({
               label: t(`propertyWizard.steps.${currentStepKey}`),
             })}
           </DialogDescription>
-          <div className="mt-4 flex justify-center">
-            <div className="flex flex-wrap items-center justify-center gap-1">
+          <div className="mt-4">
+            <div className="flex items-center">
               {visibleSteps.map((s, i) => {
                 const isActive = s.idx === step;
                 const isDone = s.idx < step;
+                const Icon = STEP_ICONS[s.key] ?? Home;
+                const label = t(`propertyWizard.steps.${s.key}`);
                 return (
-                  <div key={s.idx} className="flex items-center">
+                  <div key={s.idx} className="flex min-w-0 flex-1 items-center last:flex-none">
                     {i > 0 && (
-                      <div className={cn("mx-1 h-px w-4 shrink-0", isDone || isActive ? "bg-primary/40" : "bg-border")} />
+                      <div
+                        className={cn(
+                          "h-0.5 min-w-1.5 flex-1 rounded-full transition-colors",
+                          isDone || isActive ? "bg-primary/50" : "bg-border"
+                        )}
+                      />
                     )}
                     <button
                       type="button"
                       onClick={() => setStep(s.idx)}
+                      title={label}
+                      aria-label={label}
+                      aria-current={isActive ? "step" : undefined}
                       className={cn(
-                        "group flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-2.5 py-1.5 text-xs font-medium transition",
-                        isActive && "bg-primary text-primary-foreground shadow-sm",
-                        isDone && "bg-primary/10 text-primary hover:bg-primary/15",
-                        !isActive && !isDone && "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all duration-200",
+                        "hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        isActive
+                          ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                          : isDone
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : "border-border bg-muted/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold",
-                          isActive && "bg-primary-foreground/20 text-primary-foreground",
-                          isDone && "bg-primary text-primary-foreground",
-                          !isActive && !isDone && "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {isDone ? <Check className="h-3 w-3" /> : i + 1}
-                      </span>
-                      <span className="hidden whitespace-nowrap md:inline">
-                        {t(`propertyWizard.steps.${s.key}`)}
-                      </span>
+                      {isDone && !isActive
+                        ? <Check className="size-3.5" />
+                        : <Icon className={cn("transition-all", isActive ? "size-4" : "size-3.5")} />}
+                      {isActive && (
+                        <span className="absolute -bottom-1.5 size-1.5 rounded-full bg-primary" />
+                      )}
                     </button>
                   </div>
                 );
