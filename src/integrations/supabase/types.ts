@@ -5234,10 +5234,12 @@ export type Database = {
           energy_efficiency_envelope: string | null
           energy_efficiency_overall: string | null
           energy_source: string | null
+          ev_charging: string | null
           ewid: string | null
           exterior_construction_area: number | null
           features: string[] | null
           floor: number | null
+          floor_load: number | null
           garden_area: number | null
           gross_floor_area: number | null
           gross_living_area: number | null
@@ -5302,6 +5304,7 @@ export type Database = {
           separate_wc_count: number | null
           sia_416_area: number | null
           status: Database["public"]["Enums"]["property_status"]
+          sub_type: string | null
           terrace_area: number | null
           title: string
           total_floors: number | null
@@ -5351,10 +5354,12 @@ export type Database = {
           energy_efficiency_envelope?: string | null
           energy_efficiency_overall?: string | null
           energy_source?: string | null
+          ev_charging?: string | null
           ewid?: string | null
           exterior_construction_area?: number | null
           features?: string[] | null
           floor?: number | null
+          floor_load?: number | null
           garden_area?: number | null
           gross_floor_area?: number | null
           gross_living_area?: number | null
@@ -5419,6 +5424,7 @@ export type Database = {
           separate_wc_count?: number | null
           sia_416_area?: number | null
           status?: Database["public"]["Enums"]["property_status"]
+          sub_type?: string | null
           terrace_area?: number | null
           title: string
           total_floors?: number | null
@@ -5468,10 +5474,12 @@ export type Database = {
           energy_efficiency_envelope?: string | null
           energy_efficiency_overall?: string | null
           energy_source?: string | null
+          ev_charging?: string | null
           ewid?: string | null
           exterior_construction_area?: number | null
           features?: string[] | null
           floor?: number | null
+          floor_load?: number | null
           garden_area?: number | null
           gross_floor_area?: number | null
           gross_living_area?: number | null
@@ -5536,6 +5544,7 @@ export type Database = {
           separate_wc_count?: number | null
           sia_416_area?: number | null
           status?: Database["public"]["Enums"]["property_status"]
+          sub_type?: string | null
           terrace_area?: number | null
           title?: string
           total_floors?: number | null

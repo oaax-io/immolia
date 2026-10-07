@@ -30,6 +30,10 @@ import { generateLocationDescription } from "@/lib/property-ai.functions";
 import { FeaturePickerDialog, useFeatureOptions } from "@/components/properties/FeaturePickerDialog";
 import { featureIcon } from "@/components/properties/feature-icons";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
+import {
+  typeConfig, unitPropertyType, AREA_FIELD_LABELS, EV_CHARGING_OPTIONS, DEVELOPMENT_OPTIONS, UNIT_TYPE_OPTIONS,
+  type AreaField,
+} from "@/lib/property-type-config";
 
 /* -------------------- Typen -------------------- */
 
@@ -127,6 +131,25 @@ export type WizardData = {
   internal_notes: string;
   media: WizardMedia[];
   units: Unit[];
+  sub_type: string;
+  zone: string;
+  utilization_ratio: string;
+  development_status: string;
+  building_volume: string;
+  hall_height: string;
+  floor_load: string;
+  ev_charging: string;
+  parking_spaces: string;
+  unit_count_residential: string;
+  unit_count_commercial: string;
+  rent_target: string;
+  gross_yield: string;
+};
+
+const TYPE_EXTRA_EMPTY = {
+  sub_type: "", zone: "", utilization_ratio: "", development_status: "", building_volume: "",
+  hall_height: "", floor_load: "", ev_charging: "", parking_spaces: "", unit_count_residential: "",
+  unit_count_commercial: "", rent_target: "", gross_yield: "",
 };
 
 const empty: WizardData = {
@@ -180,6 +203,7 @@ const empty: WizardData = {
   internal_notes: "",
   media: [],
   units: [],
+  ...TYPE_EXTRA_EMPTY,
 };
 
 export type WizardSubmit = {
@@ -267,6 +291,19 @@ export function buildSubmitPayload(d: WizardData): WizardSubmit {
     description: d.description || null,
     internal_notes: d.internal_notes || null,
     features: buildFeatures(d),
+    sub_type: d.sub_type || null,
+    zone: d.zone || null,
+    utilization_ratio: num(d.utilization_ratio),
+    development_status: d.development_status || null,
+    building_volume: num(d.building_volume),
+    hall_height: num(d.hall_height),
+    floor_load: num(d.floor_load),
+    ev_charging: d.ev_charging || null,
+    parking_spaces: num(d.parking_spaces),
+    unit_count_residential: num(d.unit_count_residential),
+    unit_count_commercial: num(d.unit_count_commercial),
+    rent_target: num(d.rent_target),
+    gross_yield: num(d.gross_yield),
     images: (() => {
       const cover = d.media.find((m) => m.is_cover) ?? d.media[0];
       if (cover) return [cover.file_url];
@@ -277,7 +314,7 @@ export function buildSubmitPayload(d: WizardData): WizardSubmit {
   const units = isMfh
     ? d.units.map((u) => ({
         title: u.unit_number ? `Einheit ${u.unit_number}` : "Einheit",
-        property_type: u.unit_type || "apartment",
+        property_type: unitPropertyType(u.unit_type || "apartment"),
         listing_type,
         status: u.unit_status || "draft",
         is_unit: true,
@@ -393,6 +430,19 @@ function hydrateFromProperty(p: any): WizardData {
     internal_notes: p.internal_notes ?? "",
     media: fallbackMedia,
     units: [],
+    sub_type: p.sub_type ?? "",
+    zone: p.zone ?? "",
+    utilization_ratio: str(p.utilization_ratio),
+    development_status: p.development_status ?? "",
+    building_volume: str(p.building_volume),
+    hall_height: str(p.hall_height),
+    floor_load: str(p.floor_load),
+    ev_charging: p.ev_charging ?? "",
+    parking_spaces: str(p.parking_spaces),
+    unit_count_residential: str(p.unit_count_residential),
+    unit_count_commercial: str(p.unit_count_commercial),
+    rent_target: str(p.rent_target),
+    gross_yield: str(p.gross_yield),
   };
 }
 
@@ -419,7 +469,7 @@ export function PropertyWizard({
   }, [open, initial, mode]);
 
   const isMfh = d.property_type === "mixed_use" || d.structure === "building";
-  const showUnitsStep = isMfh;
+  const showUnitsStep = isMfh || typeConfig(d.property_type).units;
 
   const visibleSteps = useMemo(() => {
     return STEP_KEYS.map((key, idx) => ({ idx, key }))
@@ -735,7 +785,7 @@ function EditBasics({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label>{t("propertyWizard.steps.type")}</Label>
-          <Select value={d.property_type} onValueChange={(value) => update({ property_type: value })}>
+          <Select value={d.property_type} onValueChange={(value) => update(changeType(d, value))}>
             <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
@@ -771,6 +821,9 @@ function EditBasics({
           </Select>
         </div>
       </div>
+
+      <SubTypePicker d={d} update={update} />
+
 
       {d.structure === "unit_in_building" && (
         <div className="space-y-1.5 border-t pt-5">
@@ -811,7 +864,7 @@ function Step1Type({ d, update }: { d: WizardData; update: (p: Partial<WizardDat
             <button
               key={v}
               type="button"
-              onClick={() => update({ property_type: v })}
+              onClick={() => update(changeType(d, v))}
               className={cn(
                 "group relative flex h-full flex-col items-start gap-3 rounded-2xl border-2 bg-card p-5 text-left transition",
                 "hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md",
@@ -841,7 +894,110 @@ function Step1Type({ d, update }: { d: WizardData; update: (p: Partial<WizardDat
   );
 }
 
+/** Objektart wechseln: Unterart zurücksetzen und feste Struktur übernehmen. */
+function changeType(d: WizardData, type: string): Partial<WizardData> {
+  if (type === d.property_type) return {};
+  const cfg = typeConfig(type);
+  return { property_type: type, sub_type: "", structure: cfg.fixedStructure ?? (d.structure === "building" ? "single" : d.structure) };
+}
+
+function PriceInsights({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
+  const cfg = typeConfig(d.property_type);
+  const price = Number(d.price) || 0;
+  const area = d.property_type === "land" ? Number(d.plot_area) : Number(d.living_area || d.usable_area);
+  const perM2 = price > 0 && area > 0 ? Math.round(price / area) : null;
+  const target = Number(d.rent_target) || 0;
+  const autoYield = price > 0 && target > 0 ? Math.round((target / price) * 10000) / 100 : null;
+  if (!cfg.yieldFields && !perM2) return null;
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+      {perM2 && (
+        <p className="text-sm">
+          <span className="text-muted-foreground">{d.property_type === "land" ? "Landpreis" : "Preis"} pro m²: </span>
+          <span className="font-semibold">CHF {perM2.toLocaleString("de-CH")}</span>
+        </p>
+      )}
+      {cfg.yieldFields && (
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Soll-Mietertrag p.a. (CHF)</Label><Input type="number" value={d.rent_target} onChange={(e) => update({ rent_target: e.target.value })} /></div>
+          <div>
+            <Label>Bruttorendite (%)</Label>
+            <Input type="number" step="0.01" value={d.gross_yield} placeholder={autoYield ? String(autoYield) : undefined} onChange={(e) => update({ gross_yield: e.target.value })} />
+            {autoYield && !d.gross_yield && (
+              <button type="button" className="mt-1 text-xs text-primary hover:underline" onClick={() => update({ gross_yield: String(autoYield) })}>
+                Berechnet: {autoYield}% übernehmen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubTypePicker({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
+  const cfg = typeConfig(d.property_type);
+  if (cfg.subTypes.length === 0) return null;
+  const groups = Array.from(new Set(cfg.subTypes.map((s) => s.group ?? "")));
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold">{cfg.subTypeTitle}</h4>
+      {groups.map((g) => (
+        <div key={g} className="space-y-1.5">
+          {g && <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{g}</p>}
+          <div className="flex flex-wrap gap-2">
+            {cfg.subTypes.filter((s) => (s.group ?? "") === g).map((s) => {
+              const on = d.sub_type === s.v;
+              return (
+                <button
+                  key={s.v}
+                  type="button"
+                  title={s.desc}
+                  onClick={() => update({ sub_type: on ? "" : s.v, ...(s.structure && !on ? { structure: s.structure } : {}) })}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-left text-sm transition",
+                    on ? "border-primary bg-primary text-primary-foreground shadow-sm" : "bg-card hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                >
+                  <span className="font-medium">{s.label}</span>
+                  {s.desc && <span className={cn("block text-[11px]", on ? "text-primary-foreground/80" : "text-muted-foreground")}>{s.desc}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Step2Structure({ d, update, buildings }: { d: WizardData; update: (p: Partial<WizardData>) => void; buildings: any[] }) {
+  const cfg = typeConfig(d.property_type);
+  const { t } = useTranslation();
+  if (cfg.fixedStructure && cfg.fixedStructure !== "unit_in_building") {
+    return (
+      <div className="space-y-5">
+        <SubTypePicker d={d} update={update} />
+        <p className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
+          {cfg.fixedStructure === "building"
+            ? "Diese Liegenschaft wird als Gebäude erfasst. Wohnungen, Ladenlokale, Büros und Parkplätze fügst du im Schritt «Einheiten» hinzu – jederzeit erweiterbar."
+            : "Diese Objektart wird automatisch als Einzelobjekt erfasst."}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <SubTypePicker d={d} update={update} />
+      <div className="border-t pt-5"><Step2StructureBase d={d} update={update} buildings={buildings} /></div>
+      {d.structure === "building" && (
+        <p className="text-xs text-muted-foreground">{t("propertyWizard.step2.hint")}</p>
+      )}
+    </div>
+  );
+}
+
+function Step2StructureBase({ d, update, buildings }: { d: WizardData; update: (p: Partial<WizardData>) => void; buildings: any[] }) {
   const { t } = useTranslation();
   return (
     <div className="space-y-5">
@@ -1086,25 +1242,44 @@ function Step4Address({ d, update }: { d: WizardData; update: (p: Partial<Wizard
 }
 
 function Step5Areas({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
-  const { t } = useTranslation();
+  const cfg = typeConfig(d.property_type);
+  const label = (f: AreaField) => (f === "usable_area" && cfg.areaLabel ? `${cfg.areaLabel} (m²)` : AREA_FIELD_LABELS[f]);
+  const step = (f: AreaField) => (f === "rooms" || f === "bathrooms" ? "0.5" : f === "hall_height" || f === "utilization_ratio" ? "0.01" : "1");
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div><Label>{t("propertyWizard.step5.living")}</Label><Input type="number" value={d.living_area} onChange={(e) => update({ living_area: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.usable")}</Label><Input type="number" value={d.usable_area} onChange={(e) => update({ usable_area: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.plot")}</Label><Input type="number" value={d.plot_area} onChange={(e) => update({ plot_area: e.target.value })} /></div>
-      </div>
-      <div className="grid grid-cols-4 gap-3">
-        <div><Label>{t("propertyWizard.step5.rooms")}</Label><Input type="number" step="0.5" value={d.rooms} onChange={(e) => update({ rooms: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.bathrooms")}</Label><Input type="number" step="0.5" value={d.bathrooms} onChange={(e) => update({ bathrooms: e.target.value })} /></div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div><Label>{t("propertyWizard.step5.yearBuilt")}</Label><Input type="number" value={d.year_built} onChange={(e) => update({ year_built: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.renovated")}</Label><Input type="number" value={d.renovated_at} onChange={(e) => update({ renovated_at: e.target.value })} /></div>
+      <p className="text-xs text-muted-foreground">Es werden nur die Angaben abgefragt, die für diese Objektart relevant sind.</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {cfg.areaFields.map((f) => {
+          if (f === "ev_charging" || f === "development_status") {
+            const opts = f === "ev_charging" ? EV_CHARGING_OPTIONS : DEVELOPMENT_OPTIONS;
+            return (
+              <div key={f}>
+                <Label>{label(f)}</Label>
+                <Select value={d[f] || undefined} onValueChange={(v) => update({ [f]: v } as any)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>{opts.map((o) => <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            );
+          }
+          return (
+            <div key={f}>
+              <Label>{label(f)}</Label>
+              <Input
+                type={f === "zone" ? "text" : "number"}
+                step={step(f)}
+                placeholder={f === "zone" ? "z.B. W2, W3, WG3" : undefined}
+                value={d[f] as string}
+                onChange={(e) => update({ [f]: e.target.value } as any)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 
 function Step6Price({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
   const { t } = useTranslation();
@@ -1138,6 +1313,7 @@ function Step6Price({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
         </div>
         <div><Label>{t("propertyWizard.step6.commissionValue")}</Label><Input type="number" value={d.commission_value} onChange={(e) => update({ commission_value: e.target.value })} placeholder={t("propertyWizard.step6.commissionValuePlaceholder")} /></div>
       </div>
+      <PriceInsights d={d} update={update} />
     </div>
   );
 }
@@ -1165,10 +1341,11 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
   const catalogExtras = extras.filter((l) => optionByLabel.has(l.toLowerCase()));
   const customExtras = extras.filter((l) => !optionByLabel.has(l.toLowerCase()));
   const removeExtra = (label: string) => setExtras(extras.filter((l) => l.toLowerCase() !== label.toLowerCase()));
+  const cfg = typeConfig(d.property_type);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {checks.map(c => {
+        {(cfg.residentialEquipment ? checks : []).map(c => {
           const Icon = featureIcon(c.key);
           const active = d[c.k] as boolean;
           return (
@@ -1211,6 +1388,30 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
         })}
       </div>
 
+      {cfg.quickFeatures.length > 0 && (
+        <div>
+          <Label>Typisch für diese Objektart</Label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {cfg.quickFeatures.map((label) => {
+              const on = extras.some((l) => l.toLowerCase() === label.toLowerCase());
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => (on ? removeExtra(label) : setExtras([...extras, label]))}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition",
+                    on ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/60 hover:bg-primary/5",
+                  )}
+                >
+                  {on ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Label className="mb-0">Weitere Ausstattungen</Label>
@@ -1251,7 +1452,7 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
         hiddenLabels={BASE_FEATURE_LABELS}
       />
 
-      <div className="grid grid-cols-3 gap-3">
+      {cfg.heating && <div className="grid grid-cols-3 gap-3">
         <div>
           <Label>{t("propertyWizard.step7.heating")}</Label>
           <Select value={d.heating_type || "none"} onValueChange={(v) => update({ heating_type: v === "none" ? "" : v })}>
@@ -1272,7 +1473,7 @@ function Step7Equipment({ d, update }: { d: WizardData; update: (p: Partial<Wiza
           <Input value={d.energy_source} onChange={(e) => update({ energy_source: e.target.value })} placeholder={t("propertyWizard.step7.energySourcePlaceholder")} />
         </div>
         <div><Label>{t("propertyWizard.step7.energyClass")}</Label><Input value={d.energy_class} onChange={(e) => update({ energy_class: e.target.value })} placeholder={t("propertyWizard.step7.energyClassPlaceholder")} /></div>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -1599,9 +1800,7 @@ function Step9Units({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
                   <Select value={u.unit_type} onValueChange={(v) => patchUnit(i, { unit_type: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="apartment">{t("propertyWizard.step9.unitTypes.apartment")}</SelectItem>
-                      <SelectItem value="commercial">{t("propertyWizard.step9.unitTypes.commercial")}</SelectItem>
-                      <SelectItem value="parking">{t("propertyWizard.step9.unitTypes.parking")}</SelectItem>
+                      {UNIT_TYPE_OPTIONS.map((o) => <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
