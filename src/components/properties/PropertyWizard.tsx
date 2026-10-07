@@ -525,7 +525,7 @@ export function PropertyWizard({
       const res = await onCreate(buildSubmitPayload(d));
       if (res?.id) { setCreatedId(res.id); setStep(10); }
     } catch (e: any) {
-      toast.error(e?.message ?? "Speichern fehlgeschlagen");
+      void e; // Fehler-Toast kommt aus der Mutation
     } finally {
       setSaving(false);
     }
@@ -639,7 +639,7 @@ export function PropertyWizard({
                     aria-label={label}
                     aria-current={isActive ? "step" : undefined}
                     className={cn(
-                      "flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all duration-200",
+                      "flex h-8 shrink-0 cursor-pointer items-center disabled:cursor-not-allowed disabled:opacity-40 justify-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all duration-200",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isActive
                         ? "bg-primary text-primary-foreground shadow-sm"
