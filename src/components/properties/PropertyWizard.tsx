@@ -822,6 +822,9 @@ function EditBasics({
         </div>
       </div>
 
+      <SubTypePicker d={d} update={update} />
+
+
       {d.structure === "unit_in_building" && (
         <div className="space-y-1.5 border-t pt-5">
           <Label>{t("propertyWizard.step2.parentLabel")}</Label>
