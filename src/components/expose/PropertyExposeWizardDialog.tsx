@@ -625,56 +625,61 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
-        <ol className="flex flex-wrap items-center gap-1.5">
+        {/* Stepper – segmentierte Pill-Bar wie bei «Neue Immobilie» */}
+        <div className="flex w-full items-center gap-1 rounded-full border bg-muted/50 p-1">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const active = i === step;
             const done = i < step;
             return (
-              <li key={s.label}>
-                <button
-                  type="button"
-                  onClick={() => setStep(i)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                    active && "border-primary bg-primary text-primary-foreground",
-                    !active && done && "border-primary/40 bg-primary/10 text-primary",
-                    !active && !done && "border-border text-muted-foreground hover:border-primary/40",
-                  )}
-                >
-                  {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                  {s.label}
-                </button>
-              </li>
+              <button
+                key={s.label}
+                type="button"
+                title={s.label}
+                onClick={() => !generating && setStep(i)}
+                className={cn(
+                  "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition",
+                  active && "bg-primary text-primary-foreground shadow-sm",
+                  !active && done && "text-primary hover:bg-background",
+                  !active && !done && "text-muted-foreground hover:bg-background",
+                )}
+              >
+                {done ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Icon className="h-3.5 w-3.5 shrink-0" />}
+                <span className={cn("truncate", !active && "hidden lg:inline")}>{s.label}</span>
+              </button>
             );
           })}
-        </ol>
+        </div>
 
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {TEMPLATES.map((t) => (
-                  <button
+                  <div
                     key={t.id}
-                    type="button"
-                    onClick={() => setTemplate(t)}
                     className={cn(
-                      "rounded-xl border-2 p-3 text-left transition",
+                      "group relative rounded-xl border-2 p-2 text-left transition",
                       template.id === t.id ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-primary/40",
                     )}
                   >
-                    <div className="mb-2 flex h-14 overflow-hidden rounded-md" style={{ background: t.pageBg }}>
-                      <div className="w-1/3" style={{ background: t.primary }} />
-                      <div className="w-2 self-stretch" style={{ background: t.accent }} />
+                    <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
+                      <ScaledExposePreview html={buildHtml(coverUrl, [], null, null, t)} title={`Vorlage ${t.label}`} />
+                      <div className="mt-2 flex items-center justify-between gap-1">
+                        <p className="text-sm font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-4 w-4 text-primary" />}
+                      </div>
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
+                    </button>
+                    <div className="mt-2 flex items-center justify-between">
+                      <Badge variant="outline" className="text-[10px]">
+                        {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
+                      </Badge>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
+                        <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
+                      </Button>
                     </div>
-                    <p className="text-sm font-semibold">{t.label}</p>
-                    <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
-                    <Badge variant="outline" className="mt-2 text-[10px]">
-                      {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
-                    </Badge>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
