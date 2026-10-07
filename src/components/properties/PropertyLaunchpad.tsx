@@ -129,7 +129,7 @@ export function PropertyLaunchpad(p: Props) {
         <div className="grid gap-3 sm:grid-cols-3">
           {[
             { icon: Landmark, title: "Finanzierung starten", text: "Dossier für die Bankprüfung vorbereiten.", run: () => navigate({ to: "/financing" }) },
-            { icon: Users, title: "Matching prüfen", text: "Passende Suchkunden nach Budget, Ort und Zimmern.", run: () => navigate({ to: "/matching" }) },
+            { icon: Users, title: "Matching prüfen", text: "Passende Suchkunden nach Budget, Ort und Zimmern.", run: () => navigate({ to: "/matching", search: { clientId: "", view: "all", profileId: "" } as any }) },
             { icon: FileText, title: "Exposé & Portal", text: "Exposé erstellen oder fürs Portal freigeben.", run: () => navigate({ to: "/properties/$id", params: { id: p.propertyId } }) },
           ].map((a) => (
             <button
