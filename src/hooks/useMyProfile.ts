@@ -38,7 +38,8 @@ export function useMyProfile() {
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
-      .channel(`my-profile-${userId}`)
+      // Eindeutiger Kanal pro Hook-Instanz – mehrere Komponenten dürfen den Hook nutzen.
+      .channel(`my-profile-${userId}-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
