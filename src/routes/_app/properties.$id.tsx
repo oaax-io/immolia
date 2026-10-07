@@ -47,6 +47,7 @@ import { PropertyLocationMap } from "@/components/properties/PropertyLocationMap
 import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
+import { typeConfig, subTypeLabel, AREA_FIELD_LABELS, EV_CHARGING_OPTIONS, DEVELOPMENT_OPTIONS, type AreaField } from "@/lib/property-type-config";
 
 
 export const Route = createFileRoute("/_app/properties/$id")({
@@ -403,6 +404,7 @@ function PropertyDetail() {
   });
 
   if (isLoading || !p) return <div className="text-sm text-muted-foreground">Lädt…</div>;
+  const showUnitsTab = !p.is_unit && (units.length > 0 || typeConfig(p.property_type).units || p.building_type === "multi_family" || (p.sub_type === "shopping_center"));
 
   return (
     <div>
@@ -536,7 +538,7 @@ function PropertyDetail() {
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className={getPropertyStatusBadgeClass(p.status)}>{propertyStatusLabels[p.status as keyof typeof propertyStatusLabels]}</Badge>
-            <Badge variant="secondary">{propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]}</Badge>
+            <Badge variant="secondary">{propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]}{p.sub_type ? ` · ${subTypeLabel(p.property_type, p.sub_type)}` : ""}</Badge>
             <Badge variant="outline">{listingTypeLabels[p.listing_type as keyof typeof listingTypeLabels]}</Badge>
             {p.status === "reserved" && <Badge className="bg-amber-500 hover:bg-amber-500">Aktive Reservation</Badge>}
             {statusFlags?.hasActiveMandate && <Badge className="bg-emerald-600 hover:bg-emerald-600">Aktives Mandat</Badge>}
@@ -558,8 +560,14 @@ function PropertyDetail() {
             <p className="font-display text-3xl font-bold text-gradient-brand">
               {formatCurrency(p.listing_type === "rent" ? (p.rent ? Number(p.rent) : null) : (p.price ? Number(p.price) : null))}
             </p>
-            {p.living_area && p.price && p.listing_type !== "rent" && (
-              <p className="mt-1 text-xs text-muted-foreground">{formatCurrency(Number(p.price) / Number(p.living_area))} / m²</p>
+            {(() => {
+              const a = p.property_type === "land" ? p.plot_area : (p.living_area || p.usable_area);
+              return a && p.price && p.listing_type !== "rent"
+                ? <p className="mt-1 text-xs text-muted-foreground">{formatCurrency(Number(p.price) / Number(a))} / m²{p.property_type === "land" ? " Land" : ""}</p>
+                : null;
+            })()}
+            {typeConfig(p.property_type).yieldFields && p.gross_yield && (
+              <p className="mt-1 text-xs text-muted-foreground">Bruttorendite {p.gross_yield}%</p>
             )}
           </CardContent></Card>
           <Card><CardContent className="p-4 text-sm">
@@ -640,7 +648,7 @@ function PropertyDetail() {
             { v: "overview", label: "Übersicht" },
             { v: "details", label: "Details" },
             { v: "documents", label: `Dokumente${counts?.documents ? ` (${counts.documents})` : ""}` },
-            ...(!p.is_unit ? [{ v: "units", label: `Einheiten${units.length ? ` (${units.length})` : ""}` }] : []),
+            ...(showUnitsTab ? [{ v: "units", label: `Einheiten${units.length ? ` (${units.length})` : ""}` }] : []),
             { v: "activity", label: "Aktivitäten" },
           ].map((t) => (
             <TabsTrigger
@@ -666,7 +674,7 @@ function PropertyDetail() {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-0"><DocumentsTab propertyId={id} /></TabsContent>
-          {!p.is_unit && <TabsContent value="units" className="mt-0"><UnitsTab parentId={id} units={units} /></TabsContent>}
+          {showUnitsTab && <TabsContent value="units" className="mt-0"><UnitsTab parentId={id} units={units} /></TabsContent>}
           <TabsContent value="activity" className="mt-0">
             <ActivityTab activities={activities} employees={employees} />
           </TabsContent>
@@ -1021,27 +1029,45 @@ function OverviewTab({ p }: { p: any }) {
 
 
 function FactsTab({ p }: { p: any }) {
-  const rows: [string, any][] = [
+  const cfg = typeConfig(p.property_type);
+  const area = (v: any) => (v != null && v !== "" ? formatArea(Number(v)) : null);
+  const optLabel = (opts: { v: string; label: string }[], v: any) => opts.find((o) => o.v === v)?.label ?? v;
+  const fieldValue = (f: AreaField): any => {
+    const v = p[f];
+    if (v == null || v === "") return null;
+    switch (f) {
+      case "living_area": case "usable_area": case "plot_area": return formatArea(Number(v));
+      case "building_volume": return `${Number(v).toLocaleString("de-CH")} m³`;
+      case "hall_height": return `${v} m`;
+      case "floor_load": return `${v} kg/m²`;
+      case "ev_charging": return optLabel(EV_CHARGING_OPTIONS, v);
+      case "development_status": return optLabel(DEVELOPMENT_OPTIONS, v);
+      default: return v;
+    }
+  };
+  const all: [string, any][] = [
     ["Titel", p.title],
     ["Typ", propertyTypeLabels[p.property_type as keyof typeof propertyTypeLabels]],
+    ["Unterart", subTypeLabel(p.property_type, p.sub_type)],
     ["Vermarktung", listingTypeLabels[p.listing_type as keyof typeof listingTypeLabels]],
     ["Status", propertyStatusLabels[p.status as keyof typeof propertyStatusLabels]],
-    ["Kaufpreis", p.price ? formatCurrency(Number(p.price)) : "—"],
-    ["Miete / Monat", p.rent ? formatCurrency(Number(p.rent)) : "—"],
-    ["Wohnfläche", formatArea(p.living_area ? Number(p.living_area) : (p.area ? Number(p.area) : null))],
-    ["Grundstück", formatArea(p.plot_area ? Number(p.plot_area) : null)],
-    ["Zimmer", p.rooms ?? "—"],
-    ["Bäder", p.bathrooms ?? "—"],
-    ["Stockwerk", p.floor ?? "—"],
-    ["Geschosse", p.total_floors ?? "—"],
-    ["Baujahr", p.year_built ?? "—"],
-    ["Renoviert", p.renovated_at ?? "—"],
-    ["Energieklasse", p.energy_class ?? "—"],
-    ["Adresse", p.address ?? "—"],
-    ["PLZ", p.postal_code ?? "—"],
-    ["Ort", p.city ?? "—"],
-    ["Land", p.country ?? "—"],
+    ["Kaufpreis", p.price ? formatCurrency(Number(p.price)) : null],
+    ["Miete / Monat", p.rent ? formatCurrency(Number(p.rent)) : null],
+    ...(cfg.yieldFields ? [
+      ["Soll-Mietertrag p.a.", p.rent_target ? formatCurrency(Number(p.rent_target)) : null] as [string, any],
+      ["Bruttorendite", p.gross_yield ? `${p.gross_yield}%` : null] as [string, any],
+    ] : []),
+    ...cfg.areaFields.map((f) => [f === "usable_area" && cfg.areaLabel ? cfg.areaLabel : AREA_FIELD_LABELS[f].replace(/ \(.*\)$/, ""), fieldValue(f)] as [string, any]),
+    ...(cfg.areaFields.includes("living_area") || p.property_type === "other" ? [] : [["Wohnfläche", area(p.living_area)] as [string, any]]),
+    ["Stockwerk", p.floor],
+    ["Geschosse", p.total_floors],
+    ...(cfg.heating ? [["Energieklasse", p.energy_class] as [string, any]] : []),
+    ["Adresse", p.address],
+    ["PLZ", p.postal_code],
+    ["Ort", p.city],
+    ["Land", p.country],
   ];
+  const rows = all.filter(([, v]) => v != null && v !== "" && v !== "—");
   return (
     <Card><CardContent className="p-0">
       <dl className="divide-y">
