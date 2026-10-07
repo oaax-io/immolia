@@ -37,6 +37,7 @@ import { MacroLocationCard } from "@/components/properties/MacroLocationCard";
 import { PublicShareCard } from "@/components/properties/PublicShareCard";
 import { PortalPublishCard } from "@/components/properties/PortalPublishCard";
 import { PropertyExposeWizardDialog } from "@/components/expose/PropertyExposeWizardDialog";
+import { ExposeHistoryCard } from "@/components/expose/ExposeHistoryCard";
 import { publishPropertyToPortal } from "@/lib/portal.functions";
 import { DealDialog } from "@/components/commission/DealDialog";
 import { PropertyAssigneePicker, usePropertyAssignees } from "@/components/properties/PropertyAssignees";
@@ -2464,13 +2465,12 @@ function ExposeTab({ propertyId, property }: { propertyId: string; property: any
     queryFn: async () => {
       const { data } = await supabase
         .from("generated_documents")
-        .select("*")
+        .select("id,title,file_url,pdf_url,html_content,created_at,created_by,variables")
         .eq("related_type", "property").eq("related_id", propertyId)
         .order("created_at", { ascending: false });
       return (data ?? []).filter((d: any) => (d.variables as any)?.kind === "expose");
     },
   });
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
   return (
@@ -2494,35 +2494,7 @@ function ExposeTab({ propertyId, property }: { propertyId: string; property: any
         onOpenChange={setWizardOpen}
       />
 
-      <Card><CardContent className="p-6">
-        <h4 className="mb-3 font-semibold">Bisher erstellte Exposés</h4>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Wird geladen…</p>
-        ) : exposes.length === 0 ? (
-          <EmptyState title="Noch keine Exposés" description="Starte den Wizard, um das erste Exposé zu erstellen." />
-        ) : (
-          <div className="space-y-2">
-            {exposes.map((d: any) => (
-              <div key={d.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{(d.variables as any)?.title ?? "Exposé"}</p>
-                  <p className="text-xs text-muted-foreground">{formatDateTime(d.created_at)}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => setPreviewHtml(d.html_content)}>
-                  <ExternalLink className="mr-1 h-3 w-3" />Ansehen
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent></Card>
-
-      <Dialog open={!!previewHtml} onOpenChange={(o) => !o && setPreviewHtml(null)}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader><DialogTitle>Exposé-Vorschau</DialogTitle></DialogHeader>
-          {previewHtml && <iframe title="Exposé" srcDoc={previewHtml} className="h-[75vh] w-full rounded border" />}
-        </DialogContent>
-      </Dialog>
+      <ExposeHistoryCard exposes={exposes} isLoading={isLoading} />
     </div>
   );
 }

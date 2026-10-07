@@ -1,13 +1,16 @@
 import { useTenantBranding } from "@/lib/tenant-branding";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Check, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon, LayoutTemplate,
   Loader2, ListChecks, Eye, Star, Sparkles, UserRound, Paperclip, FileText, GripVertical,
-  ArrowUp, ArrowDown, RotateCcw,
+  ArrowUp, ArrowDown, RotateCcw, Building2, UserX, Mail, Download, Minimize2,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
+import { ExposeEmailDialog, base64ToBlobUrl, formatBytes, triggerDownload } from "@/components/expose/ExposeTools";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -112,13 +115,25 @@ function mediaUrl(path?: string | null) {
   return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
 }
 
+/** Lädt Bilder aus dem eigenen Speicher direkt (ohne Browser-CORS), sonst per fetch. */
+async function loadImageBlob(url: string): Promise<Blob | null> {
+  const m = url.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/([^?]+)/);
+  if (m) {
+    const { data } = await supabase.storage.from(m[1]).download(decodeURIComponent(m[2]));
+    if (data) return data;
+  } else if (!/^(https?:|data:|blob:)/i.test(url)) {
+    const { data } = await supabase.storage.from("media").download(url);
+    if (data) return data;
+  }
+  const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+  return res.ok ? await res.blob() : null;
+}
+
 async function urlToDataUri(url: string, maxSide = 1600, quality = 0.82): Promise<string | null> {
   try {
-    // Kein `credentials: "include"` — Storage antwortet mit `Access-Control-Allow-Origin: *`,
-    // was mit Credentials einen CORS-Fehler auslöst und die Bilder im PDF fehlen liess.
-    const res = await fetch(url, { mode: "cors", cache: "force-cache" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
+    if (url.startsWith("data:")) return url;
+    const blob = await loadImageBlob(url);
+    if (!blob) return null;
 
     // Bilder verkleinern, damit das HTML-Payload unter dem Server-Limit bleibt.
     const downscaled = await downscaleBlob(blob, maxSide, quality);
@@ -163,7 +178,6 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [description, setDescription] = useState("");
   const [withDescription, setWithDescription] = useState(true);
   const [withFeatures, setWithFeatures] = useState(true);
-  const [withContact, setWithContact] = useState(true);
   const [visibleFacts, setVisibleFacts] = useState<Set<FactKey>>(
     new Set<FactKey>(["property_type", "listing_type", "price", "rent", "living_area", "rooms", "bathrooms", "energy_class"]),
   );
@@ -176,11 +190,21 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [dragKey, setDragKey] = useState<ExposeSectionKey | null>(null);
   const [withMacro, setWithMacro] = useState(false);
   const [withMarket, setWithMarket] = useState(false);
-  const [contactMode, setContactMode] = useState<"employee" | "custom">("employee");
+  const [contactMode, setContactMode] = useState<"employee" | "company" | "none">("employee");
   const [contactUserId, setContactUserId] = useState<string | null>(null);
-  const [customContact, setCustomContact] = useState({ name: "", email: "", phone: "", role: "" });
+  const [empSearch, setEmpSearch] = useState("");
   const [employeeRole, setEmployeeRole] = useState("");
   const [highlights, setHighlights] = useState<string[] | null>(null);
+  const [progress, setProgress] = useState<{ pct: number; label: string }>({ pct: 0, label: "" });
+  const [result, setResult] = useState<{ url: string; size: number; fileName: string; compressed: boolean } | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [templatePreview, setTemplatePreview] = useState<TemplateMeta | null>(null);
+  const agencyId = useConfirmedAgencyId();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!open) { setResult(null); setProgress({ pct: 0, label: "" }); }
+  }, [open]);
 
   const renderPdf = useServerFn(renderDocumentPdf);
   const fetchBytes = useServerFn(fetchDocumentPdfBytes);
@@ -253,14 +277,35 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     },
   });
 
+  const companyContact = useMemo(() => {
+    const c = _tb.company;
+    const addr = [c?.address, [c?.postal_code, c?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || _tb.companyAddress || null;
+    return {
+      name: c?.name ?? _tb.companyName ?? null,
+      address: addr,
+      email: c?.email ?? _tb.companyEmail ?? null,
+      phone: c?.phone ?? null,
+      website: c?.website ?? _tb.companyWebsite ?? null,
+      logo: c?.logo_url ?? _tb.logoUrl ?? null,
+    };
+  }, [_tb]);
+
+  const filteredEmployees = useMemo(() => {
+    const q = empSearch.trim().toLowerCase();
+    const list = employees as any[];
+    if (!q) return list;
+    return list.filter((e) => `${e.full_name ?? ""} ${e.email ?? ""} ${e.phone ?? ""}`.toLowerCase().includes(q));
+  }, [employees, empSearch]);
+
+  const withContact = contactMode !== "none";
   const contact = useMemo(() => {
-    if (!withContact) return { name: null, email: null, phone: null, role: null, photo: null };
-    if (contactMode === "custom") {
+    if (contactMode === "none") return { name: null, email: null, phone: null, role: null, photo: null };
+    if (contactMode === "company") {
       return {
-        name: customContact.name || null,
-        email: customContact.email || null,
-        phone: customContact.phone || null,
-        role: customContact.role || null,
+        name: companyContact.name,
+        email: companyContact.email,
+        phone: companyContact.phone,
+        role: [companyContact.address, companyContact.website].filter(Boolean).join(" · ") || null,
         photo: null,
       };
     }
@@ -272,7 +317,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       role: employeeRole || null,
       photo: emp?.avatar_url ?? null,
     };
-  }, [withContact, contactMode, customContact, employees, contactUserId, profile, employeeRole]);
+  }, [contactMode, companyContact, employees, contactUserId, profile, employeeRole]);
 
   const imagePool = useMemo(() => {
     const fromMedia = (media as any[])
@@ -446,8 +491,9 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     return out;
   }, [withMacro, withMarket, macro, marketSections]);
 
-  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null) => {
+  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null, tpl?: TemplateMeta) => {
     const p = property ?? {};
+    const t = tpl ?? template;
     const cols = GALLERY_OPTIONS.find((o) => o.id === galleryLayout)?.cols ?? 2;
     return renderExposeHTML(
       {
@@ -481,14 +527,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         generated_on: new Date().toLocaleDateString("de-CH"),
       } as any,
       {
-        primary: template.primary,
-        accent: template.accent,
-        pageBg: template.pageBg,
-        titleFont: template.titleFont,
-        bodyFont: template.bodyFont,
-        orientation: template.orientation,
-        templateLabel: template.label,
-        family: template.family,
+        primary: t.primary,
+        accent: t.accent,
+        pageBg: t.pageBg,
+        titleFont: t.titleFont,
+        bodyFont: t.bodyFont,
+        orientation: t.orientation,
+        templateLabel: t.label,
+        family: t.family,
       },
     );
   };
@@ -521,87 +567,126 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   }
 
 
-  async function handleGenerate() {
+  async function handleGenerate(mode: "normal" | "compressed") {
+    if (!agencyId) {
+      toast.error("Keine aktive Firma", { description: "Bitte Firma auswählen und erneut versuchen." });
+      return;
+    }
     setGenerating(true);
+    let ticker: ReturnType<typeof setInterval> | null = null;
     try {
       const gallerySources = galleryUrls.filter((u) => u !== coverUrl);
+      const total = gallerySources.length + (coverUrl ? 1 : 0) + 2;
+      let loaded = 0;
+      const tick = (label: string) => {
+        loaded++;
+        setProgress({ pct: Math.min(45, Math.round((loaded / total) * 45)), label });
+      };
+      setProgress({ pct: 2, label: "Bilder werden vorbereitet" });
+      const compressed = mode === "compressed";
       const portraitSrc = contact.photo ? await urlToDataUri(contact.photo, 320, 0.85) : null;
+      tick("Bilder werden vorbereitet");
       const logoSrc = _tb.logoUrl ? await urlToDataUri(_tb.logoUrl, 480, 0.9) : null;
+      tick("Bilder werden vorbereitet");
       const embed = async (maxSide: number, quality: number) => {
         const cover = coverUrl ? await urlToDataUri(coverUrl, maxSide, quality) : null;
+        if (coverUrl) tick("Titelbild geladen");
         const gallery = (
-          await Promise.all(gallerySources.map((u) => urlToDataUri(u, maxSide, quality)))
+          await Promise.all(gallerySources.map(async (u) => { const r = await urlToDataUri(u, maxSide, quality); tick("Galeriebilder geladen"); return r; }))
         ).filter((u): u is string => !!u);
         return buildHtml(cover, gallery, portraitSrc, logoSrc);
       };
 
-      let html = await embed(1600, 0.82);
+      let html = compressed ? await embed(1000, 0.6) : await embed(1600, 0.82);
       // Server-Limit: 5 MB HTML — bei vielen Bildern stärker komprimieren.
       if (html.length > 4_600_000) html = await embed(1100, 0.7);
       if (html.length > 4_600_000) html = await embed(800, 0.6);
+      if (html.length > 4_900_000) html = await embed(600, 0.5);
       if (html.length > 4_900_000) {
         toast.error("Zu viele Bilder für ein PDF", { description: "Bitte weniger Bilder in der Galerie auswählen." });
         return;
       }
 
       const safeTitle = title || property?.title || "Expose";
-      const fileName = `Expose-${safeTitle.replace(/[^\w\s-]/g, "").trim() || "Objekt"}-${template.label}.pdf`;
+      const base = safeTitle.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-") || "Objekt";
+      const fileName = `Expose-${base}-${template.label}${compressed ? "-kompakt" : ""}-${Date.now().toString(36)}.pdf`;
 
-      const res = await renderPdf({
-        data: {
-          html, title: safeTitle, fileName,
-          documentType: "expose",
-          propertyTitle: property?.title,
-          companyName: company?.name ?? null,
-        },
-      });
-      if (!res.ok || !res.fileUrl) {
-        toast.error("PDF konnte nicht erstellt werden", { description: "message" in res ? (res as any).message : undefined });
-        return;
-      }
-
-      let url = res.fileUrl;
-      if (res.path) {
-        try {
-          const bytes = await fetchBytes({ data: { path: res.path } });
-          if (bytes.ok && bytes.base64) {
-            const bin = atob(bytes.base64);
-            const arr = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-            url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
-          }
-        } catch { /* fall back to fileUrl */ }
-      }
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      // Persist a record so it shows up under "Bisher erstellte Exposés"
-      try {
-        const { data: u } = await supabase.auth.getUser();
-        await supabase.from("generated_documents").insert({
+      // Datensatz zuerst anlegen (mit Firma) – dann sehen alle im Team das Exposé.
+      setProgress({ pct: 50, label: "Exposé wird gespeichert" });
+      const { data: u } = await supabase.auth.getUser();
+      const { data: row, error: insErr } = await supabase
+        .from("generated_documents")
+        .insert({
+          agency_id: agencyId,
           related_type: "property",
           related_id: propertyId,
+          title: safeTitle,
+          document_type: "expose",
+          status: "draft",
           html_content: buildHtml(coverUrl, galleryUrls),
           created_by: u.user?.id ?? null,
           variables: {
             kind: "expose",
             title: safeTitle,
             template: template.id,
+            template_label: template.label,
             gallery_layout: galleryLayout,
             visible_facts: Array.from(visibleFacts),
+            contact_mode: contactMode,
+            compressed,
+            file_name: fileName,
           } as any,
-        } as any);
-      } catch { /* record is optional */ }
+        } as any)
+        .select("id")
+        .single();
+      if (insErr || !row) throw new Error(insErr?.message ?? "Exposé konnte nicht gespeichert werden");
 
-      toast.success("Exposé wurde erstellt und heruntergeladen");
-      onOpenChange(false);
+      setProgress({ pct: 55, label: "PDF wird erstellt" });
+      ticker = setInterval(() => {
+        setProgress((p) => (p.pct < 90 ? { pct: p.pct + 2, label: "PDF wird erstellt" } : p));
+      }, 400);
+      const res = await renderPdf({
+        data: {
+          html, title: safeTitle, fileName, documentId: row.id,
+          documentType: "expose",
+          propertyTitle: property?.title,
+          companyName: company?.name ?? null,
+        },
+      });
+      if (ticker) clearInterval(ticker);
+      if (!res.ok || !res.fileUrl) {
+        await supabase.from("generated_documents").delete().eq("id", row.id);
+        toast.error("PDF konnte nicht erstellt werden", { description: "message" in res ? (res as any).message : undefined });
+        return;
+      }
+
+      setProgress({ pct: 94, label: "PDF wird geladen" });
+      let url = res.fileUrl;
+      let size = 0;
+      if ((res as any).path) {
+        try {
+          const bytes = await fetchBytes({ data: { path: (res as any).path } });
+          if (bytes.ok && bytes.base64) {
+            const b = base64ToBlobUrl(bytes.base64);
+            url = b.url;
+            size = b.size;
+          }
+        } catch { /* fall back to fileUrl */ }
+      }
+      if (size) {
+        await supabase
+          .from("generated_documents")
+          .update({ variables: { kind: "expose", title: safeTitle, template: template.id, template_label: template.label, gallery_layout: galleryLayout, visible_facts: Array.from(visibleFacts), contact_mode: contactMode, compressed, file_name: fileName, size_bytes: size } as any })
+          .eq("id", row.id);
+      }
+      setProgress({ pct: 100, label: "Fertig" });
+      setResult({ url, size, fileName, compressed });
+      qc.invalidateQueries({ queryKey: ["exposes", propertyId] });
+      toast.success(compressed ? "Komprimierte Version erstellt" : "Exposé wurde erstellt");
     } catch (err) {
       toast.error("PDF konnte nicht erstellt werden", { description: (err as Error).message });
     } finally {
+      if (ticker) clearInterval(ticker);
       setGenerating(false);
     }
   }
@@ -625,56 +710,61 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
-        <ol className="flex flex-wrap items-center gap-1.5">
+        {/* Stepper – segmentierte Pill-Bar wie bei «Neue Immobilie» */}
+        <div className="flex w-full items-center gap-1 rounded-full border bg-muted/50 p-1">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
             const active = i === step;
             const done = i < step;
             return (
-              <li key={s.label}>
-                <button
-                  type="button"
-                  onClick={() => setStep(i)}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                    active && "border-primary bg-primary text-primary-foreground",
-                    !active && done && "border-primary/40 bg-primary/10 text-primary",
-                    !active && !done && "border-border text-muted-foreground hover:border-primary/40",
-                  )}
-                >
-                  {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                  {s.label}
-                </button>
-              </li>
+              <button
+                key={s.label}
+                type="button"
+                title={s.label}
+                onClick={() => !generating && setStep(i)}
+                className={cn(
+                  "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition",
+                  active && "bg-primary text-primary-foreground shadow-sm",
+                  !active && done && "text-primary hover:bg-background",
+                  !active && !done && "text-muted-foreground hover:bg-background",
+                )}
+              >
+                {done ? <Check className="h-3.5 w-3.5 shrink-0" /> : <Icon className="h-3.5 w-3.5 shrink-0" />}
+                <span className={cn("truncate", !active && "hidden lg:inline")}>{s.label}</span>
+              </button>
             );
           })}
-        </ol>
+        </div>
 
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {TEMPLATES.map((t) => (
-                  <button
+                  <div
                     key={t.id}
-                    type="button"
-                    onClick={() => setTemplate(t)}
                     className={cn(
-                      "rounded-xl border-2 p-3 text-left transition",
+                      "group relative rounded-xl border-2 p-2 text-left transition",
                       template.id === t.id ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-primary/40",
                     )}
                   >
-                    <div className="mb-2 flex h-14 overflow-hidden rounded-md" style={{ background: t.pageBg }}>
-                      <div className="w-1/3" style={{ background: t.primary }} />
-                      <div className="w-2 self-stretch" style={{ background: t.accent }} />
+                    <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
+                      <ScaledExposePreview html={buildHtml(coverUrl, [], null, null, t)} title={`Vorlage ${t.label}`} />
+                      <div className="mt-2 flex items-center justify-between gap-1">
+                        <p className="text-sm font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-4 w-4 text-primary" />}
+                      </div>
+                      <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
+                    </button>
+                    <div className="mt-2 flex items-center justify-between">
+                      <Badge variant="outline" className="text-[10px]">
+                        {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
+                      </Badge>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
+                        <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
+                      </Button>
                     </div>
-                    <p className="text-sm font-semibold">{t.label}</p>
-                    <p className="line-clamp-2 text-[11px] text-muted-foreground">{t.description}</p>
-                    <Badge variant="outline" className="mt-2 text-[10px]">
-                      {t.orientation === "landscape" ? "Querformat" : "Hochformat"}
-                    </Badge>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -968,41 +1058,42 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
 
             {step === 4 && (
               <div className="space-y-4">
-                <label className="flex items-center gap-2 text-sm">
-                  <Checkbox checked={withContact} onCheckedChange={() => setWithContact((v) => !v)} />
-                  Ansprechperson im Exposé anzeigen
-                </label>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {([
+                    { id: "employee", label: "Mitarbeitende(r)", desc: "Person aus dem Team wählen", icon: UserRound },
+                    { id: "company", label: "Firmenprofil", desc: "Firma, Adresse, Kontakt, Web", icon: Building2 },
+                    { id: "none", label: "Kein Ansprechpartner", desc: "Kontaktblock weglassen", icon: UserX },
+                  ] as const).map((o) => {
+                    const Icon = o.icon;
+                    const active = contactMode === o.id;
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => setContactMode(o.id)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl border-2 p-3 text-left transition",
+                          active ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary/40",
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span>
+                          <span className="block text-sm font-semibold">{o.label}</span>
+                          <span className={cn("block text-[11px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{o.desc}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                <div className={cn("space-y-4", !withContact && "pointer-events-none opacity-50")}>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContactMode("employee")}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                        contactMode === "employee" ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40",
-                      )}
-                    >
-                      Mitarbeitende
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContactMode("custom")}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-                        contactMode === "custom" ? "border-primary bg-primary text-primary-foreground" : "hover:border-primary/40",
-                      )}
-                    >
-                      Zusätzliche Person
-                    </button>
-                  </div>
-
-                  {contactMode === "employee" ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {(employees as any[]).length === 0 && (
+                {contactMode === "employee" && (
+                  <div className="space-y-3">
+                    <Input placeholder="Mitarbeitende suchen…" value={empSearch} onChange={(e) => setEmpSearch(e.target.value)} />
+                    <div className="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2">
+                      {filteredEmployees.length === 0 && (
                         <p className="text-sm text-muted-foreground">Keine Mitarbeitenden gefunden.</p>
                       )}
-                      {(employees as any[]).map((e) => {
+                      {filteredEmployees.map((e: any) => {
                         const active = (contactUserId ?? (profile as any)?.id) === e.id;
                         return (
                           <button
@@ -1028,32 +1119,37 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
                           </button>
                         );
                       })}
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Funktion (optional)</Label>
-                        <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
-                      </div>
                     </div>
-                  ) : (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label>Name</Label>
-                        <Input value={customContact.name} onChange={(e) => setCustomContact((c) => ({ ...c, name: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Funktion (optional)</Label>
-                        <Input value={customContact.role} onChange={(e) => setCustomContact((c) => ({ ...c, role: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>E-Mail</Label>
-                        <Input type="email" value={customContact.email} onChange={(e) => setCustomContact((c) => ({ ...c, email: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Telefon</Label>
-                        <Input value={customContact.phone} onChange={(e) => setCustomContact((c) => ({ ...c, phone: e.target.value }))} />
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label>Funktion (optional)</Label>
+                      <Input value={employeeRole} placeholder="z. B. Immobilienberater" onChange={(e) => setEmployeeRole(e.target.value)} />
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {contactMode === "company" && (
+                  <div className="flex items-start gap-4 rounded-xl border bg-muted/30 p-4">
+                    {companyContact.logo ? (
+                      <img src={companyContact.logo} alt="" className="h-12 w-12 rounded object-contain" />
+                    ) : (
+                      <Building2 className="h-10 w-10 text-muted-foreground" />
+                    )}
+                    <div className="space-y-0.5 text-sm">
+                      <p className="font-semibold">{companyContact.name || "Firmenname fehlt"}</p>
+                      {companyContact.address && <p className="text-muted-foreground">{companyContact.address}</p>}
+                      {companyContact.email && <p>{companyContact.email}</p>}
+                      {companyContact.phone && <p>{companyContact.phone}</p>}
+                      {companyContact.website && <p>{companyContact.website}</p>}
+                      <p className="pt-1 text-[11px] text-muted-foreground">Angaben stammen aus den Firmeneinstellungen.</p>
+                    </div>
+                  </div>
+                )}
+
+                {contactMode === "none" && (
+                  <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                    Das Exposé wird ohne Ansprechperson erstellt.
+                  </p>
+                )}
               </div>
             )}
 
@@ -1142,20 +1238,66 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
             )}
 
             {step === 7 && (
-
-              <div className="space-y-4 py-6 text-center">
-                <FileDown className="mx-auto h-10 w-10 text-primary" />
-                <div>
-                  <p className="font-semibold">Bereit zum Generieren</p>
-                  <p className="text-sm text-muted-foreground">
-                    {title || property?.title} · Vorlage {template.label} · {facts.length} Eckdaten ·{" "}
-                    {galleryUrls.filter((u) => u !== coverUrl).length} Galeriebilder
-                  </p>
-                </div>
-                <Button size="lg" onClick={handleGenerate} disabled={generating}>
-                  {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                  {generating ? "PDF wird erstellt…" : "Exposé generieren & herunterladen"}
-                </Button>
+              <div className="space-y-4">
+                {!result && (
+                  <div className="space-y-4 py-6 text-center">
+                    <FileDown className="mx-auto h-10 w-10 text-primary" />
+                    <div>
+                      <p className="font-semibold">Bereit zum Generieren</p>
+                      <p className="text-sm text-muted-foreground">
+                        {title || property?.title} · Vorlage {template.label} · {facts.length} Eckdaten ·{" "}
+                        {galleryUrls.filter((u) => u !== coverUrl).length} Galeriebilder
+                      </p>
+                    </div>
+                    {generating ? (
+                      <div className="mx-auto max-w-sm space-y-2">
+                        <Progress value={progress.pct} />
+                        <p className="text-sm font-medium">{progress.pct}% · {progress.label}</p>
+                      </div>
+                    ) : (
+                      <Button size="lg" onClick={() => handleGenerate("normal")}>
+                        <FileDown className="mr-2 h-4 w-4" />Exposé generieren
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {result && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">Exposé erstellt</p>
+                        <p className="text-xs text-muted-foreground">
+                          {result.fileName} · {formatBytes(result.size)}
+                          {result.compressed ? " · komprimiert" : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={generating || result.compressed}
+                          onClick={() => handleGenerate("compressed")}
+                        >
+                          {generating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Minimize2 className="mr-1 h-4 w-4" />}
+                          {generating ? `${progress.pct}%` : "Komprimieren"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setEmailOpen(true)}>
+                          <Mail className="mr-1 h-4 w-4" />Per E-Mail
+                        </Button>
+                        <Button size="sm" onClick={() => triggerDownload(result.url, result.fileName)}>
+                          <Download className="mr-1 h-4 w-4" />Download
+                        </Button>
+                      </div>
+                    </div>
+                    <iframe title="Exposé-PDF" src={result.url} className="h-[60vh] w-full rounded-lg border" />
+                  </div>
+                )}
+                <ExposeEmailDialog
+                  open={emailOpen}
+                  onOpenChange={setEmailOpen}
+                  title={title || property?.title || "Exposé"}
+                  onDownload={result ? () => triggerDownload(result.url, result.fileName) : undefined}
+                />
               </div>
             )}
           </div>
@@ -1173,6 +1315,26 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={generating}>Schliessen</Button>
           )}
         </div>
+
+        <Dialog open={!!templatePreview} onOpenChange={(o) => !o && setTemplatePreview(null)}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Vorlage {templatePreview?.label}</DialogTitle>
+              <DialogDescription>{templatePreview?.description}</DialogDescription>
+            </DialogHeader>
+            {templatePreview && (
+              <div className="mx-auto w-full max-w-md">
+                <ScaledExposePreview html={buildHtml(coverUrl, galleryUrls, null, null, templatePreview)} title="Vorlagen-Vorschau" />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setTemplatePreview(null)}>Schliessen</Button>
+              <Button onClick={() => { if (templatePreview) setTemplate(templatePreview); setTemplatePreview(null); }}>
+                <Check className="mr-1 h-4 w-4" />Diese Vorlage wählen
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
