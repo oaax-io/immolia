@@ -17,6 +17,8 @@ import {
   Ruler, Coins, ClipboardCheck, Rocket,
 } from "lucide-react";
 import { PropertyLaunchpad } from "@/components/properties/PropertyLaunchpad";
+import { SearchSelect } from "@/components/properties/SearchSelect";
+import { QuickOwnerDialog, QuickBuildingDialog } from "@/components/properties/QuickCreateDialogs";
 import * as Lu from "lucide-react";
 
 const SUB_ICONS: Record<string, Lu.LucideIcon> = {
@@ -33,8 +35,8 @@ const SUB_ICONS: Record<string, Lu.LucideIcon> = {
   in_mfh: Lu.Building2, in_house: Lu.House, commercial_parking: Lu.SquareParking, motorbike: Lu.Bike,
 };
 import { cn } from "@/lib/utils";
-import { propertyStatusLabels } from "@/lib/format";
-import { useQuery } from "@tanstack/react-query";
+import { propertyStatusLabels, getPropertyStatusDotClass } from "@/lib/format";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { convertUnsupportedImages } from "@/lib/image-convert";
@@ -515,7 +517,7 @@ export function PropertyWizard({
     queryKey: ["wizard_parent_buildings"],
     queryFn: async () => {
       const { data } = await supabase.from("properties")
-        .select("id, title, address, city")
+        .select("id, title, address, postal_code, city")
         .or("property_type.eq.mixed_use,building_type.eq.multi_family")
         .order("created_at", { ascending: false });
       return data ?? [];
@@ -559,8 +561,7 @@ export function PropertyWizard({
   }, [existingMedia.data, mode, open]);
 
   const canProceed = (() => {
-    if (step === 2) return !!d.title;
-    if (step === 9) return !!d.title && (!!d.address || !!d.city);
+    if (step === 9) return !!d.title;
     return true;
   })();
 
@@ -732,7 +733,7 @@ export function PropertyWizard({
           {step === 6 && <Step7Equipment d={d} update={update} />}
           {step === 7 && <Step8Media d={d} update={update} />}
           {step === 8 && showUnitsStep && <Step9Units d={d} update={update} />}
-          {step === 9 && <Step10Summary d={d} owners={owners.data ?? []} employees={employees.data ?? []} />}
+          {step === 9 && <Step10Summary d={d} owners={owners.data ?? []} employees={employees.data ?? []} onJump={setStep} />}
           {step === 10 && createdId && (
             <PropertyLaunchpad
               propertyId={createdId}
@@ -1040,17 +1041,7 @@ function Step2Structure({ d, update, buildings }: { d: WizardData; update: (p: P
             );
           })}
         </div>
-        {inBuilding && (
-          <Select value={d.parent_property_id ?? ""} onValueChange={(v) => update({ parent_property_id: v || null })}>
-            <SelectTrigger className="mt-2 h-11 bg-card"><SelectValue placeholder={t("propertyWizard.step2.parentPlaceholder")} /></SelectTrigger>
-            <SelectContent>
-              {buildings.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">{t("propertyWizard.step2.noBuildings")}</div>}
-              {buildings.map((b: any) => (
-                <SelectItem key={b.id} value={b.id}>{b.title} {b.city ? `· ${b.city}` : ""}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        {inBuilding && <BuildingPicker d={d} update={update} buildings={buildings} />}
       </div>
     </div>
   );
@@ -1115,6 +1106,31 @@ function Step2StructureBase({ d, update, buildings }: { d: WizardData; update: (
   );
 }
 
+function BuildingPicker({ d, update, buildings }: { d: WizardData; update: (p: Partial<WizardData>) => void; buildings: any[] }) {
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState<string | null>(null);
+  const pick = (b: any) => {
+    // Adresse der Liegenschaft übernehmen, wenn noch leer
+    update({
+      parent_property_id: b.id,
+      ...(!d.address && b.address ? { address: b.address } : {}),
+      ...(!d.postal_code && b.postal_code ? { postal_code: b.postal_code } : {}),
+      ...(!d.city && b.city ? { city: b.city } : {}),
+    });
+  };
+  return (
+    <div className="mt-2">
+      <SearchSelect value={d.parent_property_id} placeholder="Liegenschaft suchen oder neu anlegen…" searchPlaceholder="Name, Strasse oder Ort…"
+        options={buildings.map((b: any) => ({ value: b.id, label: b.title, hint: [b.address, b.city].filter(Boolean).join(", ") || undefined }))}
+        onChange={(v) => { const b = buildings.find((x: any) => x.id === v); if (b) pick(b); else update({ parent_property_id: v }); }}
+        onCreate={(q) => setDraft(q)} createLabel="Neue Liegenschaft anlegen" />
+      <p className="mt-1 text-[11px] text-muted-foreground">Adresse wird automatisch von der Liegenschaft übernommen.</p>
+      <QuickBuildingDialog open={draft !== null} onOpenChange={(o) => !o && setDraft(null)} initialName={draft ?? ""}
+        onCreated={(b) => { qc.invalidateQueries({ queryKey: ["wizard_parent_buildings"] }); pick(b); }} />
+    </div>
+  );
+}
+
 const FLOOR_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "-2", label: "2. Untergeschoss" },
   { value: "-1", label: "1. Untergeschoss" },
@@ -1153,6 +1169,8 @@ function FloorSelect({ value, onChange, label = "Stockwerk", store = "value" }: 
 
 function Step3Basics({ d, update, owners, employees }: { d: WizardData; update: (p: Partial<WizardData>) => void; owners: any[]; employees: any[] }) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [ownerDraft, setOwnerDraft] = useState<string | null>(null);
   return (
     <div className="space-y-4">
       <div>
@@ -1173,34 +1191,25 @@ function Step3Basics({ d, update, owners, employees }: { d: WizardData; update: 
         </div>
         <div>
           <Label>{t("propertyWizard.step3.status")}</Label>
-          <Select value={d.status} onValueChange={(v) => update({ status: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {STATUSES.map(s => <SelectItem key={s} value={s}>{propertyStatusLabels[s]}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchSelect searchable={false} value={d.status} onChange={(v) => v && update({ status: v })}
+            options={STATUSES.map((s) => ({ value: s, label: propertyStatusLabels[s], dotClass: getPropertyStatusDotClass(s) }))} />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>{t("propertyWizard.step3.owner")}</Label>
-          <Select value={d.owner_client_id ?? "none"} onValueChange={(v) => update({ owner_client_id: v === "none" ? null : v })}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("propertyWizard.step3.ownerNone")}</SelectItem>
-              {owners.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchSelect value={d.owner_client_id} onChange={(v) => update({ owner_client_id: v })}
+            noneLabel={t("propertyWizard.step3.ownerNone")} searchPlaceholder="Name oder E-Mail suchen…"
+            options={owners.map((c) => ({ value: c.id, label: c.full_name, hint: c.email ?? undefined }))}
+            onCreate={(q) => setOwnerDraft(q)} createLabel="Neuer Eigentümer" />
+          <QuickOwnerDialog open={ownerDraft !== null} onOpenChange={(o) => !o && setOwnerDraft(null)} initialName={ownerDraft ?? ""}
+            onCreated={(c) => { qc.invalidateQueries({ queryKey: ["wizard_owner_clients"] }); update({ owner_client_id: c.id }); }} />
         </div>
         <div>
           <Label>{t("propertyWizard.step3.assignee")}</Label>
-          <Select value={d.assigned_to ?? "none"} onValueChange={(v) => update({ assigned_to: v === "none" ? null : v })}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{t("propertyWizard.step3.assigneeNone")}</SelectItem>
-              {employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.full_name || e.email}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchSelect value={d.assigned_to} onChange={(v) => update({ assigned_to: v })}
+            noneLabel={t("propertyWizard.step3.assigneeNone")} searchPlaceholder="Mitarbeiter suchen…"
+            options={employees.map((e) => ({ value: e.id, label: e.full_name || e.email, hint: e.full_name ? e.email : undefined }))} />
         </div>
       </div>
       {(showsSingleFloor(d) || showsTotalFloors(d)) && (
@@ -1907,7 +1916,7 @@ export function propertyQuality(d: WizardData) {
     { label: "Parzelle / E-GRID", ok: !!d.parcel_no || !!d.e_grid, weight: 5, step: 3 },
     { label: "Flächenangaben", ok: hasArea, weight: 10, step: 4 },
     { label: d.marketing_type === "rent" ? "Mietzins" : "Preis", ok: d.marketing_type === "rent" ? !!d.rent : !!d.price, weight: 15, step: 5 },
-    { label: "Beschreibung", ok: !!(d as any).description, weight: 5, step: 2 },
+    { label: "Beschreibung", ok: !!d.description, weight: 5, step: 2 },
     { label: "Mind. 3 Bilder", ok: images >= 3, weight: 15, step: 7 },
     { label: "Eigentümer", ok: !!d.owner_client_id, weight: 5, step: 2 },
     { label: "Zuständiger Mitarbeiter", ok: !!d.assigned_to, weight: 5, step: 2 },
@@ -1983,6 +1992,7 @@ function Step10Summary({ d, owners, employees, onJump }: { d: WizardData; owners
   ];
   return (
     <div className="space-y-4">
+      {onJump && <QualityCard d={d} onJump={onJump} />}
       <p className="text-sm text-muted-foreground">{t("propertyWizard.step10.intro")}</p>
       <Card><CardContent className="p-0">
         <dl className="divide-y">
