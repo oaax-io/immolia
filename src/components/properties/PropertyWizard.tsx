@@ -785,7 +785,7 @@ function EditBasics({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label>{t("propertyWizard.steps.type")}</Label>
-          <Select value={d.property_type} onValueChange={(value) => update({ property_type: value })}>
+          <Select value={d.property_type} onValueChange={(value) => update(changeType(d, value))}>
             <SelectTrigger className="h-11">
               <SelectValue />
             </SelectTrigger>
@@ -861,7 +861,7 @@ function Step1Type({ d, update }: { d: WizardData; update: (p: Partial<WizardDat
             <button
               key={v}
               type="button"
-              onClick={() => update({ property_type: v })}
+              onClick={() => update(changeType(d, v))}
               className={cn(
                 "group relative flex h-full flex-col items-start gap-3 rounded-2xl border-2 bg-card p-5 text-left transition",
                 "hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md",
@@ -1136,25 +1136,44 @@ function Step4Address({ d, update }: { d: WizardData; update: (p: Partial<Wizard
 }
 
 function Step5Areas({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
-  const { t } = useTranslation();
+  const cfg = typeConfig(d.property_type);
+  const label = (f: AreaField) => (f === "usable_area" && cfg.areaLabel ? `${cfg.areaLabel} (m²)` : AREA_FIELD_LABELS[f]);
+  const step = (f: AreaField) => (f === "rooms" || f === "bathrooms" ? "0.5" : f === "hall_height" || f === "utilization_ratio" ? "0.01" : "1");
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div><Label>{t("propertyWizard.step5.living")}</Label><Input type="number" value={d.living_area} onChange={(e) => update({ living_area: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.usable")}</Label><Input type="number" value={d.usable_area} onChange={(e) => update({ usable_area: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.plot")}</Label><Input type="number" value={d.plot_area} onChange={(e) => update({ plot_area: e.target.value })} /></div>
-      </div>
-      <div className="grid grid-cols-4 gap-3">
-        <div><Label>{t("propertyWizard.step5.rooms")}</Label><Input type="number" step="0.5" value={d.rooms} onChange={(e) => update({ rooms: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.bathrooms")}</Label><Input type="number" step="0.5" value={d.bathrooms} onChange={(e) => update({ bathrooms: e.target.value })} /></div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div><Label>{t("propertyWizard.step5.yearBuilt")}</Label><Input type="number" value={d.year_built} onChange={(e) => update({ year_built: e.target.value })} /></div>
-        <div><Label>{t("propertyWizard.step5.renovated")}</Label><Input type="number" value={d.renovated_at} onChange={(e) => update({ renovated_at: e.target.value })} /></div>
+      <p className="text-xs text-muted-foreground">Es werden nur die Angaben abgefragt, die für diese Objektart relevant sind.</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {cfg.areaFields.map((f) => {
+          if (f === "ev_charging" || f === "development_status") {
+            const opts = f === "ev_charging" ? EV_CHARGING_OPTIONS : DEVELOPMENT_OPTIONS;
+            return (
+              <div key={f}>
+                <Label>{label(f)}</Label>
+                <Select value={d[f] || undefined} onValueChange={(v) => update({ [f]: v } as any)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>{opts.map((o) => <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            );
+          }
+          return (
+            <div key={f}>
+              <Label>{label(f)}</Label>
+              <Input
+                type={f === "zone" ? "text" : "number"}
+                step={step(f)}
+                placeholder={f === "zone" ? "z.B. W2, W3, WG3" : undefined}
+                value={d[f] as string}
+                onChange={(e) => update({ [f]: e.target.value } as any)}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 
 function Step6Price({ d, update }: { d: WizardData; update: (p: Partial<WizardData>) => void }) {
   const { t } = useTranslation();
@@ -1649,9 +1668,7 @@ function Step9Units({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
                   <Select value={u.unit_type} onValueChange={(v) => patchUnit(i, { unit_type: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="apartment">{t("propertyWizard.step9.unitTypes.apartment")}</SelectItem>
-                      <SelectItem value="commercial">{t("propertyWizard.step9.unitTypes.commercial")}</SelectItem>
-                      <SelectItem value="parking">{t("propertyWizard.step9.unitTypes.parking")}</SelectItem>
+                      {UNIT_TYPE_OPTIONS.map((o) => <SelectItem key={o.v} value={o.v}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
