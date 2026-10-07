@@ -26,8 +26,8 @@ type Props = {
 export function PropertyLaunchpad(p: Props) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: me } = useMyProfile();
-  const firstName = (me?.full_name || "").trim().split(/\s+/)[0] || "";
+  const { fullName } = useMyProfile();
+  const firstName = (fullName || "").trim().split(/\s+/)[0] || "";
   const [busy, setBusy] = useState<string | null>(null);
 
   const isOffMarket = p.marketingType === "off_market";
