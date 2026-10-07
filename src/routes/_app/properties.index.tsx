@@ -179,7 +179,6 @@ function PropertiesPage() {
     onSuccess: () => {
       toast.success(t("properties.toasts.created"));
       qc.invalidateQueries({ queryKey: ["properties"] });
-      setOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -351,7 +350,8 @@ function PropertiesPage() {
       <PropertyWizard
         open={open}
         onOpenChange={setOpen}
-        onSubmit={(payload) => create.mutate(payload)}
+        onSubmit={(payload) => create.mutate(payload, { onSuccess: () => setOpen(false) })}
+        onCreate={(payload) => create.mutateAsync(payload)}
         submitting={create.isPending}
       />
 

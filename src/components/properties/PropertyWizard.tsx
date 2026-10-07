@@ -628,7 +628,7 @@ export function PropertyWizard({
                 const isDone = s.idx < step;
                 const Icon = STEP_ICONS[s.key] ?? Home;
                 const label = t(`propertyWizard.steps.${s.key}`);
-                const locked = s.idx === 10 ? !createdId : (createdId != null && step === 10 ? false : false);
+                const locked = s.idx === 10 && !createdId;
                 return (
                   <button
                     key={s.idx}
