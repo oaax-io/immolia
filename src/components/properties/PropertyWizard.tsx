@@ -17,6 +17,21 @@ import {
   Ruler, Coins, ClipboardCheck, Rocket,
 } from "lucide-react";
 import { PropertyLaunchpad } from "@/components/properties/PropertyLaunchpad";
+import * as Lu from "lucide-react";
+
+const SUB_ICONS: Record<string, Lu.LucideIcon> = {
+  detached: Lu.House, semi_detached: Lu.Columns2, terraced_end: Lu.PanelLeft, terraced_mid: Lu.Rows3,
+  villa: Lu.Castle, farmhouse: Lu.Wheat, chalet: Lu.MountainSnow,
+  floor_apartment: Lu.Building, attic: Lu.Crown, maisonette: Lu.Layers2, garden_apartment: Lu.Flower2, studio: Lu.BedSingle,
+  mfh: Lu.Building2, residential_commercial: Lu.Store, commercial_building: Lu.Briefcase, estate: Lu.LandPlot,
+  office: Lu.Briefcase, practice: Lu.Stethoscope, coworking: Lu.Users, hotel: Lu.Hotel, restaurant: Lu.UtensilsCrossed,
+  shop: Lu.ShoppingBag, shopping_center: Lu.ShoppingCart, showroom: Lu.Store, warehouse: Lu.Warehouse,
+  workshop: Lu.Wrench, production: Lu.Factory, gas_station: Lu.Fuel, leisure: Lu.Dumbbell,
+  building_land: Lu.Shovel, commercial_land: Lu.Factory, mixed_zone: Lu.Shapes, meadow: Lu.Sprout,
+  agricultural: Lu.Tractor, demolition: Lu.Hammer, forest: Lu.Trees,
+  underground: Lu.ParkingSquare, garage_box: Lu.Warehouse, outdoor: Lu.Car, carport: Lu.Tent,
+  in_mfh: Lu.Building2, in_house: Lu.House, commercial_parking: Lu.SquareParking, motorbike: Lu.Bike,
+};
 import { cn } from "@/lib/utils";
 import { propertyStatusLabels } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
