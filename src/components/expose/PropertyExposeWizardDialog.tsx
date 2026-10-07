@@ -1142,20 +1142,66 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
             )}
 
             {step === 7 && (
-
-              <div className="space-y-4 py-6 text-center">
-                <FileDown className="mx-auto h-10 w-10 text-primary" />
-                <div>
-                  <p className="font-semibold">Bereit zum Generieren</p>
-                  <p className="text-sm text-muted-foreground">
-                    {title || property?.title} · Vorlage {template.label} · {facts.length} Eckdaten ·{" "}
-                    {galleryUrls.filter((u) => u !== coverUrl).length} Galeriebilder
-                  </p>
-                </div>
-                <Button size="lg" onClick={handleGenerate} disabled={generating}>
-                  {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                  {generating ? "PDF wird erstellt…" : "Exposé generieren & herunterladen"}
-                </Button>
+              <div className="space-y-4">
+                {!result && (
+                  <div className="space-y-4 py-6 text-center">
+                    <FileDown className="mx-auto h-10 w-10 text-primary" />
+                    <div>
+                      <p className="font-semibold">Bereit zum Generieren</p>
+                      <p className="text-sm text-muted-foreground">
+                        {title || property?.title} · Vorlage {template.label} · {facts.length} Eckdaten ·{" "}
+                        {galleryUrls.filter((u) => u !== coverUrl).length} Galeriebilder
+                      </p>
+                    </div>
+                    {generating ? (
+                      <div className="mx-auto max-w-sm space-y-2">
+                        <Progress value={progress.pct} />
+                        <p className="text-sm font-medium">{progress.pct}% · {progress.label}</p>
+                      </div>
+                    ) : (
+                      <Button size="lg" onClick={() => handleGenerate("normal")}>
+                        <FileDown className="mr-2 h-4 w-4" />Exposé generieren
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {result && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-semibold">Exposé erstellt</p>
+                        <p className="text-xs text-muted-foreground">
+                          {result.fileName} · {formatBytes(result.size)}
+                          {result.compressed ? " · komprimiert" : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={generating || result.compressed}
+                          onClick={() => handleGenerate("compressed")}
+                        >
+                          {generating ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Minimize2 className="mr-1 h-4 w-4" />}
+                          {generating ? `${progress.pct}%` : "Komprimieren"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setEmailOpen(true)}>
+                          <Mail className="mr-1 h-4 w-4" />Per E-Mail
+                        </Button>
+                        <Button size="sm" onClick={() => triggerDownload(result.url, result.fileName)}>
+                          <Download className="mr-1 h-4 w-4" />Download
+                        </Button>
+                      </div>
+                    </div>
+                    <iframe title="Exposé-PDF" src={result.url} className="h-[60vh] w-full rounded-lg border" />
+                  </div>
+                )}
+                <ExposeEmailDialog
+                  open={emailOpen}
+                  onOpenChange={setEmailOpen}
+                  title={title || property?.title || "Exposé"}
+                  onDownload={result ? () => triggerDownload(result.url, result.fileName) : undefined}
+                />
               </div>
             )}
           </div>
