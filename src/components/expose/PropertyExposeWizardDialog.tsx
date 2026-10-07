@@ -521,87 +521,126 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   }
 
 
-  async function handleGenerate() {
+  async function handleGenerate(mode: "normal" | "compressed") {
+    if (!agencyId) {
+      toast.error("Keine aktive Firma", { description: "Bitte Firma auswählen und erneut versuchen." });
+      return;
+    }
     setGenerating(true);
+    let ticker: ReturnType<typeof setInterval> | null = null;
     try {
       const gallerySources = galleryUrls.filter((u) => u !== coverUrl);
+      const total = gallerySources.length + (coverUrl ? 1 : 0) + 2;
+      let loaded = 0;
+      const tick = (label: string) => {
+        loaded++;
+        setProgress({ pct: Math.min(45, Math.round((loaded / total) * 45)), label });
+      };
+      setProgress({ pct: 2, label: "Bilder werden vorbereitet" });
+      const compressed = mode === "compressed";
       const portraitSrc = contact.photo ? await urlToDataUri(contact.photo, 320, 0.85) : null;
+      tick("Bilder werden vorbereitet");
       const logoSrc = _tb.logoUrl ? await urlToDataUri(_tb.logoUrl, 480, 0.9) : null;
+      tick("Bilder werden vorbereitet");
       const embed = async (maxSide: number, quality: number) => {
         const cover = coverUrl ? await urlToDataUri(coverUrl, maxSide, quality) : null;
+        if (coverUrl) tick("Titelbild geladen");
         const gallery = (
-          await Promise.all(gallerySources.map((u) => urlToDataUri(u, maxSide, quality)))
+          await Promise.all(gallerySources.map(async (u) => { const r = await urlToDataUri(u, maxSide, quality); tick("Galeriebilder geladen"); return r; }))
         ).filter((u): u is string => !!u);
         return buildHtml(cover, gallery, portraitSrc, logoSrc);
       };
 
-      let html = await embed(1600, 0.82);
+      let html = compressed ? await embed(1000, 0.6) : await embed(1600, 0.82);
       // Server-Limit: 5 MB HTML — bei vielen Bildern stärker komprimieren.
       if (html.length > 4_600_000) html = await embed(1100, 0.7);
       if (html.length > 4_600_000) html = await embed(800, 0.6);
+      if (html.length > 4_900_000) html = await embed(600, 0.5);
       if (html.length > 4_900_000) {
         toast.error("Zu viele Bilder für ein PDF", { description: "Bitte weniger Bilder in der Galerie auswählen." });
         return;
       }
 
       const safeTitle = title || property?.title || "Expose";
-      const fileName = `Expose-${safeTitle.replace(/[^\w\s-]/g, "").trim() || "Objekt"}-${template.label}.pdf`;
+      const base = safeTitle.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-") || "Objekt";
+      const fileName = `Expose-${base}-${template.label}${compressed ? "-kompakt" : ""}-${Date.now().toString(36)}.pdf`;
 
-      const res = await renderPdf({
-        data: {
-          html, title: safeTitle, fileName,
-          documentType: "expose",
-          propertyTitle: property?.title,
-          companyName: company?.name ?? null,
-        },
-      });
-      if (!res.ok || !res.fileUrl) {
-        toast.error("PDF konnte nicht erstellt werden", { description: "message" in res ? (res as any).message : undefined });
-        return;
-      }
-
-      let url = res.fileUrl;
-      if (res.path) {
-        try {
-          const bytes = await fetchBytes({ data: { path: res.path } });
-          if (bytes.ok && bytes.base64) {
-            const bin = atob(bytes.base64);
-            const arr = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-            url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
-          }
-        } catch { /* fall back to fileUrl */ }
-      }
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      // Persist a record so it shows up under "Bisher erstellte Exposés"
-      try {
-        const { data: u } = await supabase.auth.getUser();
-        await supabase.from("generated_documents").insert({
+      // Datensatz zuerst anlegen (mit Firma) – dann sehen alle im Team das Exposé.
+      setProgress({ pct: 50, label: "Exposé wird gespeichert" });
+      const { data: u } = await supabase.auth.getUser();
+      const { data: row, error: insErr } = await supabase
+        .from("generated_documents")
+        .insert({
+          agency_id: agencyId,
           related_type: "property",
           related_id: propertyId,
+          title: safeTitle,
+          document_type: "expose",
+          status: "draft",
           html_content: buildHtml(coverUrl, galleryUrls),
           created_by: u.user?.id ?? null,
           variables: {
             kind: "expose",
             title: safeTitle,
             template: template.id,
+            template_label: template.label,
             gallery_layout: galleryLayout,
             visible_facts: Array.from(visibleFacts),
+            contact_mode: contactMode,
+            compressed,
+            file_name: fileName,
           } as any,
-        } as any);
-      } catch { /* record is optional */ }
+        } as any)
+        .select("id")
+        .single();
+      if (insErr || !row) throw new Error(insErr?.message ?? "Exposé konnte nicht gespeichert werden");
 
-      toast.success("Exposé wurde erstellt und heruntergeladen");
-      onOpenChange(false);
+      setProgress({ pct: 55, label: "PDF wird erstellt" });
+      ticker = setInterval(() => {
+        setProgress((p) => (p.pct < 90 ? { pct: p.pct + 2, label: "PDF wird erstellt" } : p));
+      }, 400);
+      const res = await renderPdf({
+        data: {
+          html, title: safeTitle, fileName, documentId: row.id,
+          documentType: "expose",
+          propertyTitle: property?.title,
+          companyName: company?.name ?? null,
+        },
+      });
+      if (ticker) clearInterval(ticker);
+      if (!res.ok || !res.fileUrl) {
+        await supabase.from("generated_documents").delete().eq("id", row.id);
+        toast.error("PDF konnte nicht erstellt werden", { description: "message" in res ? (res as any).message : undefined });
+        return;
+      }
+
+      setProgress({ pct: 94, label: "PDF wird geladen" });
+      let url = res.fileUrl;
+      let size = 0;
+      if ((res as any).path) {
+        try {
+          const bytes = await fetchBytes({ data: { path: (res as any).path } });
+          if (bytes.ok && bytes.base64) {
+            const b = base64ToBlobUrl(bytes.base64);
+            url = b.url;
+            size = b.size;
+          }
+        } catch { /* fall back to fileUrl */ }
+      }
+      if (size) {
+        await supabase
+          .from("generated_documents")
+          .update({ variables: { kind: "expose", title: safeTitle, template: template.id, template_label: template.label, gallery_layout: galleryLayout, visible_facts: Array.from(visibleFacts), contact_mode: contactMode, compressed, file_name: fileName, size_bytes: size } as any })
+          .eq("id", row.id);
+      }
+      setProgress({ pct: 100, label: "Fertig" });
+      setResult({ url, size, fileName, compressed });
+      qc.invalidateQueries({ queryKey: ["exposes", propertyId] });
+      toast.success(compressed ? "Komprimierte Version erstellt" : "Exposé wurde erstellt");
     } catch (err) {
       toast.error("PDF konnte nicht erstellt werden", { description: (err as Error).message });
     } finally {
+      if (ticker) clearInterval(ticker);
       setGenerating(false);
     }
   }
