@@ -14,6 +14,7 @@ import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2,
   Home, Building2, Building, Briefcase, TreePine, Car, Layers,
   Box, Boxes, Layers3, Upload, ImageIcon, Star, X, Library, MapPin, Sparkles, Loader2, FileText,
+  Ruler, Coins, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { propertyStatusLabels } from "@/lib/format";
@@ -304,6 +305,19 @@ const STEP_KEYS = [
   "type", "structure", "basics", "address", "areas",
   "price", "equipment", "media", "units", "summary",
 ] as const;
+
+const STEP_ICONS: Record<(typeof STEP_KEYS)[number], any> = {
+  type: Home,
+  structure: Boxes,
+  basics: FileText,
+  address: MapPin,
+  areas: Ruler,
+  price: Coins,
+  equipment: Sparkles,
+  media: ImageIcon,
+  units: Layers3,
+  summary: ClipboardCheck,
+};
 
 function hydrateFromProperty(p: any): WizardData {
   if (!p) return { ...empty };
