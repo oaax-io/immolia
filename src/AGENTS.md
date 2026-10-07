@@ -121,3 +121,6 @@
 ## Selbstauskunft (Core Step 5)
 - PDF-Import parse-self-disclosure: Format-Erkennung → Source Adapter → kanonische client_self_disclosures-Felder; legacy_asimo_self_disclosure_v1 (Feldcodes AN../MI..) ist nur Eingabeformat, für jede Firma nutzbar; unbekanntes Format übernimmt keine Beträge (review_required); why: keine falschen Finanzdaten, kein ASIMO-Zwang.
 - Firma nur aus Sitzung (current_agency_id), nie aus PDF oder Payload; Feldinhalte nie loggen; why: sensible Finanzdaten.
+
+## Objektarten
+- Typabhängiges Verhalten (Unterarten, Flächenfelder, Ausstattung, Rendite, Einheiten) nur aus src/lib/property-type-config.ts (PROPERTY_TYPE_CONFIG), von Assistent und Detailseite gemeinsam genutzt; Unterart in properties.sub_type; why: eine Quelle, neue Arten in einer Zeile ergänzbar.
