@@ -1894,7 +1894,59 @@ function Step9Units({ d, update }: { d: WizardData; update: (p: Partial<WizardDa
   );
 }
 
-function Step10Summary({ d, owners, employees }: { d: WizardData; owners: any[]; employees: any[] }) {
+/** Datenqualität: gewichtete Checkliste mit Sprungziel pro Punkt. */
+export function propertyQuality(d: WizardData) {
+  const cfg = typeConfig(d.property_type);
+  const images = d.media.filter(isWizardImage).length;
+  const hasArea = d.property_type === "land" ? !!d.plot_area : !!(d.living_area || d.usable_area);
+  const items: { label: string; ok: boolean; weight: number; step: number; required?: boolean }[] = [
+    { label: "Objekttitel", ok: !!d.title, weight: 10, step: 2, required: true },
+    ...(cfg.subTypes.length ? [{ label: "Unterart gewählt", ok: !!d.sub_type, weight: 5, step: 1 }] : []),
+    ...(d.structure === "unit_in_building" ? [{ label: "Liegenschaft zugeordnet", ok: !!d.parent_property_id, weight: 5, step: 1 }] : []),
+    { label: "Adresse & Ort", ok: !!d.address && !!d.city, weight: 15, step: 3 },
+    { label: "Parzelle / E-GRID", ok: !!d.parcel_no || !!d.e_grid, weight: 5, step: 3 },
+    { label: "Flächenangaben", ok: hasArea, weight: 10, step: 4 },
+    { label: d.marketing_type === "rent" ? "Mietzins" : "Preis", ok: d.marketing_type === "rent" ? !!d.rent : !!d.price, weight: 15, step: 5 },
+    { label: "Beschreibung", ok: !!(d as any).description, weight: 5, step: 2 },
+    { label: "Mind. 3 Bilder", ok: images >= 3, weight: 15, step: 7 },
+    { label: "Eigentümer", ok: !!d.owner_client_id, weight: 5, step: 2 },
+    { label: "Zuständiger Mitarbeiter", ok: !!d.assigned_to, weight: 5, step: 2 },
+    ...((d.structure === "building" || cfg.units) ? [{ label: "Einheiten erfasst", ok: d.units.length > 0, weight: 5, step: 8 }] : []),
+  ];
+  const total = items.reduce((s, i) => s + i.weight, 0);
+  const score = Math.round((items.filter((i) => i.ok).reduce((s, i) => s + i.weight, 0) / total) * 100);
+  return { items, score };
+}
+
+function QualityCard({ d, onJump }: { d: WizardData; onJump: (step: number) => void }) {
+  const { items, score } = propertyQuality(d);
+  const tone = score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-rose-500";
+  const missing = items.filter((i) => !i.ok);
+  return (
+    <Card><CardContent className="space-y-3 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Qualität der Erfassung</p>
+          <p className="text-xs text-muted-foreground">{missing.length === 0 ? "Alles vollständig – bereit für Exposé und Portale." : `${missing.length} Punkt(e) noch offen. Speichern geht trotzdem.`}</p>
+        </div>
+        <span className="text-2xl font-bold tabular-nums">{score}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted"><div className={cn("h-full transition-all", tone)} style={{ width: `${score}%` }} /></div>
+      {missing.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {missing.map((i) => (
+            <button key={i.label} type="button" onClick={() => onJump(i.step)}
+              className={cn("rounded-full border px-3 py-1.5 text-xs font-medium transition hover:border-primary hover:text-primary", i.required && "border-destructive text-destructive")}>
+              {i.label}{i.required ? " (Pflicht)" : ""} →
+            </button>
+          ))}
+        </div>
+      )}
+    </CardContent></Card>
+  );
+}
+
+function Step10Summary({ d, owners, employees, onJump }: { d: WizardData; owners: any[]; employees: any[]; onJump?: (step: number) => void }) {
   const { t } = useTranslation();
   const owner = owners.find(o => o.id === d.owner_client_id);
   const emp = employees.find(e => e.id === d.assigned_to);
