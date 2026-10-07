@@ -127,6 +127,25 @@ export type WizardData = {
   internal_notes: string;
   media: WizardMedia[];
   units: Unit[];
+  sub_type: string;
+  zone: string;
+  utilization_ratio: string;
+  development_status: string;
+  building_volume: string;
+  hall_height: string;
+  floor_load: string;
+  ev_charging: string;
+  parking_spaces: string;
+  unit_count_residential: string;
+  unit_count_commercial: string;
+  rent_target: string;
+  gross_yield: string;
+};
+
+const TYPE_EXTRA_EMPTY = {
+  sub_type: "", zone: "", utilization_ratio: "", development_status: "", building_volume: "",
+  hall_height: "", floor_load: "", ev_charging: "", parking_spaces: "", unit_count_residential: "",
+  unit_count_commercial: "", rent_target: "", gross_yield: "",
 };
 
 const empty: WizardData = {
@@ -180,6 +199,7 @@ const empty: WizardData = {
   internal_notes: "",
   media: [],
   units: [],
+  ...TYPE_EXTRA_EMPTY,
 };
 
 export type WizardSubmit = {
@@ -267,6 +287,19 @@ export function buildSubmitPayload(d: WizardData): WizardSubmit {
     description: d.description || null,
     internal_notes: d.internal_notes || null,
     features: buildFeatures(d),
+    sub_type: d.sub_type || null,
+    zone: d.zone || null,
+    utilization_ratio: num(d.utilization_ratio),
+    development_status: d.development_status || null,
+    building_volume: num(d.building_volume),
+    hall_height: num(d.hall_height),
+    floor_load: num(d.floor_load),
+    ev_charging: d.ev_charging || null,
+    parking_spaces: num(d.parking_spaces),
+    unit_count_residential: num(d.unit_count_residential),
+    unit_count_commercial: num(d.unit_count_commercial),
+    rent_target: num(d.rent_target),
+    gross_yield: num(d.gross_yield),
     images: (() => {
       const cover = d.media.find((m) => m.is_cover) ?? d.media[0];
       if (cover) return [cover.file_url];
@@ -277,7 +310,7 @@ export function buildSubmitPayload(d: WizardData): WizardSubmit {
   const units = isMfh
     ? d.units.map((u) => ({
         title: u.unit_number ? `Einheit ${u.unit_number}` : "Einheit",
-        property_type: u.unit_type || "apartment",
+        property_type: unitPropertyType(u.unit_type || "apartment"),
         listing_type,
         status: u.unit_status || "draft",
         is_unit: true,
