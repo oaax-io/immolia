@@ -798,100 +798,113 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
             )}
 
             {step === 1 && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Titel</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label>Beschreibung</Label>
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Checkbox checked={withDescription} onCheckedChange={() => setWithDescription((v) => !v)} />
-                      Im Exposé anzeigen
-                    </label>
-                  </div>
-                  <Textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} disabled={!withDescription} />
-                </div>
-                <div>
-                  <Label className="mb-2 block">Eckdaten auswählen</Label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {FACT_DEFS.map((f) => (
-                      <label key={f.key} className="flex items-center gap-2 rounded-lg border p-2 text-sm">
-                        <Checkbox checked={visibleFacts.has(f.key)} onCheckedChange={() => toggleFact(f.key)} />
-                        {f.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={withFeatures} onCheckedChange={() => setWithFeatures((v) => !v)} />
-                    Ausstattung anzeigen
-                  </label>
-                </div>
-
-                {withFeatures && allFeatures.length > 0 && (
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <Label>Highlights mit Symbolen</Label>
-                      <span className="text-xs text-muted-foreground">{selectedHighlights.length} von max. 8</span>
+              <Accordion type="multiple" defaultValue={["inhalt"]} className="space-y-2">
+                <AccordionItem value="inhalt" className="rounded-xl border px-3">
+                  <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">Titel &amp; Beschreibung</AccordionTrigger>
+                  <AccordionContent className="space-y-3 pb-3">
+                    <div className="space-y-1.5">
+                      <Label>Titel</Label>
+                      <Input value={title} onChange={(e) => setTitle(e.target.value)} />
                     </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label>Beschreibung</Label>
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Checkbox checked={withDescription} onCheckedChange={() => setWithDescription((v) => !v)} />
+                          Im Exposé anzeigen
+                        </label>
+                      </div>
+                      <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} disabled={!withDescription} />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="eckdaten" className="rounded-xl border px-3">
+                  <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
+                    Eckdaten auswählen
+                    <span className="ml-auto mr-2 text-xs font-normal text-muted-foreground">{visibleFacts.size} ausgewählt</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {allFeatures.map((f) => {
-                        const active = selectedHighlights.includes(f);
-                        return (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => toggleHighlight(f)}
-                            className={cn(
-                              "flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition",
-                              active ? "border-primary bg-primary/5 text-foreground" : "text-muted-foreground hover:border-primary/40",
-                            )}
-                          >
-                            <span
-                              className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}
-                              dangerouslySetInnerHTML={{ __html: exposeIconSvg(matchExposeIcon(f), "currentColor", 18) }}
-                            />
-                            <span className="truncate">{f}</span>
-                          </button>
-                        );
-                      })}
+                      {FACT_DEFS.map((f) => (
+                        <label key={f.key} className="flex items-center gap-2 rounded-lg border p-2 text-sm">
+                          <Checkbox checked={visibleFacts.has(f.key)} onCheckedChange={() => toggleFact(f.key)} />
+                          {f.label}
+                        </label>
+                      ))}
                     </div>
-                  </div>
-                )}
+                  </AccordionContent>
+                </AccordionItem>
 
-                <div className="rounded-xl border p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <Label>Exposé-Check</Label>
-                    <span className={cn("text-xs font-medium", checkMissing.length ? "text-amber-600" : "text-emerald-600")}>
-                      {checkOk} von {checks.length} Punkten erfüllt
+                <AccordionItem value="highlights" className="rounded-xl border px-3">
+                  <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
+                    Highlights mit Symbolen
+                    <span className="ml-auto mr-2 text-xs font-normal text-muted-foreground">{selectedHighlights.length} von max. 8</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pb-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={withFeatures} onCheckedChange={() => setWithFeatures((v) => !v)} />
+                      Ausstattung im Exposé anzeigen
+                    </label>
+                    {withFeatures && allFeatures.length > 0 && (
+                      <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+                        {allFeatures.map((f) => {
+                          const active = selectedHighlights.includes(f);
+                          return (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => toggleHighlight(f)}
+                              className={cn(
+                                "flex items-center gap-2 rounded-lg border p-2 text-left text-sm transition",
+                                active ? "border-primary bg-primary/5 text-foreground" : "text-muted-foreground hover:border-primary/40",
+                              )}
+                            >
+                              <span
+                                className={cn("shrink-0", active ? "text-primary" : "text-muted-foreground")}
+                                dangerouslySetInnerHTML={{ __html: exposeIconSvg(matchExposeIcon(f), "currentColor", 18) }}
+                              />
+                              <span className="truncate">{f}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="check" className="rounded-xl border px-3">
+                  <AccordionTrigger className="py-2.5 text-sm font-semibold hover:no-underline">
+                    Exposé-Check
+                    <span className={cn("ml-auto mr-2 text-xs font-medium", checkMissing.length ? "text-amber-600" : "text-emerald-600")}>
+                      {checkOk} von {checks.length}
                     </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {checks.map((c) => (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() => setStep(c.step)}
-                        title={c.ok ? undefined : c.hint}
-                        className={cn(
-                          "rounded-full border px-2.5 py-1 text-xs transition",
-                          c.ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700" : "border-amber-500/50 bg-amber-500/10 text-amber-700",
-                        )}
-                      >
-                        {c.ok ? "✓" : "!"} {c.label}
-                      </button>
-                    ))}
-                  </div>
-                  {checkMissing.length > 0 && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Fehlende Punkte sind nur ein Hinweis – das Exposé kann trotzdem erstellt werden.
-                    </p>
-                  )}
-                </div>
-              </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {checks.map((c) => (
+                        <button
+                          key={c.key}
+                          type="button"
+                          onClick={() => setStep(c.step)}
+                          title={c.ok ? undefined : c.hint}
+                          className={cn(
+                            "rounded-full border px-2.5 py-1 text-xs transition",
+                            c.ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700" : "border-amber-500/50 bg-amber-500/10 text-amber-700",
+                          )}
+                        >
+                          {c.ok ? "✓" : "!"} {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    {checkMissing.length > 0 && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Fehlende Punkte sind nur ein Hinweis – das Exposé kann trotzdem erstellt werden.
+                      </p>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             )}
 
             {step === 2 && (
