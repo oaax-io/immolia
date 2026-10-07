@@ -1,13 +1,16 @@
 import { useTenantBranding } from "@/lib/tenant-branding";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Check, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon, LayoutTemplate,
   Loader2, ListChecks, Eye, Star, Sparkles, UserRound, Paperclip, FileText, GripVertical,
-  ArrowUp, ArrowDown, RotateCcw,
+  ArrowUp, ArrowDown, RotateCcw, Building2, UserX, Mail, Download, Minimize2,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { useConfirmedAgencyId } from "@/lib/tenant-session";
+import { ExposeEmailDialog, base64ToBlobUrl, formatBytes, triggerDownload } from "@/components/expose/ExposeTools";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -112,13 +115,25 @@ function mediaUrl(path?: string | null) {
   return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
 }
 
+/** Lädt Bilder aus dem eigenen Speicher direkt (ohne Browser-CORS), sonst per fetch. */
+async function loadImageBlob(url: string): Promise<Blob | null> {
+  const m = url.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/([^?]+)/);
+  if (m) {
+    const { data } = await supabase.storage.from(m[1]).download(decodeURIComponent(m[2]));
+    if (data) return data;
+  } else if (!/^(https?:|data:|blob:)/i.test(url)) {
+    const { data } = await supabase.storage.from("media").download(url);
+    if (data) return data;
+  }
+  const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+  return res.ok ? await res.blob() : null;
+}
+
 async function urlToDataUri(url: string, maxSide = 1600, quality = 0.82): Promise<string | null> {
   try {
-    // Kein `credentials: "include"` — Storage antwortet mit `Access-Control-Allow-Origin: *`,
-    // was mit Credentials einen CORS-Fehler auslöst und die Bilder im PDF fehlen liess.
-    const res = await fetch(url, { mode: "cors", cache: "force-cache" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
+    if (url.startsWith("data:")) return url;
+    const blob = await loadImageBlob(url);
+    if (!blob) return null;
 
     // Bilder verkleinern, damit das HTML-Payload unter dem Server-Limit bleibt.
     const downscaled = await downscaleBlob(blob, maxSide, quality);
@@ -163,7 +178,6 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [description, setDescription] = useState("");
   const [withDescription, setWithDescription] = useState(true);
   const [withFeatures, setWithFeatures] = useState(true);
-  const [withContact, setWithContact] = useState(true);
   const [visibleFacts, setVisibleFacts] = useState<Set<FactKey>>(
     new Set<FactKey>(["property_type", "listing_type", "price", "rent", "living_area", "rooms", "bathrooms", "energy_class"]),
   );
@@ -176,11 +190,21 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
   const [dragKey, setDragKey] = useState<ExposeSectionKey | null>(null);
   const [withMacro, setWithMacro] = useState(false);
   const [withMarket, setWithMarket] = useState(false);
-  const [contactMode, setContactMode] = useState<"employee" | "custom">("employee");
+  const [contactMode, setContactMode] = useState<"employee" | "company" | "none">("employee");
   const [contactUserId, setContactUserId] = useState<string | null>(null);
-  const [customContact, setCustomContact] = useState({ name: "", email: "", phone: "", role: "" });
+  const [empSearch, setEmpSearch] = useState("");
   const [employeeRole, setEmployeeRole] = useState("");
   const [highlights, setHighlights] = useState<string[] | null>(null);
+  const [progress, setProgress] = useState<{ pct: number; label: string }>({ pct: 0, label: "" });
+  const [result, setResult] = useState<{ url: string; size: number; fileName: string; compressed: boolean } | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [templatePreview, setTemplatePreview] = useState<TemplateMeta | null>(null);
+  const agencyId = useConfirmedAgencyId();
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!open) { setResult(null); setProgress({ pct: 0, label: "" }); }
+  }, [open]);
 
   const renderPdf = useServerFn(renderDocumentPdf);
   const fetchBytes = useServerFn(fetchDocumentPdfBytes);
