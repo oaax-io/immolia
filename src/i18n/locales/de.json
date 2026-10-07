@@ -1794,7 +1794,8 @@
       "equipment": "Ausstattung",
       "media": "Medien",
       "units": "Einheiten",
-      "summary": "Zusammenfassung"
+      "summary": "Zusammenfassung",
+      "launch": "Abschluss"
     },
     "types": {
       "house": {

@@ -853,7 +853,8 @@
         "client": "Client",
         "metrics": "Indicateurs",
         "advanced": "Avancé",
-        "summary": "Résumé"
+        "summary": "Résumé",
+      "launch": "Finalisation"
       },
       "stepCounter": "Étape {{step}} sur {{total}}",
       "back": "Retour",
