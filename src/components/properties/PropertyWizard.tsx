@@ -30,6 +30,10 @@ import { generateLocationDescription } from "@/lib/property-ai.functions";
 import { FeaturePickerDialog, useFeatureOptions } from "@/components/properties/FeaturePickerDialog";
 import { featureIcon } from "@/components/properties/feature-icons";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
+import {
+  typeConfig, unitPropertyType, AREA_FIELD_LABELS, EV_CHARGING_OPTIONS, DEVELOPMENT_OPTIONS, UNIT_TYPE_OPTIONS,
+  type AreaField,
+} from "@/lib/property-type-config";
 
 /* -------------------- Typen -------------------- */
 
@@ -426,6 +430,19 @@ function hydrateFromProperty(p: any): WizardData {
     internal_notes: p.internal_notes ?? "",
     media: fallbackMedia,
     units: [],
+    sub_type: p.sub_type ?? "",
+    zone: p.zone ?? "",
+    utilization_ratio: str(p.utilization_ratio),
+    development_status: p.development_status ?? "",
+    building_volume: str(p.building_volume),
+    hall_height: str(p.hall_height),
+    floor_load: str(p.floor_load),
+    ev_charging: p.ev_charging ?? "",
+    parking_spaces: str(p.parking_spaces),
+    unit_count_residential: str(p.unit_count_residential),
+    unit_count_commercial: str(p.unit_count_commercial),
+    rent_target: str(p.rent_target),
+    gross_yield: str(p.gross_yield),
   };
 }
 
@@ -452,7 +469,7 @@ export function PropertyWizard({
   }, [open, initial, mode]);
 
   const isMfh = d.property_type === "mixed_use" || d.structure === "building";
-  const showUnitsStep = isMfh;
+  const showUnitsStep = isMfh || typeConfig(d.property_type).units;
 
   const visibleSteps = useMemo(() => {
     return STEP_KEYS.map((key, idx) => ({ idx, key }))
