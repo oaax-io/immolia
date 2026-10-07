@@ -14,8 +14,9 @@ import {
   ArrowLeft, ArrowRight, Check, Plus, Trash2,
   Home, Building2, Building, Briefcase, TreePine, Car, Layers,
   Box, Boxes, Layers3, Upload, ImageIcon, Star, X, Library, MapPin, Sparkles, Loader2, FileText,
-  Ruler, Coins, ClipboardCheck,
+  Ruler, Coins, ClipboardCheck, Rocket,
 } from "lucide-react";
+import { PropertyLaunchpad } from "@/components/properties/PropertyLaunchpad";
 import { cn } from "@/lib/utils";
 import { propertyStatusLabels } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
@@ -303,7 +304,7 @@ export function buildSubmitPayload(d: WizardData): WizardSubmit {
 
 const STEP_KEYS = [
   "type", "structure", "basics", "address", "areas",
-  "price", "equipment", "media", "units", "summary",
+  "price", "equipment", "media", "units", "summary", "launch",
 ] as const;
 
 const STEP_ICONS: Record<(typeof STEP_KEYS)[number], any> = {
@@ -317,6 +318,7 @@ const STEP_ICONS: Record<(typeof STEP_KEYS)[number], any> = {
   media: ImageIcon,
   units: Layers3,
   summary: ClipboardCheck,
+  launch: Rocket,
 };
 
 function hydrateFromProperty(p: any): WizardData {
@@ -395,11 +397,13 @@ function hydrateFromProperty(p: any): WizardData {
 }
 
 export function PropertyWizard({
-  open, onOpenChange, onSubmit, submitting, initial, mode = "create",
+  open, onOpenChange, onSubmit, onCreate, submitting, initial, mode = "create",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSubmit: (payload: WizardSubmit) => void;
+  /** Optional: speichert und liefert die neue ID – aktiviert den Abschluss-Schritt. */
+  onCreate?: (payload: WizardSubmit) => Promise<{ id: string } | null | undefined>;
   submitting?: boolean;
   initial?: any;
   mode?: "create" | "edit";
@@ -407,9 +411,11 @@ export function PropertyWizard({
   const { t } = useTranslation();
   const [step, setStep] = useState(mode === "edit" ? 2 : 0);
   const [d, setD] = useState<WizardData>(() => initial ? hydrateFromProperty(initial) : { ...empty });
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) { setStep(mode === "edit" ? 2 : 0); setD(initial ? hydrateFromProperty(initial) : { ...empty }); }
+    if (open) { setStep(mode === "edit" ? 2 : 0); setD(initial ? hydrateFromProperty(initial) : { ...empty }); setCreatedId(null); }
   }, [open, initial, mode]);
 
   const isMfh = d.property_type === "mixed_use" || d.structure === "building";
@@ -417,8 +423,8 @@ export function PropertyWizard({
 
   const visibleSteps = useMemo(() => {
     return STEP_KEYS.map((key, idx) => ({ idx, key }))
-      .filter(s => (mode !== "edit" || s.idx >= 2) && (showUnitsStep || s.idx !== 8));
-  }, [mode, showUnitsStep]);
+      .filter(s => (mode !== "edit" || s.idx >= 2) && (showUnitsStep || s.idx !== 8) && (s.idx !== 10 || (mode !== "edit" && !!onCreate)));
+  }, [mode, showUnitsStep, onCreate]);
 
   const employees = useQuery({
     queryKey: ["wizard_employees"],
@@ -508,6 +514,21 @@ export function PropertyWizard({
 
   const finish = () => {
     onSubmit(buildSubmitPayload(d));
+  };
+
+  const saveAndLaunch = async () => {
+    if (!onCreate) return finish();
+    if (createdId) { setStep(10); return; }
+    if (!d.title) { toast.error("Bitte zuerst einen Titel erfassen."); setStep(2); return; }
+    setSaving(true);
+    try {
+      const res = await onCreate(buildSubmitPayload(d));
+      if (res?.id) { setCreatedId(res.id); setStep(10); }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Speichern fehlgeschlagen");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const update = (patch: Partial<WizardData>) => setD((p) => ({ ...p, ...patch }));
@@ -607,10 +628,12 @@ export function PropertyWizard({
                 const isDone = s.idx < step;
                 const Icon = STEP_ICONS[s.key] ?? Home;
                 const label = t(`propertyWizard.steps.${s.key}`);
+                const locked = s.idx === 10 ? !createdId : (createdId != null && step === 10 ? false : false);
                 return (
                   <button
                     key={s.idx}
                     type="button"
+                    disabled={locked}
                     onClick={() => setStep(s.idx)}
                     title={label}
                     aria-label={label}
@@ -645,19 +668,38 @@ export function PropertyWizard({
           {step === 7 && <Step8Media d={d} update={update} />}
           {step === 8 && showUnitsStep && <Step9Units d={d} update={update} />}
           {step === 9 && <Step10Summary d={d} owners={owners.data ?? []} employees={employees.data ?? []} />}
+          {step === 10 && createdId && (
+            <PropertyLaunchpad
+              propertyId={createdId}
+              title={d.title}
+              status={d.status}
+              marketingType={d.marketing_type}
+              imageCount={d.media.filter(isWizardImage).length}
+              hasMinPrice={!!d.internal_minimum_price}
+              onClose={() => onOpenChange(false)}
+              onNew={() => { setCreatedId(null); setD({ ...empty }); setStep(0); }}
+              onStatusChange={(status, marketing) => update({ status, ...(marketing ? { marketing_type: marketing as Marketing } : {}) })}
+            />
+          )}
         </div>
 
+        {step < 10 && (
         <div className="sticky bottom-0 z-10 flex shrink-0 items-center justify-between gap-2 border-t bg-background p-4">
-          <Button variant="ghost" onClick={goBack} disabled={step === 0 || submitting}>
+          <Button variant="ghost" onClick={goBack} disabled={step === 0 || submitting || saving}>
             <ArrowLeft className="mr-1 h-4 w-4" /> {t("propertyWizard.nav.back")}
           </Button>
           <div className="hidden text-xs text-muted-foreground md:block">
-            {t("propertyWizard.mandatoryHint")}
+            {step === 9 && onCreate ? "Beim Klick auf «Weiter» wird das Objekt automatisch gespeichert." : t("propertyWizard.mandatoryHint")}
           </div>
 
           {step < 9 ? (
             <Button onClick={goNext} disabled={!canProceed || submitting}>
               {t("propertyWizard.nav.next")} <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          ) : onCreate ? (
+            <Button onClick={saveAndLaunch} disabled={!canProceed || saving}>
+              {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+              {saving ? "Speichert…" : <>{t("propertyWizard.nav.next")} <ArrowRight className="ml-1 h-4 w-4" /></>}
             </Button>
           ) : (
             <Button onClick={finish} disabled={!canProceed || submitting}>
@@ -665,6 +707,7 @@ export function PropertyWizard({
             </Button>
           )}
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
