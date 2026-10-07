@@ -1315,6 +1315,26 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={generating}>Schliessen</Button>
           )}
         </div>
+
+        <Dialog open={!!templatePreview} onOpenChange={(o) => !o && setTemplatePreview(null)}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Vorlage {templatePreview?.label}</DialogTitle>
+              <DialogDescription>{templatePreview?.description}</DialogDescription>
+            </DialogHeader>
+            {templatePreview && (
+              <div className="mx-auto w-full max-w-md">
+                <ScaledExposePreview html={buildHtml(coverUrl, galleryUrls, null, null, templatePreview)} title="Vorlagen-Vorschau" />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setTemplatePreview(null)}>Schliessen</Button>
+              <Button onClick={() => { if (templatePreview) setTemplate(templatePreview); setTemplatePreview(null); }}>
+                <Check className="mr-1 h-4 w-4" />Diese Vorlage wählen
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
