@@ -253,14 +253,35 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     },
   });
 
+  const companyContact = useMemo(() => {
+    const c = _tb.company;
+    const addr = [c?.address, [c?.postal_code, c?.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || _tb.companyAddress || null;
+    return {
+      name: c?.name ?? _tb.companyName ?? null,
+      address: addr,
+      email: c?.email ?? _tb.companyEmail ?? null,
+      phone: c?.phone ?? null,
+      website: c?.website ?? _tb.companyWebsite ?? null,
+      logo: c?.logo_url ?? _tb.logoUrl ?? null,
+    };
+  }, [_tb]);
+
+  const filteredEmployees = useMemo(() => {
+    const q = empSearch.trim().toLowerCase();
+    const list = employees as any[];
+    if (!q) return list;
+    return list.filter((e) => `${e.full_name ?? ""} ${e.email ?? ""} ${e.phone ?? ""}`.toLowerCase().includes(q));
+  }, [employees, empSearch]);
+
+  const withContact = contactMode !== "none";
   const contact = useMemo(() => {
-    if (!withContact) return { name: null, email: null, phone: null, role: null, photo: null };
-    if (contactMode === "custom") {
+    if (contactMode === "none") return { name: null, email: null, phone: null, role: null, photo: null };
+    if (contactMode === "company") {
       return {
-        name: customContact.name || null,
-        email: customContact.email || null,
-        phone: customContact.phone || null,
-        role: customContact.role || null,
+        name: companyContact.name,
+        email: companyContact.email,
+        phone: companyContact.phone,
+        role: [companyContact.address, companyContact.website].filter(Boolean).join(" · ") || null,
         photo: null,
       };
     }
@@ -272,7 +293,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
       role: employeeRole || null,
       photo: emp?.avatar_url ?? null,
     };
-  }, [withContact, contactMode, customContact, employees, contactUserId, profile, employeeRole]);
+  }, [contactMode, companyContact, employees, contactUserId, profile, employeeRole]);
 
   const imagePool = useMemo(() => {
     const fromMedia = (media as any[])
@@ -446,8 +467,9 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
     return out;
   }, [withMacro, withMarket, macro, marketSections]);
 
-  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null) => {
+  const buildHtml = (cover: string | null, gallery: string[], portraitSrc?: string | null, logoSrc?: string | null, tpl?: TemplateMeta) => {
     const p = property ?? {};
+    const t = tpl ?? template;
     const cols = GALLERY_OPTIONS.find((o) => o.id === galleryLayout)?.cols ?? 2;
     return renderExposeHTML(
       {
@@ -481,14 +503,14 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         generated_on: new Date().toLocaleDateString("de-CH"),
       } as any,
       {
-        primary: template.primary,
-        accent: template.accent,
-        pageBg: template.pageBg,
-        titleFont: template.titleFont,
-        bodyFont: template.bodyFont,
-        orientation: template.orientation,
-        templateLabel: template.label,
-        family: template.family,
+        primary: t.primary,
+        accent: t.accent,
+        pageBg: t.pageBg,
+        titleFont: t.titleFont,
+        bodyFont: t.bodyFont,
+        orientation: t.orientation,
+        templateLabel: t.label,
+        family: t.family,
       },
     );
   };
