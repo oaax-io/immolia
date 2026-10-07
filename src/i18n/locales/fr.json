@@ -1793,7 +1793,8 @@
       "equipment": "Équipement",
       "media": "Médias",
       "units": "Unités",
-      "summary": "Récapitulatif"
+      "summary": "Récapitulatif",
+      "launch": "Finalisation"
     },
     "types": {
       "house": {
