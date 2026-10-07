@@ -1349,7 +1349,7 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         </div>
 
         <Dialog open={!!templatePreview} onOpenChange={(o) => !o && setTemplatePreview(null)}>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Vorlage {templatePreview?.label}</DialogTitle>
               <DialogDescription>{templatePreview?.description}</DialogDescription>
