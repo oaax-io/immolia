@@ -600,47 +600,34 @@ export function PropertyWizard({
               label: t(`propertyWizard.steps.${currentStepKey}`),
             })}
           </DialogDescription>
-          <div className="mt-4">
-            <div className="flex items-center">
-              {visibleSteps.map((s, i) => {
+          <div className="mt-3 flex justify-center">
+            <div className="inline-flex max-w-full items-center gap-0.5 rounded-xl border border-border/60 bg-muted/60 p-1">
+              {visibleSteps.map((s) => {
                 const isActive = s.idx === step;
                 const isDone = s.idx < step;
                 const Icon = STEP_ICONS[s.key] ?? Home;
                 const label = t(`propertyWizard.steps.${s.key}`);
                 return (
-                  <div key={s.idx} className="flex min-w-0 flex-1 items-center last:flex-none">
-                    {i > 0 && (
-                      <div
-                        className={cn(
-                          "h-0.5 min-w-1.5 flex-1 rounded-full transition-colors",
-                          isDone || isActive ? "bg-primary/50" : "bg-border"
-                        )}
-                      />
+                  <button
+                    key={s.idx}
+                    type="button"
+                    onClick={() => setStep(s.idx)}
+                    title={label}
+                    aria-label={label}
+                    aria-current={isActive ? "step" : undefined}
+                    className={cn(
+                      "flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-all duration-200",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : isDone
+                          ? "text-primary hover:bg-background/80"
+                          : "text-muted-foreground hover:bg-background/80 hover:text-foreground"
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setStep(s.idx)}
-                      title={label}
-                      aria-label={label}
-                      aria-current={isActive ? "step" : undefined}
-                      className={cn(
-                        "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all duration-200",
-                        "hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        isActive
-                          ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                          : isDone
-                            ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border bg-muted/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                      )}
-                    >
-                      {isDone && !isActive
-                        ? <Check className="size-3.5" />
-                        : <Icon className={cn("transition-all", isActive ? "size-4" : "size-3.5")} />}
-                      {isActive && (
-                        <span className="absolute -bottom-1.5 size-1.5 rounded-full bg-primary" />
-                      )}
-                    </button>
-                  </div>
+                  >
+                    {isDone && !isActive ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
+                    {isActive && <span className="hidden whitespace-nowrap sm:inline">{label}</span>}
+                  </button>
                 );
               })}
             </div>
