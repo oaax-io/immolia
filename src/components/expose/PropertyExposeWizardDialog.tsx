@@ -98,33 +98,28 @@ function ScaledExposePreview({ html, title }: { html: string; title: string }) {
   );
 }
 
-/** Leichte, statische Mini-Vorschau einer Vorlage (kein iframe) – damit die Kacheln schnell laden und scrollen. */
+/** Kompakte Mini-Vorschau einer Vorlage mit fiktivem Beispielbild (nicht vom Objekt). */
 function TemplateThumb({ t }: { t: TemplateMeta }) {
-  const serif = t.titleFont.toLowerCase().includes("cormorant") || t.titleFont.toLowerCase().includes("serif");
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-lg border"
-      style={{ aspectRatio: t.orientation === "landscape" ? "297 / 210" : "210 / 297", background: t.pageBg }}
-    >
-      {/* Hero-Band */}
-      <div className="absolute inset-x-0 top-0" style={{ height: "42%", background: `linear-gradient(135deg, ${t.primary}, ${t.primary}dd)` }}>
-        <div className="absolute bottom-2 left-2 right-2 space-y-1">
-          <div className="h-1.5 w-2/3 rounded-full" style={{ background: t.accent }} />
-          <div className="h-1 w-1/2 rounded-full bg-white/60" />
-        </div>
+    <div className="relative w-full overflow-hidden rounded-md border" style={{ height: 88, background: t.pageBg }}>
+      {/* Fiktives Beispielbild als Hero-Band */}
+      <img
+        src={`https://picsum.photos/seed/expose-${t.id}/320/180`}
+        alt=""
+        loading="lazy"
+        className="absolute inset-x-0 top-0 h-[55%] w-full object-cover"
+      />
+      <div className="absolute inset-x-0 top-0 h-[55%]" style={{ background: `linear-gradient(180deg, transparent 40%, ${t.primary}cc)` }} />
+      {/* Akzent + Titelzeilen */}
+      <div className="absolute left-1.5 right-1.5 space-y-0.5" style={{ top: "60%" }}>
+        <div className="h-1 w-2/5 rounded-full" style={{ background: t.accent }} />
+        <div className="h-1.5 w-3/4 rounded-full" style={{ background: t.primary }} />
+        <div className="h-1 w-1/2 rounded-full bg-black/15" />
       </div>
-      {/* Titelzeilen */}
-      <div className="absolute left-2 right-2 space-y-1" style={{ top: "48%" }}>
-        <div className="h-2 w-3/4 rounded-full" style={{ background: t.primary, borderRadius: serif ? 1 : 999 }} />
-        <div className="h-1.5 w-1/2 rounded-full bg-black/15" />
-      </div>
-      {/* Fakten-Zeilen */}
-      <div className="absolute inset-x-2 bottom-2 space-y-1">
+      {/* Fakten-Punkte */}
+      <div className="absolute inset-x-1.5 bottom-1 flex gap-1">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-1">
-            <div className="h-1 w-1 rounded-full" style={{ background: t.accent }} />
-            <div className="h-1 flex-1 rounded-full bg-black/10" />
-          </div>
+          <div key={i} className="h-1 flex-1 rounded-full bg-black/10" />
         ))}
       </div>
     </div>
@@ -772,28 +767,28 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                 {TEMPLATES.map((t) => (
                   <div
                     key={t.id}
                     className={cn(
-                      "group relative rounded-xl border-2 p-2 text-left transition",
+                      "group relative rounded-lg border-2 p-1.5 text-left transition",
                       template.id === t.id ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-primary/40",
                     )}
                   >
                     <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
                       <TemplateThumb t={t} />
-                      <div className="mt-2 flex items-center justify-between gap-1">
-                        <p className="truncate text-sm font-semibold">{t.label}</p>
-                        {template.id === t.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                      <div className="mt-1 flex items-center justify-between gap-1">
+                        <p className="truncate text-xs font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
                       </div>
                     </button>
-                    <div className="mt-1.5 flex items-center justify-between gap-1">
-                      <Badge variant="outline" className="text-[10px]">
+                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                      <Badge variant="outline" className="px-1 py-0 text-[9px]">
                         {t.orientation === "landscape" ? "Quer" : "Hoch"}
                       </Badge>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
+                      <Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => setTemplatePreview(t)}>
+                        <Eye className="mr-0.5 h-3 w-3" />Vorschau
                       </Button>
                     </div>
                   </div>
