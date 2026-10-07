@@ -767,28 +767,28 @@ export function PropertyExposeWizardDialog({ propertyId, property, open, onOpenC
         <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="min-h-[320px] py-3">
             {step === 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                 {TEMPLATES.map((t) => (
                   <div
                     key={t.id}
                     className={cn(
-                      "group relative rounded-xl border-2 p-2 text-left transition",
+                      "group relative rounded-lg border-2 p-1.5 text-left transition",
                       template.id === t.id ? "border-primary ring-2 ring-primary/25" : "border-border hover:border-primary/40",
                     )}
                   >
                     <button type="button" onClick={() => setTemplate(t)} className="block w-full text-left">
                       <TemplateThumb t={t} />
-                      <div className="mt-2 flex items-center justify-between gap-1">
-                        <p className="truncate text-sm font-semibold">{t.label}</p>
-                        {template.id === t.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                      <div className="mt-1 flex items-center justify-between gap-1">
+                        <p className="truncate text-xs font-semibold">{t.label}</p>
+                        {template.id === t.id && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
                       </div>
                     </button>
-                    <div className="mt-1.5 flex items-center justify-between gap-1">
-                      <Badge variant="outline" className="text-[10px]">
+                    <div className="mt-0.5 flex items-center justify-between gap-1">
+                      <Badge variant="outline" className="px-1 py-0 text-[9px]">
                         {t.orientation === "landscape" ? "Quer" : "Hoch"}
                       </Badge>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setTemplatePreview(t)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" />Vorschau
+                      <Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => setTemplatePreview(t)}>
+                        <Eye className="mr-0.5 h-3 w-3" />Vorschau
                       </Button>
                     </div>
                   </div>
