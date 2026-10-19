@@ -12,3 +12,4 @@ Immer gültige Invarianten:
 - UI-Sprache Deutsch (Schweiz).
 - Immobilien-Marktanalysen laufen über eine geschützte, gezählte TanStack-Serverfunktion und werden in der bestehenden firmengebundenen Analysehistorie gespeichert; so verwenden Karte und Detailansicht denselben sicheren Weg.
 - Serverfunktionen: `createServerFn().validator(...)` verwenden, nicht das veraltete `.inputValidator(...)` – die aktuelle TanStack-Version meldet es beim Build als veraltet.
+- Browser-only-Bibliotheken (Karten-Renderer, PDF-Erzeugung, Bildkonverter) nie statisch in SSR-Routen importieren, sondern über `lazy()`/dynamische Importe hinter `<Suspense>` laden; geteilte UI-Teile daraus in ein eigenes Modul ohne diese Abhängigkeiten auslagern. Sonst landet der ganze Code im Server-Bundle und der Build läuft in den Arbeitsspeicher.
