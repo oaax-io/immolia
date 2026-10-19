@@ -9,98 +9,92 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SetPasswordRouteImport } from './routes/set-password'
-import { Route as PlatformRouteImport } from './routes/platform'
-import { Route as OaaxRouteImport } from './routes/oaax'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PlatformIndexRouteImport } from './routes/platform.index'
-import { Route as InviteIndexRouteImport } from './routes/invite.index'
-import { Route as SelbstauskunftTokenRouteImport } from './routes/selbstauskunft.$token'
-import { Route as PlatformUsersRouteImport } from './routes/platform.users'
-import { Route as PlatformSettingsRouteImport } from './routes/platform.settings'
-import { Route as PlatformSecurityRouteImport } from './routes/platform.security'
-import { Route as PlatformPartnersRouteImport } from './routes/platform.partners'
-import { Route as PlatformModulesRouteImport } from './routes/platform.modules'
-import { Route as PlatformFeedbackRouteImport } from './routes/platform.feedback'
-import { Route as PlatformDomainsRouteImport } from './routes/platform.domains'
-import { Route as PlatformCommercialRouteImport } from './routes/platform.commercial'
-import { Route as PlatformActivityRouteImport } from './routes/platform.activity'
-import { Route as PTokenRouteImport } from './routes/p.$token'
-import { Route as InviteTokenRouteImport } from './routes/invite.$token'
-import { Route as FinanzierungTokenRouteImport } from './routes/finanzierung.$token'
-import { Route as BankPaketTokenRouteImport } from './routes/bank-paket.$token'
-import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
-import { Route as AppTeamRouteImport } from './routes/_app/team'
-import { Route as AppTasksRouteImport } from './routes/_app/tasks'
-import { Route as AppSettingsRouteImport } from './routes/_app/settings'
-import { Route as AppReservationsRouteImport } from './routes/_app/reservations'
-import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
-import { Route as AppNdasRouteImport } from './routes/_app/ndas'
-import { Route as AppMediaRouteImport } from './routes/_app/media'
-import { Route as AppMatchingRouteImport } from './routes/_app/matching'
-import { Route as AppMandatesRouteImport } from './routes/_app/mandates'
-import { Route as AppLeadsRouteImport } from './routes/_app/leads'
-import { Route as AppGeneratedDocumentsRouteImport } from './routes/_app/generated-documents'
-import { Route as AppFeedbackRouteImport } from './routes/_app/feedback'
-import { Route as AppExposesRouteImport } from './routes/_app/exposes'
-import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
-import { Route as AppDocsRouteImport } from './routes/_app/docs'
-import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
-import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
-import { Route as AppClientsRouteImport } from './routes/_app/clients'
-import { Route as AppChecklistsRouteImport } from './routes/_app/checklists'
-import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as OaaxRouteImport } from './routes/oaax'
+import { Route as PlatformRouteImport } from './routes/platform'
+import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as AppAnalyticsRouteImport } from './routes/_app/analytics'
-import { Route as PlatformTenantsIndexRouteImport } from './routes/platform.tenants.index'
-import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings.index'
-import { Route as AppPropertiesIndexRouteImport } from './routes/_app/properties.index'
-import { Route as AppLeadsIndexRouteImport } from './routes/_app/leads.index'
-import { Route as AppFinancingIndexRouteImport } from './routes/_app/financing.index'
+import { Route as AppAppointmentsRouteImport } from './routes/_app/appointments'
+import { Route as AppChecklistsRouteImport } from './routes/_app/checklists'
+import { Route as AppClientsRouteImport } from './routes/_app/clients'
+import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppDocsRouteImport } from './routes/_app/docs'
+import { Route as AppDocumentsRouteImport } from './routes/_app/documents'
+import { Route as AppExposesRouteImport } from './routes/_app/exposes'
+import { Route as AppFeedbackRouteImport } from './routes/_app/feedback'
+import { Route as AppGeneratedDocumentsRouteImport } from './routes/_app/generated-documents'
+import { Route as AppLeadsRouteImport } from './routes/_app/leads'
+import { Route as AppMandatesRouteImport } from './routes/_app/mandates'
+import { Route as AppMatchingRouteImport } from './routes/_app/matching'
+import { Route as AppMediaRouteImport } from './routes/_app/media'
+import { Route as AppNdasRouteImport } from './routes/_app/ndas'
+import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppReservationsRouteImport } from './routes/_app/reservations'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppTasksRouteImport } from './routes/_app/tasks'
+import { Route as AppTeamRouteImport } from './routes/_app/team'
+import { Route as AppTemplatesRouteImport } from './routes/_app/templates'
+import { Route as BankPaketTokenRouteImport } from './routes/bank-paket.$token'
+import { Route as FinanzierungTokenRouteImport } from './routes/finanzierung.$token'
+import { Route as InviteIndexRouteImport } from './routes/invite.index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as PTokenRouteImport } from './routes/p.$token'
+import { Route as PlatformIndexRouteImport } from './routes/platform.index'
+import { Route as PlatformActivityRouteImport } from './routes/platform.activity'
+import { Route as PlatformCommercialRouteImport } from './routes/platform.commercial'
+import { Route as PlatformDomainsRouteImport } from './routes/platform.domains'
+import { Route as PlatformFeedbackRouteImport } from './routes/platform.feedback'
+import { Route as PlatformModulesRouteImport } from './routes/platform.modules'
+import { Route as PlatformPartnersRouteImport } from './routes/platform.partners'
+import { Route as PlatformSecurityRouteImport } from './routes/platform.security'
+import { Route as PlatformSettingsRouteImport } from './routes/platform.settings'
+import { Route as PlatformUsersRouteImport } from './routes/platform.users'
+import { Route as SelbstauskunftTokenRouteImport } from './routes/selbstauskunft.$token'
 import { Route as AppClientsIndexRouteImport } from './routes/_app/clients.index'
-import { Route as PlatformTenantsAgencyIdRouteImport } from './routes/platform.tenants.$agencyId'
-import { Route as ApiPublicPortalWebhookRouteImport } from './routes/api/public/portal-webhook'
-import { Route as AppSettingsWhiteLabelRouteImport } from './routes/_app/settings.white-label'
-import { Route as AppSettingsVideoRouteImport } from './routes/_app/settings.video'
-import { Route as AppSettingsTrashRouteImport } from './routes/_app/settings.trash'
-import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings.profile'
-import { Route as AppSettingsPartnersRouteImport } from './routes/_app/settings.partners'
-import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings.notifications'
-import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.modules'
-import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
-import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
-import { Route as AppSettingsCategoriesRouteImport } from './routes/_app/settings.categories'
-import { Route as AppSettingsCalendarRouteImport } from './routes/_app/settings.calendar'
-import { Route as AppSettingsBrandkitRouteImport } from './routes/_app/settings.brandkit'
-import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings.billing'
-import { Route as AppSettingsBanksRouteImport } from './routes/_app/settings.banks'
-import { Route as AppPropertiesIdRouteImport } from './routes/_app/properties.$id'
-import { Route as AppMeetRoomRouteImport } from './routes/_app/meet.$room'
-import { Route as AppLeadsIdRouteImport } from './routes/_app/leads.$id'
-import { Route as AppFinancingIdRouteImport } from './routes/_app/financing.$id'
 import { Route as AppClientsIdRouteImport } from './routes/_app/clients.$id'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicMsCalendarWorkerRouteImport } from './routes/api/public/ms-calendar/worker'
-import { Route as ApiPublicMsCalendarNotificationsRouteImport } from './routes/api/public/ms-calendar/notifications'
-import { Route as ApiPublicMsCalendarCallbackRouteImport } from './routes/api/public/ms-calendar/callback'
-import { Route as ApiPublicBankPaketTokenRouteImport } from './routes/api/public/bank-paket.$token'
-import { Route as AppPropertiesIdExposeRouteImport } from './routes/_app/properties.$id.expose'
+import { Route as AppFinancingIndexRouteImport } from './routes/_app/financing.index'
+import { Route as AppFinancingIdRouteImport } from './routes/_app/financing.$id'
+import { Route as AppLeadsIndexRouteImport } from './routes/_app/leads.index'
+import { Route as AppLeadsIdRouteImport } from './routes/_app/leads.$id'
+import { Route as AppMeetRoomRouteImport } from './routes/_app/meet.$room'
+import { Route as AppPropertiesIndexRouteImport } from './routes/_app/properties.index'
+import { Route as AppPropertiesIdRouteImport } from './routes/_app/properties.$id'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings.index'
+import { Route as AppSettingsBanksRouteImport } from './routes/_app/settings.banks'
+import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings.billing'
+import { Route as AppSettingsBrandkitRouteImport } from './routes/_app/settings.brandkit'
+import { Route as AppSettingsCalendarRouteImport } from './routes/_app/settings.calendar'
+import { Route as AppSettingsCategoriesRouteImport } from './routes/_app/settings.categories'
+import { Route as AppSettingsCompanyRouteImport } from './routes/_app/settings.company'
+import { Route as AppSettingsEsignRouteImport } from './routes/_app/settings.esign'
+import { Route as AppSettingsModulesRouteImport } from './routes/_app/settings.modules'
+import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings.notifications'
+import { Route as AppSettingsPartnersRouteImport } from './routes/_app/settings.partners'
+import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings.profile'
+import { Route as AppSettingsTrashRouteImport } from './routes/_app/settings.trash'
+import { Route as AppSettingsVideoRouteImport } from './routes/_app/settings.video'
+import { Route as AppSettingsWhiteLabelRouteImport } from './routes/_app/settings.white-label'
+import { Route as ApiPublicPortalWebhookRouteImport } from './routes/api/public/portal-webhook'
+import { Route as PlatformTenantsIndexRouteImport } from './routes/platform.tenants.index'
+import { Route as PlatformTenantsAgencyIdRouteImport } from './routes/platform.tenants.$agencyId'
 import { Route as AppFinancingIdQuickCheckResultRouteImport } from './routes/_app/financing.$id.quick-check-result'
+import { Route as AppPropertiesIdExposeRouteImport } from './routes/_app/properties.$id.expose'
+import { Route as ApiPublicBankPaketTokenRouteImport } from './routes/api/public/bank-paket.$token'
+import { Route as ApiPublicMsCalendarCallbackRouteImport } from './routes/api/public/ms-calendar/callback'
+import { Route as ApiPublicMsCalendarNotificationsRouteImport } from './routes/api/public/ms-calendar/notifications'
+import { Route as ApiPublicMsCalendarWorkerRouteImport } from './routes/api/public/ms-calendar/worker'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
-const SetPasswordRoute = SetPasswordRouteImport.update({
-  id: '/set-password',
-  path: '/set-password',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlatformRoute = PlatformRouteImport.update({
-  id: '/platform',
-  path: '/platform',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OaaxRoute = OaaxRouteImport.update({
-  id: '/oaax',
-  path: '/oaax',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -108,193 +102,24 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const OaaxRoute = OaaxRouteImport.update({
+  id: '/oaax',
+  path: '/oaax',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PlatformRoute = PlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlatformIndexRoute = PlatformIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const InviteIndexRoute = InviteIndexRouteImport.update({
-  id: '/invite/',
-  path: '/invite/',
+const SetPasswordRoute = SetPasswordRouteImport.update({
+  id: '/set-password',
+  path: '/set-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SelbstauskunftTokenRoute = SelbstauskunftTokenRouteImport.update({
-  id: '/selbstauskunft/$token',
-  path: '/selbstauskunft/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlatformUsersRoute = PlatformUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformSettingsRoute = PlatformSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformSecurityRoute = PlatformSecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformPartnersRoute = PlatformPartnersRouteImport.update({
-  id: '/partners',
-  path: '/partners',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformModulesRoute = PlatformModulesRouteImport.update({
-  id: '/modules',
-  path: '/modules',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformFeedbackRoute = PlatformFeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformDomainsRoute = PlatformDomainsRouteImport.update({
-  id: '/domains',
-  path: '/domains',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformCommercialRoute = PlatformCommercialRouteImport.update({
-  id: '/commercial',
-  path: '/commercial',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PlatformActivityRoute = PlatformActivityRouteImport.update({
-  id: '/activity',
-  path: '/activity',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const PTokenRoute = PTokenRouteImport.update({
-  id: '/p/$token',
-  path: '/p/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InviteTokenRoute = InviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinanzierungTokenRoute = FinanzierungTokenRouteImport.update({
-  id: '/finanzierung/$token',
-  path: '/finanzierung/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BankPaketTokenRoute = BankPaketTokenRouteImport.update({
-  id: '/bank-paket/$token',
-  path: '/bank-paket/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppTemplatesRoute = AppTemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTeamRoute = AppTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTasksRoute = AppTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReservationsRoute = AppReservationsRouteImport.update({
-  id: '/reservations',
-  path: '/reservations',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppNotificationsRoute = AppNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppNdasRoute = AppNdasRouteImport.update({
-  id: '/ndas',
-  path: '/ndas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMediaRoute = AppMediaRouteImport.update({
-  id: '/media',
-  path: '/media',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMatchingRoute = AppMatchingRouteImport.update({
-  id: '/matching',
-  path: '/matching',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMandatesRoute = AppMandatesRouteImport.update({
-  id: '/mandates',
-  path: '/mandates',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeadsRoute = AppLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppGeneratedDocumentsRoute = AppGeneratedDocumentsRouteImport.update({
-  id: '/generated-documents',
-  path: '/generated-documents',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFeedbackRoute = AppFeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppExposesRoute = AppExposesRouteImport.update({
-  id: '/exposes',
-  path: '/exposes',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDocumentsRoute = AppDocumentsRouteImport.update({
-  id: '/documents',
-  path: '/documents',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDocsRoute = AppDocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCommissionsRoute = AppCommissionsRouteImport.update({
-  id: '/commissions',
-  path: '/commissions',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClientsRoute = AppClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppChecklistsRoute = AppChecklistsRouteImport.update({
-  id: '/checklists',
-  path: '/checklists',
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
@@ -302,24 +127,204 @@ const AppAppointmentsRoute = AppAppointmentsRouteImport.update({
   path: '/appointments',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const AppChecklistsRoute = AppChecklistsRouteImport.update({
+  id: '/checklists',
+  path: '/checklists',
   getParentRoute: () => AppRoute,
 } as any)
-const PlatformTenantsIndexRoute = PlatformTenantsIndexRouteImport.update({
-  id: '/tenants/',
-  path: '/tenants/',
-  getParentRoute: () => PlatformRoute,
+const AppClientsRoute = AppClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => AppRoute,
 } as any)
-const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+const AppCommissionsRoute = AppCommissionsRouteImport.update({
+  id: '/commissions',
+  path: '/commissions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocsRoute = AppDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExposesRoute = AppExposesRouteImport.update({
+  id: '/exposes',
+  path: '/exposes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeedbackRoute = AppFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGeneratedDocumentsRoute = AppGeneratedDocumentsRouteImport.update({
+  id: '/generated-documents',
+  path: '/generated-documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLeadsRoute = AppLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMandatesRoute = AppMandatesRouteImport.update({
+  id: '/mandates',
+  path: '/mandates',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMatchingRoute = AppMatchingRouteImport.update({
+  id: '/matching',
+  path: '/matching',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMediaRoute = AppMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNdasRoute = AppNdasRouteImport.update({
+  id: '/ndas',
+  path: '/ndas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReservationsRoute = AppReservationsRouteImport.update({
+  id: '/reservations',
+  path: '/reservations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTasksRoute = AppTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTemplatesRoute = AppTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppRoute,
+} as any)
+const BankPaketTokenRoute = BankPaketTokenRouteImport.update({
+  id: '/bank-paket/$token',
+  path: '/bank-paket/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanzierungTokenRoute = FinanzierungTokenRouteImport.update({
+  id: '/finanzierung/$token',
+  path: '/finanzierung/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteIndexRoute = InviteIndexRouteImport.update({
+  id: '/invite/',
+  path: '/invite/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PTokenRoute = PTokenRouteImport.update({
+  id: '/p/$token',
+  path: '/p/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformIndexRoute = PlatformIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppSettingsRoute,
+  getParentRoute: () => PlatformRoute,
 } as any)
-const AppPropertiesIndexRoute = AppPropertiesIndexRouteImport.update({
-  id: '/properties/',
-  path: '/properties/',
+const PlatformActivityRoute = PlatformActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformCommercialRoute = PlatformCommercialRouteImport.update({
+  id: '/commercial',
+  path: '/commercial',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformDomainsRoute = PlatformDomainsRouteImport.update({
+  id: '/domains',
+  path: '/domains',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformFeedbackRoute = PlatformFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformModulesRoute = PlatformModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformPartnersRoute = PlatformPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformSecurityRoute = PlatformSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformSettingsRoute = PlatformSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformUsersRoute = PlatformUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const SelbstauskunftTokenRoute = SelbstauskunftTokenRouteImport.update({
+  id: '/selbstauskunft/$token',
+  path: '/selbstauskunft/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppClientsIndexRoute = AppClientsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppClientsRoute,
+} as any)
+const AppClientsIdRoute = AppClientsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppClientsRoute,
+} as any)
+const AppFinancingIndexRoute = AppFinancingIndexRouteImport.update({
+  id: '/financing/',
+  path: '/financing/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinancingIdRoute = AppFinancingIdRouteImport.update({
+  id: '/financing/$id',
+  path: '/financing/$id',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLeadsIndexRoute = AppLeadsIndexRouteImport.update({
@@ -327,49 +332,69 @@ const AppLeadsIndexRoute = AppLeadsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppLeadsRoute,
 } as any)
-const AppFinancingIndexRoute = AppFinancingIndexRouteImport.update({
-  id: '/financing/',
-  path: '/financing/',
+const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppLeadsRoute,
+} as any)
+const AppMeetRoomRoute = AppMeetRoomRouteImport.update({
+  id: '/meet/$room',
+  path: '/meet/$room',
   getParentRoute: () => AppRoute,
 } as any)
-const AppClientsIndexRoute = AppClientsIndexRouteImport.update({
+const AppPropertiesIndexRoute = AppPropertiesIndexRouteImport.update({
+  id: '/properties/',
+  path: '/properties/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPropertiesIdRoute = AppPropertiesIdRouteImport.update({
+  id: '/properties/$id',
+  path: '/properties/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppClientsRoute,
-} as any)
-const PlatformTenantsAgencyIdRoute = PlatformTenantsAgencyIdRouteImport.update({
-  id: '/tenants/$agencyId',
-  path: '/tenants/$agencyId',
-  getParentRoute: () => PlatformRoute,
-} as any)
-const ApiPublicPortalWebhookRoute = ApiPublicPortalWebhookRouteImport.update({
-  id: '/api/public/portal-webhook',
-  path: '/api/public/portal-webhook',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppSettingsWhiteLabelRoute = AppSettingsWhiteLabelRouteImport.update({
-  id: '/white-label',
-  path: '/white-label',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsVideoRoute = AppSettingsVideoRouteImport.update({
-  id: '/video',
-  path: '/video',
+const AppSettingsBanksRoute = AppSettingsBanksRouteImport.update({
+  id: '/banks',
+  path: '/banks',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsTrashRoute = AppSettingsTrashRouteImport.update({
-  id: '/trash',
-  path: '/trash',
+const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
+const AppSettingsBrandkitRoute = AppSettingsBrandkitRouteImport.update({
+  id: '/brandkit',
+  path: '/brandkit',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsPartnersRoute = AppSettingsPartnersRouteImport.update({
-  id: '/partners',
-  path: '/partners',
+const AppSettingsCalendarRoute = AppSettingsCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsCategoriesRoute = AppSettingsCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsEsignRoute = AppSettingsEsignRouteImport.update({
+  id: '/esign',
+  path: '/esign',
+  getParentRoute: () => AppSettingsRoute,
+} as any)
+const AppSettingsModulesRoute = AppSettingsModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
   getParentRoute: () => AppSettingsRoute,
 } as any)
 const AppSettingsNotificationsRoute =
@@ -378,81 +403,66 @@ const AppSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppSettingsRoute,
   } as any)
-const AppSettingsModulesRoute = AppSettingsModulesRouteImport.update({
-  id: '/modules',
-  path: '/modules',
+const AppSettingsPartnersRoute = AppSettingsPartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsEsignRoute = AppSettingsEsignRouteImport.update({
-  id: '/esign',
-  path: '/esign',
+const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsCompanyRoute = AppSettingsCompanyRouteImport.update({
-  id: '/company',
-  path: '/company',
+const AppSettingsTrashRoute = AppSettingsTrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsCategoriesRoute = AppSettingsCategoriesRouteImport.update({
-  id: '/categories',
-  path: '/categories',
+const AppSettingsVideoRoute = AppSettingsVideoRouteImport.update({
+  id: '/video',
+  path: '/video',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsCalendarRoute = AppSettingsCalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
+const AppSettingsWhiteLabelRoute = AppSettingsWhiteLabelRouteImport.update({
+  id: '/white-label',
+  path: '/white-label',
   getParentRoute: () => AppSettingsRoute,
 } as any)
-const AppSettingsBrandkitRoute = AppSettingsBrandkitRouteImport.update({
-  id: '/brandkit',
-  path: '/brandkit',
-  getParentRoute: () => AppSettingsRoute,
+const ApiPublicPortalWebhookRoute = ApiPublicPortalWebhookRouteImport.update({
+  id: '/api/public/portal-webhook',
+  path: '/api/public/portal-webhook',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => AppSettingsRoute,
+const PlatformTenantsIndexRoute = PlatformTenantsIndexRouteImport.update({
+  id: '/tenants/',
+  path: '/tenants/',
+  getParentRoute: () => PlatformRoute,
 } as any)
-const AppSettingsBanksRoute = AppSettingsBanksRouteImport.update({
-  id: '/banks',
-  path: '/banks',
-  getParentRoute: () => AppSettingsRoute,
+const PlatformTenantsAgencyIdRoute = PlatformTenantsAgencyIdRouteImport.update({
+  id: '/tenants/$agencyId',
+  path: '/tenants/$agencyId',
+  getParentRoute: () => PlatformRoute,
 } as any)
-const AppPropertiesIdRoute = AppPropertiesIdRouteImport.update({
-  id: '/properties/$id',
-  path: '/properties/$id',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMeetRoomRoute = AppMeetRoomRouteImport.update({
-  id: '/meet/$room',
-  path: '/meet/$room',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLeadsIdRoute = AppLeadsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppLeadsRoute,
-} as any)
-const AppFinancingIdRoute = AppFinancingIdRouteImport.update({
-  id: '/financing/$id',
-  path: '/financing/$id',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppClientsIdRoute = AppClientsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppClientsRoute,
-} as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
+const AppFinancingIdQuickCheckResultRoute =
+  AppFinancingIdQuickCheckResultRouteImport.update({
+    id: '/quick-check-result',
+    path: '/quick-check-result',
+    getParentRoute: () => AppFinancingIdRoute,
   } as any)
-const ApiPublicMsCalendarWorkerRoute =
-  ApiPublicMsCalendarWorkerRouteImport.update({
-    id: '/api/public/ms-calendar/worker',
-    path: '/api/public/ms-calendar/worker',
+const AppPropertiesIdExposeRoute = AppPropertiesIdExposeRouteImport.update({
+  id: '/expose',
+  path: '/expose',
+  getParentRoute: () => AppPropertiesIdRoute,
+} as any)
+const ApiPublicBankPaketTokenRoute = ApiPublicBankPaketTokenRouteImport.update({
+  id: '/api/public/bank-paket/$token',
+  path: '/api/public/bank-paket/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMsCalendarCallbackRoute =
+  ApiPublicMsCalendarCallbackRouteImport.update({
+    id: '/api/public/ms-calendar/callback',
+    path: '/api/public/ms-calendar/callback',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicMsCalendarNotificationsRoute =
@@ -461,27 +471,17 @@ const ApiPublicMsCalendarNotificationsRoute =
     path: '/api/public/ms-calendar/notifications',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicMsCalendarCallbackRoute =
-  ApiPublicMsCalendarCallbackRouteImport.update({
-    id: '/api/public/ms-calendar/callback',
-    path: '/api/public/ms-calendar/callback',
+const ApiPublicMsCalendarWorkerRoute =
+  ApiPublicMsCalendarWorkerRouteImport.update({
+    id: '/api/public/ms-calendar/worker',
+    path: '/api/public/ms-calendar/worker',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicBankPaketTokenRoute = ApiPublicBankPaketTokenRouteImport.update({
-  id: '/api/public/bank-paket/$token',
-  path: '/api/public/bank-paket/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppPropertiesIdExposeRoute = AppPropertiesIdExposeRouteImport.update({
-  id: '/expose',
-  path: '/expose',
-  getParentRoute: () => AppPropertiesIdRoute,
-} as any)
-const AppFinancingIdQuickCheckResultRoute =
-  AppFinancingIdQuickCheckResultRouteImport.update({
-    id: '/quick-check-result',
-    path: '/quick-check-result',
-    getParentRoute: () => AppFinancingIdRoute,
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -979,32 +979,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/set-password': {
-      id: '/set-password'
-      path: '/set-password'
-      fullPath: '/set-password'
-      preLoaderRoute: typeof SetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/platform': {
-      id: '/platform'
-      path: '/platform'
-      fullPath: '/platform'
-      preLoaderRoute: typeof PlatformRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oaax': {
-      id: '/oaax'
-      path: '/oaax'
-      fullPath: '/oaax'
-      preLoaderRoute: typeof OaaxRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -1014,263 +993,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/platform/': {
-      id: '/platform/'
-      path: '/'
-      fullPath: '/platform/'
-      preLoaderRoute: typeof PlatformIndexRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/invite/': {
-      id: '/invite/'
-      path: '/invite'
-      fullPath: '/invite/'
-      preLoaderRoute: typeof InviteIndexRouteImport
+    '/oaax': {
+      id: '/oaax'
+      path: '/oaax'
+      fullPath: '/oaax'
+      preLoaderRoute: typeof OaaxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/selbstauskunft/$token': {
-      id: '/selbstauskunft/$token'
-      path: '/selbstauskunft/$token'
-      fullPath: '/selbstauskunft/$token'
-      preLoaderRoute: typeof SelbstauskunftTokenRouteImport
+    '/platform': {
+      id: '/platform'
+      path: '/platform'
+      fullPath: '/platform'
+      preLoaderRoute: typeof PlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/platform/users': {
-      id: '/platform/users'
-      path: '/users'
-      fullPath: '/platform/users'
-      preLoaderRoute: typeof PlatformUsersRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/settings': {
-      id: '/platform/settings'
-      path: '/settings'
-      fullPath: '/platform/settings'
-      preLoaderRoute: typeof PlatformSettingsRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/security': {
-      id: '/platform/security'
-      path: '/security'
-      fullPath: '/platform/security'
-      preLoaderRoute: typeof PlatformSecurityRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/partners': {
-      id: '/platform/partners'
-      path: '/partners'
-      fullPath: '/platform/partners'
-      preLoaderRoute: typeof PlatformPartnersRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/modules': {
-      id: '/platform/modules'
-      path: '/modules'
-      fullPath: '/platform/modules'
-      preLoaderRoute: typeof PlatformModulesRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/feedback': {
-      id: '/platform/feedback'
-      path: '/feedback'
-      fullPath: '/platform/feedback'
-      preLoaderRoute: typeof PlatformFeedbackRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/domains': {
-      id: '/platform/domains'
-      path: '/domains'
-      fullPath: '/platform/domains'
-      preLoaderRoute: typeof PlatformDomainsRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/commercial': {
-      id: '/platform/commercial'
-      path: '/commercial'
-      fullPath: '/platform/commercial'
-      preLoaderRoute: typeof PlatformCommercialRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/platform/activity': {
-      id: '/platform/activity'
-      path: '/activity'
-      fullPath: '/platform/activity'
-      preLoaderRoute: typeof PlatformActivityRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/p/$token': {
-      id: '/p/$token'
-      path: '/p/$token'
-      fullPath: '/p/$token'
-      preLoaderRoute: typeof PTokenRouteImport
+    '/set-password': {
+      id: '/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof SetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/$token': {
-      id: '/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/invite/$token'
-      preLoaderRoute: typeof InviteTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/finanzierung/$token': {
-      id: '/finanzierung/$token'
-      path: '/finanzierung/$token'
-      fullPath: '/finanzierung/$token'
-      preLoaderRoute: typeof FinanzierungTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bank-paket/$token': {
-      id: '/bank-paket/$token'
-      path: '/bank-paket/$token'
-      fullPath: '/bank-paket/$token'
-      preLoaderRoute: typeof BankPaketTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/templates': {
-      id: '/_app/templates'
-      path: '/templates'
-      fullPath: '/templates'
-      preLoaderRoute: typeof AppTemplatesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/team': {
-      id: '/_app/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof AppTeamRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/tasks': {
-      id: '/_app/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AppTasksRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/reservations': {
-      id: '/_app/reservations'
-      path: '/reservations'
-      fullPath: '/reservations'
-      preLoaderRoute: typeof AppReservationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/notifications': {
-      id: '/_app/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AppNotificationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/ndas': {
-      id: '/_app/ndas'
-      path: '/ndas'
-      fullPath: '/ndas'
-      preLoaderRoute: typeof AppNdasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/media': {
-      id: '/_app/media'
-      path: '/media'
-      fullPath: '/media'
-      preLoaderRoute: typeof AppMediaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/matching': {
-      id: '/_app/matching'
-      path: '/matching'
-      fullPath: '/matching'
-      preLoaderRoute: typeof AppMatchingRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/mandates': {
-      id: '/_app/mandates'
-      path: '/mandates'
-      fullPath: '/mandates'
-      preLoaderRoute: typeof AppMandatesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/leads': {
-      id: '/_app/leads'
-      path: '/leads'
-      fullPath: '/leads'
-      preLoaderRoute: typeof AppLeadsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/generated-documents': {
-      id: '/_app/generated-documents'
-      path: '/generated-documents'
-      fullPath: '/generated-documents'
-      preLoaderRoute: typeof AppGeneratedDocumentsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/feedback': {
-      id: '/_app/feedback'
-      path: '/feedback'
-      fullPath: '/feedback'
-      preLoaderRoute: typeof AppFeedbackRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/exposes': {
-      id: '/_app/exposes'
-      path: '/exposes'
-      fullPath: '/exposes'
-      preLoaderRoute: typeof AppExposesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/documents': {
-      id: '/_app/documents'
-      path: '/documents'
-      fullPath: '/documents'
-      preLoaderRoute: typeof AppDocumentsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/docs': {
-      id: '/_app/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof AppDocsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/commissions': {
-      id: '/_app/commissions'
-      path: '/commissions'
-      fullPath: '/commissions'
-      preLoaderRoute: typeof AppCommissionsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/clients': {
-      id: '/_app/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof AppClientsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/checklists': {
-      id: '/_app/checklists'
-      path: '/checklists'
-      fullPath: '/checklists'
-      preLoaderRoute: typeof AppChecklistsRouteImport
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/appointments': {
@@ -1280,32 +1035,284 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAppointmentsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/analytics': {
-      id: '/_app/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AppAnalyticsRouteImport
+    '/_app/checklists': {
+      id: '/_app/checklists'
+      path: '/checklists'
+      fullPath: '/checklists'
+      preLoaderRoute: typeof AppChecklistsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/platform/tenants/': {
-      id: '/platform/tenants/'
-      path: '/tenants'
-      fullPath: '/platform/tenants/'
-      preLoaderRoute: typeof PlatformTenantsIndexRouteImport
+    '/_app/clients': {
+      id: '/_app/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof AppClientsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/commissions': {
+      id: '/_app/commissions'
+      path: '/commissions'
+      fullPath: '/commissions'
+      preLoaderRoute: typeof AppCommissionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/docs': {
+      id: '/_app/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof AppDocsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/exposes': {
+      id: '/_app/exposes'
+      path: '/exposes'
+      fullPath: '/exposes'
+      preLoaderRoute: typeof AppExposesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/feedback': {
+      id: '/_app/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof AppFeedbackRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/generated-documents': {
+      id: '/_app/generated-documents'
+      path: '/generated-documents'
+      fullPath: '/generated-documents'
+      preLoaderRoute: typeof AppGeneratedDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/leads': {
+      id: '/_app/leads'
+      path: '/leads'
+      fullPath: '/leads'
+      preLoaderRoute: typeof AppLeadsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/mandates': {
+      id: '/_app/mandates'
+      path: '/mandates'
+      fullPath: '/mandates'
+      preLoaderRoute: typeof AppMandatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/matching': {
+      id: '/_app/matching'
+      path: '/matching'
+      fullPath: '/matching'
+      preLoaderRoute: typeof AppMatchingRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/media': {
+      id: '/_app/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof AppMediaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ndas': {
+      id: '/_app/ndas'
+      path: '/ndas'
+      fullPath: '/ndas'
+      preLoaderRoute: typeof AppNdasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reservations': {
+      id: '/_app/reservations'
+      path: '/reservations'
+      fullPath: '/reservations'
+      preLoaderRoute: typeof AppReservationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tasks': {
+      id: '/_app/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof AppTasksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/templates': {
+      id: '/_app/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AppTemplatesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/bank-paket/$token': {
+      id: '/bank-paket/$token'
+      path: '/bank-paket/$token'
+      fullPath: '/bank-paket/$token'
+      preLoaderRoute: typeof BankPaketTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finanzierung/$token': {
+      id: '/finanzierung/$token'
+      path: '/finanzierung/$token'
+      fullPath: '/finanzierung/$token'
+      preLoaderRoute: typeof FinanzierungTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/': {
+      id: '/invite/'
+      path: '/invite'
+      fullPath: '/invite/'
+      preLoaderRoute: typeof InviteIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$token': {
+      id: '/p/$token'
+      path: '/p/$token'
+      fullPath: '/p/$token'
+      preLoaderRoute: typeof PTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform/': {
+      id: '/platform/'
+      path: '/'
+      fullPath: '/platform/'
+      preLoaderRoute: typeof PlatformIndexRouteImport
       parentRoute: typeof PlatformRoute
     }
-    '/_app/settings/': {
-      id: '/_app/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AppSettingsIndexRouteImport
-      parentRoute: typeof AppSettingsRoute
+    '/platform/activity': {
+      id: '/platform/activity'
+      path: '/activity'
+      fullPath: '/platform/activity'
+      preLoaderRoute: typeof PlatformActivityRouteImport
+      parentRoute: typeof PlatformRoute
     }
-    '/_app/properties/': {
-      id: '/_app/properties/'
-      path: '/properties'
-      fullPath: '/properties/'
-      preLoaderRoute: typeof AppPropertiesIndexRouteImport
+    '/platform/commercial': {
+      id: '/platform/commercial'
+      path: '/commercial'
+      fullPath: '/platform/commercial'
+      preLoaderRoute: typeof PlatformCommercialRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/domains': {
+      id: '/platform/domains'
+      path: '/domains'
+      fullPath: '/platform/domains'
+      preLoaderRoute: typeof PlatformDomainsRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/feedback': {
+      id: '/platform/feedback'
+      path: '/feedback'
+      fullPath: '/platform/feedback'
+      preLoaderRoute: typeof PlatformFeedbackRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/modules': {
+      id: '/platform/modules'
+      path: '/modules'
+      fullPath: '/platform/modules'
+      preLoaderRoute: typeof PlatformModulesRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/partners': {
+      id: '/platform/partners'
+      path: '/partners'
+      fullPath: '/platform/partners'
+      preLoaderRoute: typeof PlatformPartnersRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/security': {
+      id: '/platform/security'
+      path: '/security'
+      fullPath: '/platform/security'
+      preLoaderRoute: typeof PlatformSecurityRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/settings': {
+      id: '/platform/settings'
+      path: '/settings'
+      fullPath: '/platform/settings'
+      preLoaderRoute: typeof PlatformSettingsRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/platform/users': {
+      id: '/platform/users'
+      path: '/users'
+      fullPath: '/platform/users'
+      preLoaderRoute: typeof PlatformUsersRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/selbstauskunft/$token': {
+      id: '/selbstauskunft/$token'
+      path: '/selbstauskunft/$token'
+      fullPath: '/selbstauskunft/$token'
+      preLoaderRoute: typeof SelbstauskunftTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/clients/': {
+      id: '/_app/clients/'
+      path: '/'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof AppClientsIndexRouteImport
+      parentRoute: typeof AppClientsRoute
+    }
+    '/_app/clients/$id': {
+      id: '/_app/clients/$id'
+      path: '/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof AppClientsIdRouteImport
+      parentRoute: typeof AppClientsRoute
+    }
+    '/_app/financing/': {
+      id: '/_app/financing/'
+      path: '/financing'
+      fullPath: '/financing/'
+      preLoaderRoute: typeof AppFinancingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/financing/$id': {
+      id: '/_app/financing/$id'
+      path: '/financing/$id'
+      fullPath: '/financing/$id'
+      preLoaderRoute: typeof AppFinancingIdRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/leads/': {
@@ -1315,123 +1322,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLeadsIndexRouteImport
       parentRoute: typeof AppLeadsRoute
     }
-    '/_app/financing/': {
-      id: '/_app/financing/'
-      path: '/financing'
-      fullPath: '/financing/'
-      preLoaderRoute: typeof AppFinancingIndexRouteImport
+    '/_app/leads/$id': {
+      id: '/_app/leads/$id'
+      path: '/$id'
+      fullPath: '/leads/$id'
+      preLoaderRoute: typeof AppLeadsIdRouteImport
+      parentRoute: typeof AppLeadsRoute
+    }
+    '/_app/meet/$room': {
+      id: '/_app/meet/$room'
+      path: '/meet/$room'
+      fullPath: '/meet/$room'
+      preLoaderRoute: typeof AppMeetRoomRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/clients/': {
-      id: '/_app/clients/'
+    '/_app/properties/': {
+      id: '/_app/properties/'
+      path: '/properties'
+      fullPath: '/properties/'
+      preLoaderRoute: typeof AppPropertiesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/properties/$id': {
+      id: '/_app/properties/$id'
+      path: '/properties/$id'
+      fullPath: '/properties/$id'
+      preLoaderRoute: typeof AppPropertiesIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings/': {
+      id: '/_app/settings/'
       path: '/'
-      fullPath: '/clients/'
-      preLoaderRoute: typeof AppClientsIndexRouteImport
-      parentRoute: typeof AppClientsRoute
-    }
-    '/platform/tenants/$agencyId': {
-      id: '/platform/tenants/$agencyId'
-      path: '/tenants/$agencyId'
-      fullPath: '/platform/tenants/$agencyId'
-      preLoaderRoute: typeof PlatformTenantsAgencyIdRouteImport
-      parentRoute: typeof PlatformRoute
-    }
-    '/api/public/portal-webhook': {
-      id: '/api/public/portal-webhook'
-      path: '/api/public/portal-webhook'
-      fullPath: '/api/public/portal-webhook'
-      preLoaderRoute: typeof ApiPublicPortalWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/settings/white-label': {
-      id: '/_app/settings/white-label'
-      path: '/white-label'
-      fullPath: '/settings/white-label'
-      preLoaderRoute: typeof AppSettingsWhiteLabelRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/video': {
-      id: '/_app/settings/video'
-      path: '/video'
-      fullPath: '/settings/video'
-      preLoaderRoute: typeof AppSettingsVideoRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/trash': {
-      id: '/_app/settings/trash'
-      path: '/trash'
-      fullPath: '/settings/trash'
-      preLoaderRoute: typeof AppSettingsTrashRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/profile': {
-      id: '/_app/settings/profile'
-      path: '/profile'
-      fullPath: '/settings/profile'
-      preLoaderRoute: typeof AppSettingsProfileRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/partners': {
-      id: '/_app/settings/partners'
-      path: '/partners'
-      fullPath: '/settings/partners'
-      preLoaderRoute: typeof AppSettingsPartnersRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/notifications': {
-      id: '/_app/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/modules': {
-      id: '/_app/settings/modules'
-      path: '/modules'
-      fullPath: '/settings/modules'
-      preLoaderRoute: typeof AppSettingsModulesRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/esign': {
-      id: '/_app/settings/esign'
-      path: '/esign'
-      fullPath: '/settings/esign'
-      preLoaderRoute: typeof AppSettingsEsignRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/company': {
-      id: '/_app/settings/company'
-      path: '/company'
-      fullPath: '/settings/company'
-      preLoaderRoute: typeof AppSettingsCompanyRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/categories': {
-      id: '/_app/settings/categories'
-      path: '/categories'
-      fullPath: '/settings/categories'
-      preLoaderRoute: typeof AppSettingsCategoriesRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/calendar': {
-      id: '/_app/settings/calendar'
-      path: '/calendar'
-      fullPath: '/settings/calendar'
-      preLoaderRoute: typeof AppSettingsCalendarRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/brandkit': {
-      id: '/_app/settings/brandkit'
-      path: '/brandkit'
-      fullPath: '/settings/brandkit'
-      preLoaderRoute: typeof AppSettingsBrandkitRouteImport
-      parentRoute: typeof AppSettingsRoute
-    }
-    '/_app/settings/billing': {
-      id: '/_app/settings/billing'
-      path: '/billing'
-      fullPath: '/settings/billing'
-      preLoaderRoute: typeof AppSettingsBillingRouteImport
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
       parentRoute: typeof AppSettingsRoute
     }
     '/_app/settings/banks': {
@@ -1441,60 +1364,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsBanksRouteImport
       parentRoute: typeof AppSettingsRoute
     }
-    '/_app/properties/$id': {
-      id: '/_app/properties/$id'
-      path: '/properties/$id'
-      fullPath: '/properties/$id'
-      preLoaderRoute: typeof AppPropertiesIdRouteImport
-      parentRoute: typeof AppRoute
+    '/_app/settings/billing': {
+      id: '/_app/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof AppSettingsBillingRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/_app/meet/$room': {
-      id: '/_app/meet/$room'
-      path: '/meet/$room'
-      fullPath: '/meet/$room'
-      preLoaderRoute: typeof AppMeetRoomRouteImport
-      parentRoute: typeof AppRoute
+    '/_app/settings/brandkit': {
+      id: '/_app/settings/brandkit'
+      path: '/brandkit'
+      fullPath: '/settings/brandkit'
+      preLoaderRoute: typeof AppSettingsBrandkitRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/_app/leads/$id': {
-      id: '/_app/leads/$id'
-      path: '/$id'
-      fullPath: '/leads/$id'
-      preLoaderRoute: typeof AppLeadsIdRouteImport
-      parentRoute: typeof AppLeadsRoute
+    '/_app/settings/calendar': {
+      id: '/_app/settings/calendar'
+      path: '/calendar'
+      fullPath: '/settings/calendar'
+      preLoaderRoute: typeof AppSettingsCalendarRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/_app/financing/$id': {
-      id: '/_app/financing/$id'
-      path: '/financing/$id'
-      fullPath: '/financing/$id'
-      preLoaderRoute: typeof AppFinancingIdRouteImport
-      parentRoute: typeof AppRoute
+    '/_app/settings/categories': {
+      id: '/_app/settings/categories'
+      path: '/categories'
+      fullPath: '/settings/categories'
+      preLoaderRoute: typeof AppSettingsCategoriesRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/_app/clients/$id': {
-      id: '/_app/clients/$id'
-      path: '/$id'
-      fullPath: '/clients/$id'
-      preLoaderRoute: typeof AppClientsIdRouteImport
-      parentRoute: typeof AppClientsRoute
+    '/_app/settings/company': {
+      id: '/_app/settings/company'
+      path: '/company'
+      fullPath: '/settings/company'
+      preLoaderRoute: typeof AppSettingsCompanyRouteImport
+      parentRoute: typeof AppSettingsRoute
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/_app/settings/esign': {
+      id: '/_app/settings/esign'
+      path: '/esign'
+      fullPath: '/settings/esign'
+      preLoaderRoute: typeof AppSettingsEsignRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/modules': {
+      id: '/_app/settings/modules'
+      path: '/modules'
+      fullPath: '/settings/modules'
+      preLoaderRoute: typeof AppSettingsModulesRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/notifications': {
+      id: '/_app/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AppSettingsNotificationsRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/partners': {
+      id: '/_app/settings/partners'
+      path: '/partners'
+      fullPath: '/settings/partners'
+      preLoaderRoute: typeof AppSettingsPartnersRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/profile': {
+      id: '/_app/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AppSettingsProfileRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/trash': {
+      id: '/_app/settings/trash'
+      path: '/trash'
+      fullPath: '/settings/trash'
+      preLoaderRoute: typeof AppSettingsTrashRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/video': {
+      id: '/_app/settings/video'
+      path: '/video'
+      fullPath: '/settings/video'
+      preLoaderRoute: typeof AppSettingsVideoRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/_app/settings/white-label': {
+      id: '/_app/settings/white-label'
+      path: '/white-label'
+      fullPath: '/settings/white-label'
+      preLoaderRoute: typeof AppSettingsWhiteLabelRouteImport
+      parentRoute: typeof AppSettingsRoute
+    }
+    '/api/public/portal-webhook': {
+      id: '/api/public/portal-webhook'
+      path: '/api/public/portal-webhook'
+      fullPath: '/api/public/portal-webhook'
+      preLoaderRoute: typeof ApiPublicPortalWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/ms-calendar/worker': {
-      id: '/api/public/ms-calendar/worker'
-      path: '/api/public/ms-calendar/worker'
-      fullPath: '/api/public/ms-calendar/worker'
-      preLoaderRoute: typeof ApiPublicMsCalendarWorkerRouteImport
-      parentRoute: typeof rootRouteImport
+    '/platform/tenants/': {
+      id: '/platform/tenants/'
+      path: '/tenants'
+      fullPath: '/platform/tenants/'
+      preLoaderRoute: typeof PlatformTenantsIndexRouteImport
+      parentRoute: typeof PlatformRoute
     }
-    '/api/public/ms-calendar/notifications': {
-      id: '/api/public/ms-calendar/notifications'
-      path: '/api/public/ms-calendar/notifications'
-      fullPath: '/api/public/ms-calendar/notifications'
-      preLoaderRoute: typeof ApiPublicMsCalendarNotificationsRouteImport
+    '/platform/tenants/$agencyId': {
+      id: '/platform/tenants/$agencyId'
+      path: '/tenants/$agencyId'
+      fullPath: '/platform/tenants/$agencyId'
+      preLoaderRoute: typeof PlatformTenantsAgencyIdRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/_app/financing/$id/quick-check-result': {
+      id: '/_app/financing/$id/quick-check-result'
+      path: '/quick-check-result'
+      fullPath: '/financing/$id/quick-check-result'
+      preLoaderRoute: typeof AppFinancingIdQuickCheckResultRouteImport
+      parentRoute: typeof AppFinancingIdRoute
+    }
+    '/_app/properties/$id/expose': {
+      id: '/_app/properties/$id/expose'
+      path: '/expose'
+      fullPath: '/properties/$id/expose'
+      preLoaderRoute: typeof AppPropertiesIdExposeRouteImport
+      parentRoute: typeof AppPropertiesIdRoute
+    }
+    '/api/public/bank-paket/$token': {
+      id: '/api/public/bank-paket/$token'
+      path: '/api/public/bank-paket/$token'
+      fullPath: '/api/public/bank-paket/$token'
+      preLoaderRoute: typeof ApiPublicBankPaketTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ms-calendar/callback': {
@@ -1504,26 +1504,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicMsCalendarCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/bank-paket/$token': {
-      id: '/api/public/bank-paket/$token'
-      path: '/api/public/bank-paket/$token'
-      fullPath: '/api/public/bank-paket/$token'
-      preLoaderRoute: typeof ApiPublicBankPaketTokenRouteImport
+    '/api/public/ms-calendar/notifications': {
+      id: '/api/public/ms-calendar/notifications'
+      path: '/api/public/ms-calendar/notifications'
+      fullPath: '/api/public/ms-calendar/notifications'
+      preLoaderRoute: typeof ApiPublicMsCalendarNotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/properties/$id/expose': {
-      id: '/_app/properties/$id/expose'
-      path: '/expose'
-      fullPath: '/properties/$id/expose'
-      preLoaderRoute: typeof AppPropertiesIdExposeRouteImport
-      parentRoute: typeof AppPropertiesIdRoute
+    '/api/public/ms-calendar/worker': {
+      id: '/api/public/ms-calendar/worker'
+      path: '/api/public/ms-calendar/worker'
+      fullPath: '/api/public/ms-calendar/worker'
+      preLoaderRoute: typeof ApiPublicMsCalendarWorkerRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_app/financing/$id/quick-check-result': {
-      id: '/_app/financing/$id/quick-check-result'
-      path: '/quick-check-result'
-      fullPath: '/financing/$id/quick-check-result'
-      preLoaderRoute: typeof AppFinancingIdQuickCheckResultRouteImport
-      parentRoute: typeof AppFinancingIdRoute
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
