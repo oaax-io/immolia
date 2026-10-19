@@ -8,7 +8,7 @@ type Att = { url?: string; path?: string; name?: string; mime?: string };
 // als aufrufender Benutzer; erst danach signiert der Server kurzlebige Links.
 export const getPlatformFeedbackAttachments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ feedbackId: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ feedbackId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: list, error } = await (context.supabase.rpc as any)("platform_feedback_attachments", {
       _feedback_id: data.feedbackId,

@@ -17,7 +17,7 @@ async function lookupTxt(name: string): Promise<string[]> {
 
 export const platformVerifyDomain = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<{ status: string; message: string }> => {
     // platform_domain_dns_record prüft is_platform_admin() serverseitig.
     const { data: rec, error } = await context.supabase.rpc("platform_domain_dns_record" as never, { _id: data.id } as never);

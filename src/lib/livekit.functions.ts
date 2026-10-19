@@ -50,7 +50,7 @@ export const getLivekitStatus = createServerFn({ method: "GET" })
 /** Zugangsdaten speichern – nur Inhaber/Admin. */
 export const saveLivekitSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => saveSchema.parse(data))
+  .validator((data) => saveSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { normalizeWsUrl } = await import("@/lib/livekit.server");
     const { data: allowed, error: roleError } = await (context as any).supabase.rpc(
@@ -138,7 +138,7 @@ export const testLivekitConnection = createServerFn({ method: "POST" })
 /** Beitritts-Token für einen Raum. */
 export const createLivekitToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => tokenSchema.parse(data))
+  .validator((data) => tokenSchema.parse(data))
   .handler(async ({ data, context }) => {
     const agencyId = await callerAgency(context);
     const { createAccessToken } = await import("@/lib/livekit.server");

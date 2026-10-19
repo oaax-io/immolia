@@ -14,7 +14,7 @@ export type UsagePreview = {
 /** Vorschau vor einer gezählten Aktion – reine Leseabfrage, Firma = aktive Firma des Benutzers. */
 export const getUsagePreview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ usageKey: z.string().regex(/^[a-z_]{2,60}$/) }).parse(d))
+  .validator((d: unknown) => z.object({ usageKey: z.string().regex(/^[a-z_]{2,60}$/) }).parse(d))
   .handler(async ({ data, context }): Promise<UsagePreview> => {
     const { data: d, error } = await (context.supabase as any).rpc("commercial_usage_decision", { _usage_key: data.usageKey, _requested_quantity: 1 });
     if (error) throw new Error("Nutzung konnte nicht geladen werden");

@@ -27,7 +27,7 @@ export type GeocodedPoint = {
 };
 
 export const geocodeAddresses = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         items: z
@@ -87,7 +87,7 @@ export const geocodeAddresses = createServerFn({ method: "POST" })
   });
 
 export const searchAddress = createServerFn({ method: "GET" })
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         q: z.string().min(2),
@@ -174,7 +174,7 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
 }
 
 export const getNearbyPois = createServerFn({ method: "POST" })
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         longitude: z.number(),

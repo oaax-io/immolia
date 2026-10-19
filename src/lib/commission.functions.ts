@@ -182,7 +182,7 @@ async function insertRecord(
 
 export const bookReservationFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ reservationId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ reservationId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<CommissionRecordResult> => {
     const sb = context.supabase as any;
 
@@ -249,7 +249,7 @@ const splitSchema = z.object({
 
 export const saveDeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         propertyId: z.string().uuid(),
@@ -378,7 +378,7 @@ export const saveDeal = createServerFn({ method: "POST" })
 
 export const bookCancellationFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => z.object({ mandateId: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ mandateId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }): Promise<CommissionRecordResult> => {
     const sb = context.supabase as any;
 

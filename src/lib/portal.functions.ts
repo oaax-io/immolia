@@ -35,7 +35,7 @@ export const getPortalConnectionStatus = createServerFn({ method: "GET" })
 
 export const publishPropertyToPortal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => InputSchema.parse(data))
+  .validator((data: unknown) => InputSchema.parse(data))
   .handler(
     async ({ data, context }): Promise<{ ok: true; published: boolean; portalPropertyId: string | null; skipped?: boolean }> => {
       const sb = context.supabase as any;

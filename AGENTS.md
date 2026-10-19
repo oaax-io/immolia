@@ -11,3 +11,4 @@ Immer gültige Invarianten:
 - Additiv arbeiten: neue Spalten NULLABLE, keine bestehenden Spalten/Tabellen/Enums/Policies umbenennen oder löschen; jede neue Tabelle mit GRANTs und RLS.
 - UI-Sprache Deutsch (Schweiz).
 - Immobilien-Marktanalysen laufen über eine geschützte, gezählte TanStack-Serverfunktion und werden in der bestehenden firmengebundenen Analysehistorie gespeichert; so verwenden Karte und Detailansicht denselben sicheren Weg.
+- Serverfunktionen: `createServerFn().validator(...)` verwenden, nicht das veraltete `.inputValidator(...)` – die aktuelle TanStack-Version meldet es beim Build als veraltet.

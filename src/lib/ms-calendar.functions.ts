@@ -104,7 +104,7 @@ async function allowedReturnHost(agencyId: string): Promise<string> {
 
 export const startMsConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ reconnect: z.boolean().optional(), returnTo: z.enum(["calendar", "settings"]).optional() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ reconnect: z.boolean().optional(), returnTo: z.enum(["calendar", "settings"]).optional() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const s = await import("./ms-calendar.server");
     const cfg = s.msConfig();
@@ -144,7 +144,7 @@ export const listMsCalendars = createServerFn({ method: "GET" })
 
 export const saveMsCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ calendarId: z.string().min(1).max(512), pushToOutlook: z.boolean().optional(), showBusy: z.boolean().optional() }).parse(d))
+  .validator((d: unknown) => z.object({ calendarId: z.string().min(1).max(512), pushToOutlook: z.boolean().optional(), showBusy: z.boolean().optional() }).parse(d))
   .handler(async ({ context, data }) => {
     const s = await import("./ms-calendar.server");
     const agencyId = await activeAgency(context as Ctx);
@@ -236,7 +236,7 @@ export const listMsConflicts = createServerFn({ method: "GET" })
 
 export const resolveMsConflict = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ linkId: z.string().uuid(), keep: z.enum(["local", "remote"]) }).parse(d))
+  .validator((d: unknown) => z.object({ linkId: z.string().uuid(), keep: z.enum(["local", "remote"]) }).parse(d))
   .handler(async ({ context, data }) => {
     const agencyId = await activeAgency(context as Ctx);
     const { admin, conn } = await ownConnection(agencyId, (context as Ctx).userId);
@@ -252,7 +252,7 @@ export const resolveMsConflict = createServerFn({ method: "POST" })
 // oder nur lokal ausblenden (ohne Microsoft-Aktion). Eingeladene können nie im Namen des Organisators absagen.
 export const respondMsEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
+  .validator((d) => z.object({
     providerEventId: z.string().min(1).max(500),
     action: z.enum(["cancel", "decline"]),
     comment: z.string().max(1000).optional(),

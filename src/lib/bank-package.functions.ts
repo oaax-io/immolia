@@ -77,7 +77,7 @@ async function assertPackagePathAccess(sb: UserClient, path: string) {
 
 export const buildBankPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { dossierId: string; locale?: PackageLocale }) => {
+  .validator((input: { dossierId: string; locale?: PackageLocale }) => {
     if (!input?.dossierId || typeof input.dossierId !== "string") {
       throw new Error("dossierId is required");
     }
@@ -688,7 +688,7 @@ async function buildBankPackageInner(data: { dossierId: string; locale: PackageL
 
 export const listBankPackages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { dossierId: string }) => {
+  .validator((input: { dossierId: string }) => {
     if (!input?.dossierId) throw new Error("dossierId is required");
     return { dossierId: input.dossierId };
   })
@@ -724,7 +724,7 @@ export const listBankPackages = createServerFn({ method: "GET" })
 
 export const getBankPackageSignedUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { path: string }) => {
+  .validator((input: { path: string }) => {
     if (!input?.path) throw new Error("path is required");
     return { path: input.path };
   })
@@ -744,7 +744,7 @@ export const getBankPackageSignedUrl = createServerFn({ method: "POST" })
 
 export const fetchBankPackageBytes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { path: string }) => {
+  .validator((input: { path: string }) => {
     if (!input?.path) throw new Error("path is required");
     return { path: input.path };
   })
@@ -788,7 +788,7 @@ function randomToken(len = 40): string {
 
 export const createBankPackageShare = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { generatedDocumentId: string }) => {
+  .validator((input: { generatedDocumentId: string }) => {
     if (!input?.generatedDocumentId) throw new Error("generatedDocumentId is required");
     return { generatedDocumentId: input.generatedDocumentId };
   })
@@ -852,7 +852,7 @@ export const createBankPackageShare = createServerFn({ method: "POST" })
 
 export const deleteBankPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { generatedDocumentId: string }) => {
+  .validator((input: { generatedDocumentId: string }) => {
     if (!input?.generatedDocumentId) throw new Error("generatedDocumentId is required");
     return { generatedDocumentId: input.generatedDocumentId };
   })
