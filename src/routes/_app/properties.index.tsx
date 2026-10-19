@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { FilterMultiSelect } from "@/components/filters/FilterMultiSelect";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Plus, MapPin, Bed, Maximize, Search, LayoutGrid, List as ListIcon, Map as MapIcon, Archive, ArchiveRestore, Trash2, UserCog, MoreHorizontal, X, Upload, Building2, Layers3, ChevronRight, ChevronDown, SlidersHorizontal, RotateCcw, CircleDollarSign } from "lucide-react";
-import { PropertiesMap } from "@/components/properties/PropertiesMap";
+import { Plus, MapPin, Bed, Maximize, Search, LayoutGrid, List as ListIcon, Map as MapIcon, Archive, ArchiveRestore, Trash2, UserCog, MoreHorizontal, X, Upload, Building2, Layers3, ChevronRight, ChevronDown, SlidersHorizontal, RotateCcw, CircleDollarSign, Loader2 } from "lucide-react";
+const PropertiesMap = lazy(() => import("@/components/properties/PropertiesMap"));
 import { PropertyImportDialog } from "@/components/properties/PropertyImportDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -604,7 +604,9 @@ function PropertiesPage() {
           ) : undefined}
         />
       ) : view === "map" ? (
-        <PropertiesMap properties={(properties as any[]).filter((p) => p.status !== "archived")} />
+        <Suspense fallback={<div className="flex h-96 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Karte wird geladen…</div>}>
+          <PropertiesMap properties={(properties as any[]).filter((p) => p.status !== "archived")} />
+        </Suspense>
       ) : view === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {paginated.map((p: any) => {

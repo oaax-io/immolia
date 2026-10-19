@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { SWISS_BANKS } from "@/lib/swiss-banks";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { FilterMultiSelect } from "@/components/filters/FilterMultiSelect";
 import { useTranslation } from "react-i18next";
@@ -25,8 +25,8 @@ import {
   type FinancingType, type DossierStatus, type QuickCheckStatus,
 } from "@/lib/financing";
 import { FinancingQuickCheckWizard } from "@/components/financing/FinancingQuickCheckWizard";
-import { HypoRechnerKosovoDialog } from "@/components/financing/HypoRechnerKosovoDialog";
-import { HypoRechnerSchweizDialog } from "@/components/financing/HypoRechnerSchweizDialog";
+const HypoRechnerKosovoDialog = lazy(() => import("@/components/financing/HypoRechnerKosovoDialog").then((m) => ({ default: m.HypoRechnerKosovoDialog })));
+const HypoRechnerSchweizDialog = lazy(() => import("@/components/financing/HypoRechnerSchweizDialog").then((m) => ({ default: m.HypoRechnerSchweizDialog })));
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

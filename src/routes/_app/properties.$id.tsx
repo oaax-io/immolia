@@ -5,10 +5,10 @@ import { tenantStoragePath } from "@/lib/tenant-storage";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, MapPin, Bed, Bath, Maximize, Calendar, Zap, FileText, Trash2, Pencil, Plus, ExternalLink, CheckCircle2, Circle, Image as ImageIcon, User, Building2, Layers3, Banknote, Activity, TrendingUp, Sparkles, RefreshCw, ChevronLeft, ChevronRight, UploadCloud, Download, X, Share2 } from "lucide-react";
+import { ArrowLeft, MapPin, Bed, Bath, Maximize, Calendar, Zap, FileText, Trash2, Pencil, Plus, ExternalLink, CheckCircle2, Circle, Image as ImageIcon, User, Building2, Layers3, Banknote, Activity, TrendingUp, Sparkles, RefreshCw, ChevronLeft, ChevronRight, UploadCloud, Download, X, Share2, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +44,7 @@ import { PropertyAssigneePicker, usePropertyAssignees } from "@/components/prope
 import type { EmployeeLite } from "@/components/clients/ClientAssignees";
 import { PropertyQuickActions } from "@/components/properties/PropertyQuickActions";
 import { deleteToTrash } from "@/lib/trash";
-import { PropertyLocationMap } from "@/components/properties/PropertyLocationMap";
+const PropertyLocationMap = lazy(() => import("@/components/properties/PropertyLocationMap"));
 import { PropertyImageSorter } from "@/components/properties/PropertyImageSorter";
 import { PropertyPhoto, propertyPhotoCandidates } from "@/components/properties/PropertyPhoto";
 import { generatePropertyMarketAnalysis } from "@/lib/property-market-analysis.functions";
@@ -1130,7 +1130,9 @@ function CoverWithMap({ property }: { property: any }) {
         <PropertyImageGallery propertyId={property.id} images={property.images ?? []} title={property.title} />
       ) : (
         <div className="h-full w-full overflow-hidden rounded-2xl border bg-muted">
-          <PropertyLocationMap property={property} />
+          <Suspense fallback={<div className="flex h-full w-full items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Karte wird geladen…</div>}>
+            <PropertyLocationMap property={property} />
+          </Suspense>
         </div>
       )}
       <div className="absolute right-3 top-3 z-20 flex rounded-full border bg-background/90 p-0.5 text-xs font-medium shadow backdrop-blur">

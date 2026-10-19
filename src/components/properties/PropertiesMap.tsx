@@ -21,7 +21,7 @@ import {
 } from "@/lib/format";
 import { PropertyPhoto } from "@/components/properties/PropertyPhoto";
 import { CANTON_NAMES } from "@/lib/cantons";
-import { MarketScale, RangeSlider, YieldGauge } from "@/components/properties/PropertyLocationMap";
+import { MarketScale, RangeSlider, YieldGauge } from "@/components/properties/MapUi";
 
 interface Props {
   properties: any[];
@@ -562,3 +562,6 @@ export function PropertiesMap({ properties }: Props) {
     </div>
   );
 }
+
+export default PropertiesMap;
+
