@@ -19,7 +19,7 @@ const chf = (n: number | null | undefined) =>
 
 export const generateBankCoverLetter = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => Schema.parse(data))
+  .validator((data: unknown) => Schema.parse(data))
   .handler(async ({ data, context }): Promise<{ text: string }> =>
     withMeteredUsage(
       context.supabase,

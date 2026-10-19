@@ -12,7 +12,7 @@ const Schema = z.object({
 
 export const improveTaskText = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => Schema.parse(data))
+  .validator((data: unknown) => Schema.parse(data))
   .handler(async ({ data, context }): Promise<{ title: string; description: string }> =>
     withMeteredUsage(context.supabase, "ai_assistant_usage", data.requestId ?? crypto.randomUUID(), () => run(data), { type: "ai_task_text" }));
 

@@ -34,7 +34,7 @@ async function googleError(res: Response): Promise<never> {
 
 export const searchGoogleAddress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => z.object({
+  .validator((value: unknown) => z.object({
     q: z.string().trim().min(3).max(200),
     country: z.string().max(30).optional(),
     sessionToken: z.string().uuid(),
@@ -63,7 +63,7 @@ export const searchGoogleAddress = createServerFn({ method: "POST" })
 
 export const resolveGoogleAddress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => z.object({ placeId: z.string().min(3).max(300), sessionToken: z.string().uuid() }).parse(value))
+  .validator((value: unknown) => z.object({ placeId: z.string().min(3).max(300), sessionToken: z.string().uuid() }).parse(value))
   .handler(async ({ data }): Promise<AddressSuggestion> => {
     const url = new URL(`https://connector-gateway.lovable.dev/google_maps/places/v1/places/${encodeURIComponent(data.placeId)}`);
     url.searchParams.set("sessionToken", data.sessionToken);
@@ -109,7 +109,7 @@ async function geocodeSwissAddress(query: string): Promise<{ east: number; north
 
 export const lookupSwissParcel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => z.object({
+  .validator((value: unknown) => z.object({
     latitude: z.number().min(45).max(48).nullish(),
     longitude: z.number().min(5).max(11).nullish(),
     address: z.string().trim().min(3).max(300).optional(),
@@ -148,7 +148,7 @@ export const lookupSwissParcel = createServerFn({ method: "POST" })
   });
 export const getSwissParcelGeometry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => z.object({
+  .validator((value: unknown) => z.object({
     latitude: z.number().min(45).max(48),
     longitude: z.number().min(5).max(11),
   }).parse(value))

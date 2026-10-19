@@ -70,7 +70,7 @@ async function readResponseText(response: Response): Promise<string> {
 
 export const generatePropertyMarketAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => InputSchema.parse(value))
+  .validator((value: unknown) => InputSchema.parse(value))
   .handler(async ({ data, context }) => withMeteredUsage(
     context.supabase,
     "market_analyses",

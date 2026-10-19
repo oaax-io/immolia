@@ -11,7 +11,7 @@ import { z } from "zod";
  */
 export const setDefaultTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ templateId: z.string().uuid() }).parse(data))
+  .validator((data) => z.object({ templateId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     // Als Benutzer aufrufen, damit die Rollenprüfung in set_default_template greift
     // (mit Vollzugriff wäre auth.uid() leer und die Prüfung wirkungslos).

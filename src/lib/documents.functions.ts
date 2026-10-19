@@ -31,7 +31,7 @@ type StoredDocumentInsert = Database["public"]["Tables"]["documents"]["Insert"];
 
 export const renderDocumentPdf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       html: string;
       title?: string;
@@ -338,7 +338,7 @@ export const renderDocumentPdf = createServerFn({ method: "POST" })
  */
 export const getDocumentPdfUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { documentId: string }) => {
+  .validator((input: { documentId: string }) => {
     if (!input?.documentId) throw new Error("documentId is required");
     return { documentId: input.documentId };
   })
@@ -364,7 +364,7 @@ export const getDocumentPdfUrl = createServerFn({ method: "POST" })
  */
 export const fetchDocumentPdfBytes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { path: string }) => {
+  .validator((input: { path: string }) => {
     if (!input?.path || typeof input.path !== "string") throw new Error("path is required");
     return { path: input.path };
   })

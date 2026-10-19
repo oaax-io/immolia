@@ -18,7 +18,7 @@ export type InviteSignupResult =
   | { ok: false; reason: "invalid" | "expired" | "revoked" | "accepted" | "unavailable" | "account_exists" | "failed"; email?: string };
 
 export const signupWithInvitation = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => Input.parse(d))
+  .validator((d: unknown) => Input.parse(d))
   .handler(async ({ data }): Promise<InviteSignupResult> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

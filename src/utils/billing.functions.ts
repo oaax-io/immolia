@@ -59,7 +59,7 @@ async function getOrCreateAgencyCustomer(
 
 export const createPlanCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { planKey: string; returnUrl: string; environment: StripeEnv }) => {
+  .validator((d: { planKey: string; returnUrl: string; environment: StripeEnv }) => {
     if (!KEY_RE.test(d.planKey)) throw new Error("Invalid plan");
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Invalid env");
     return d;
@@ -127,7 +127,7 @@ export const createPlanCheckout = createServerFn({ method: "POST" })
 
 export const createCreditTopupCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { packageKey: string; returnUrl: string; environment: StripeEnv }) => {
+  .validator((d: { packageKey: string; returnUrl: string; environment: StripeEnv }) => {
     if (!KEY_RE.test(d.packageKey)) throw new Error("Invalid package");
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Invalid env");
     return d;
@@ -167,7 +167,7 @@ export const createCreditTopupCheckout = createServerFn({ method: "POST" })
 
 export const createAgencyPortal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { returnUrl?: string; environment: StripeEnv }) => {
+  .validator((d: { returnUrl?: string; environment: StripeEnv }) => {
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Invalid env");
     return d;
   })

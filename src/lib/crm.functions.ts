@@ -60,7 +60,7 @@ export const getLeads = createServerFn({ method: "POST" })
 
 export const addLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => leadInputSchema.parse(data))
+  .validator((data) => leadInputSchema.parse(data))
   .handler(async ({ data, context }): Promise<ServerResult<Database["public"]["Tables"]["leads"]["Row"] | null>> => {
     const payload: Database["public"]["Tables"]["leads"]["Insert"] = {
       owner_id: context.userId,
@@ -95,7 +95,7 @@ export const getClients = createServerFn({ method: "POST" })
 
 export const addClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => clientInputSchema.parse(data))
+  .validator((data) => clientInputSchema.parse(data))
   .handler(async ({ data, context }): Promise<ServerResult<Database["public"]["Tables"]["clients"]["Row"] | null>> => {
     const payload: Database["public"]["Tables"]["clients"]["Insert"] = {
       owner_id: context.userId,

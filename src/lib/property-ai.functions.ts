@@ -14,7 +14,7 @@ const InputSchema = z.object({
 
 export const generatePropertyDescription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => InputSchema.parse(data))
+  .validator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data, context }): Promise<{ text: string }> =>
     withMeteredUsage(context.supabase, "ai_expose_generations", data.requestId ?? crypto.randomUUID(), () => runDescription(data), { type: "ai_property_description" }));
 
@@ -105,7 +105,7 @@ const LocationInputSchema = z.object({
 
 export const generateLocationDescription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => LocationInputSchema.parse(data))
+  .validator((data: unknown) => LocationInputSchema.parse(data))
   .handler(async ({ data, context }): Promise<{ text: string }> =>
     withMeteredUsage(context.supabase, "ai_assistant_usage", data.requestId ?? crypto.randomUUID(), () => runLocation(data), { type: "ai_location_description" }));
 
